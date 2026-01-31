@@ -1,8 +1,6 @@
 
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { StudyPart } from "../types";
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
 
 export const generateStudyContent = async (
   type: 'WATCHTOWER' | 'MINISTRY',
@@ -10,42 +8,55 @@ export const generateStudyContent = async (
   part: StudyPart = 'tout'
 ): Promise<{ text: string; title: string; sources: any[] }> => {
   
+  // Initialisation à l'intérieur de la fonction pour éviter les erreurs de chargement global
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const model = 'gemini-3-pro-preview';
   
   let prompt = "";
   if (type === 'WATCHTOWER') {
     prompt = `
-      Cherche l'article de la Tour de Garde correspondant à : "${input}" sur jw.org.
-      Utilise la Bible Traduction du Monde Nouveau (TMN).
+      ARTICLE : "${input}"
+      SOURCE : jw.org
+      BIBLE : Traduction du Monde Nouveau (TMN)
       
-      Format de réponse EXIGÉ pour chaque paragraphe :
-      1. Numéro du paragraphe suivi de la question de l'article.
-      2. "Réponses (Informations Clés) :" en italique, avec des tirets.
-      3. "Commentaires :" avec des tirets, apportant une réflexion profonde.
-      4. "Applications :" avec des tirets, montrant comment appliquer cela personnellement.
+      INSTRUCTIONS CRUCIALES :
+      1. Analyse l'article de la Tour de Garde indiqué.
+      2. RÉPONDS À TOUS LES PARAGRAPHES de l'article, du paragraphe 1 jusqu'au dernier. Ne saute aucun paragraphe.
+      3. Pour CHAQUE paragraphe :
+         - Écris le numéro et la question.
+         - "Réponse (Informations Clés) :" Extraits précis du paragraphe.
+         - "Commentaire :" Une réflexion personnelle profonde et biblique.
+         - "Application :" Comment appliquer ce point dans la vie chrétienne.
+      4. QUESTIONS DE RÉVISION : À la fin, réponds obligatoirement à TOUTES les questions de la boîte de révision.
       
-      Règles cruciales :
-      - Pour chaque verset biblique mentionné au début d'une réponse ou d'un commentaire qui doit être lu, inclus le texte complet du verset entre parenthèses.
-      - Commence souvent par "D'après tel chapitre et verset biblique...".
-      - Utilise un ton professionnel et spirituel.
-      - Si c'est un article d'étude, inclus la section "Leçons Pratiques : Réflexion Finale" à la fin.
+      RÈGLES DE CITATION :
+      - Pour CHAQUE verset biblique mentionné (surtout ceux indiqués par "Lire"), inclus le texte COMPLET du verset entre parenthèses juste après sa référence.
+      - Utilise des phrases comme "D'après [Livre Chapitre:Verset]...".
     `;
   } else {
     prompt = `
-      Cherche l'article du Cahier Vie et Ministère correspondant à : "${input}" sur jw.org.
-      Partie demandée : ${part === 'tout' ? 'Toutes les parties' : part}.
+      ARTICLE : "${input}" (Cahier Vie et Ministère)
+      SOURCE : jw.org
+      BIBLE : Traduction du Monde Nouveau (TMN)
+      SECTION : ${part === 'tout' ? 'Toutes les parties' : part}
       
-      Détaille les sections suivantes si demandées :
-      - JOYAUX DE LA PAROLE DE DIEU (Discours et Perles spirituelles)
-      - APPLIQUE-TOI AU MINISTÈRE (Propositions d'exposés détaillés)
-      - VIE CHRÉTIENNE (Commentaires pour les parties et Étude biblique de l'assemblée)
+      INSTRUCTIONS POUR L'ÉTUDE BIBLIQUE DE L'ASSEMBLÉE :
+      Si l'article contient une étude biblique, tu dois OBLIGATOIREMENT fournir ces leçons pour chaque section étudiée :
+      - Leçon pour nous personnellement.
+      - Leçon pour la prédication.
+      - Leçon pour la famille.
+      - Leçon pour l'assemblée ou la salle du royaume.
+      - Ce que cela nous apprend sur Jéhovah (Ses qualités, sa volonté).
+      - Ce que cela nous apprend sur Jésus.
       
-      Format :
-      - Réponses claires et bibliques.
-      - Commentaires profonds.
-      - Applications concrètes.
-      - Pour les discours, fournis un plan complet et rédigé.
-      - Inclus les versets complets entre parenthèses pour les textes clés à lire.
+      INSTRUCTIONS POUR LES AUTRES PARTIES :
+      - JOYAUX : Analyse détaillée du texte biblique avec perles spirituelles.
+      - MINISTÈRE : Propositions complètes et variées pour les exposés.
+      - VIE CHRÉTIENNE : Commentaires pour les besoins locaux et autres parties.
+      
+      FORMAT :
+      - Inclus le texte COMPLET des versets entre parenthèses (TMN).
+      - Langage professionnel, spirituel et profond.
     `;
   }
 
@@ -59,14 +70,11 @@ export const generateStudyContent = async (
       },
     });
 
-    const text = response.text || "Désolé, je n'ai pas pu générer le contenu.";
-    const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-    
-    // Attempt to extract title from text or grounding metadata
+    const text = response.text || "Désolé, impossible de générer le contenu.";
     const titleMatch = text.match(/^# (.*)/) || text.match(/(.*)\n===/);
     const title = titleMatch ? titleMatch[1].trim() : (type === 'WATCHTOWER' ? 'Étude de la Tour de Garde' : 'Réunion Vie et Ministère');
 
-    return { text, title, sources };
+    return { text, title, sources: [] };
   } catch (error) {
     console.error("Gemini API Error:", error);
     throw error;

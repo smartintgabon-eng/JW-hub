@@ -14,7 +14,8 @@ import {
   Trash2,
   RefreshCw,
   Search,
-  Home as HomeIcon
+  Home as HomeIcon,
+  ShieldCheck
 } from 'lucide-react';
 import { AppView, GeneratedStudy, AppSettings, StudyPart } from './types';
 import { getSettings, getHistory, saveToHistory, deleteFromHistory, saveSettings } from './utils/storage';
@@ -33,12 +34,15 @@ const App: React.FC = () => {
   const [history, setHistory] = useState<GeneratedStudy[]>(getHistory());
 
   useEffect(() => {
-    document.body.style.backgroundColor = settings.customHex || settings.backgroundColor;
+    // On s'assure que settings existe pour éviter l'écran noir si localStorage est corrompu
+    const bodyBg = settings?.customHex || settings?.backgroundColor || '#09090b';
+    document.body.style.backgroundColor = bodyBg;
   }, [settings]);
 
   const navigateTo = (newView: AppView) => {
     setView(newView);
     setIsSidebarOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleStudyGenerated = (study: GeneratedStudy) => {
@@ -50,41 +54,44 @@ const App: React.FC = () => {
   const NavItem = ({ icon: Icon, label, active, onClick }: any) => (
     <button
       onClick={onClick}
-      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${
+      className={`w-full flex items-center space-x-4 px-4 py-3.5 rounded-2xl transition-all duration-300 ${
         active 
-          ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' 
-          : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200'
+          ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20 scale-[1.02]' 
+          : 'text-zinc-400 hover:bg-zinc-800/80 hover:text-zinc-200'
       }`}
     >
-      <Icon size={20} />
-      <span className="font-medium">{label}</span>
+      <Icon size={22} strokeWidth={active ? 2.5 : 2} />
+      <span className={`font-bold tracking-tight ${active ? 'opacity-100' : 'opacity-80'}`}>{label}</span>
     </button>
   );
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row transition-colors duration-500">
+    <div className="min-h-screen flex flex-col md:flex-row transition-colors duration-700 font-sans selection:bg-blue-500/30">
       {/* Mobile Header */}
-      <header className="md:hidden flex items-center justify-between p-4 bg-zinc-900/50 border-b border-zinc-800 sticky top-0 z-50 backdrop-blur-md">
-        <button onClick={() => navigateTo(AppView.HOME)} className="flex items-center space-x-2 active:scale-95 transition-transform">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/20">W</div>
-          <span className="font-bold text-lg">JW Study</span>
+      <header className="md:hidden flex items-center justify-between p-4 bg-zinc-900/80 border-b border-zinc-800 sticky top-0 z-50 backdrop-blur-xl">
+        <button onClick={() => navigateTo(AppView.HOME)} className="flex items-center space-x-3 active:scale-95 transition-transform">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center font-black text-white shadow-lg shadow-blue-500/20">W</div>
+          <span className="font-black text-xl tracking-tighter">JW Study</span>
         </button>
-        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 text-zinc-400">
+        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 text-zinc-400 bg-zinc-800/50 rounded-lg">
           {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </header>
 
       {/* Sidebar / Sidebar Overlay */}
       <aside className={`
-        fixed inset-y-0 left-0 z-40 w-72 bg-zinc-900 border-r border-zinc-800 p-6 transform transition-transform duration-300 ease-in-out md:translate-x-0 md:static
+        fixed inset-y-0 left-0 z-40 w-72 bg-zinc-950/50 backdrop-blur-3xl border-r border-zinc-800 p-6 transform transition-transform duration-500 ease-in-out md:translate-x-0 md:static
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <button onClick={() => navigateTo(AppView.HOME)} className="hidden md:flex items-center space-x-3 mb-10 px-2 group active:scale-95 transition-transform">
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-bold text-xl text-white shadow-xl shadow-blue-500/20 group-hover:rotate-3 transition-transform">W</div>
-          <span className="font-bold text-xl tracking-tight">JW Study Pro</span>
+        <button onClick={() => navigateTo(AppView.HOME)} className="hidden md:flex items-center space-x-4 mb-12 px-2 group active:scale-95 transition-transform">
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl flex items-center justify-center font-black text-2xl text-white shadow-2xl shadow-blue-600/30 group-hover:rotate-6 transition-transform text-center">W</div>
+          <div className="flex flex-col items-start">
+            <span className="font-black text-xl tracking-tighter leading-none">JW Study</span>
+            <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mt-1 text-left">Assistant Pro</span>
+          </div>
         </button>
 
-        <nav className="space-y-2">
+        <nav className="space-y-3">
           <NavItem icon={HomeIcon} label="Accueil" active={view === AppView.HOME} onClick={() => navigateTo(AppView.HOME)} />
           <NavItem icon={Calendar} label="Vie et Ministère" active={view === AppView.MINISTRY} onClick={() => navigateTo(AppView.MINISTRY)} />
           <NavItem icon={BookOpen} label="Tour de Garde" active={view === AppView.WATCHTOWER} onClick={() => navigateTo(AppView.WATCHTOWER)} />
@@ -94,59 +101,59 @@ const App: React.FC = () => {
         </nav>
 
         <div className="absolute bottom-8 left-6 right-6">
-          <div className="p-4 bg-zinc-800/40 rounded-2xl border border-zinc-700/50">
-            <p className="text-xs text-zinc-500 mb-2 font-semibold uppercase tracking-widest">Connectivité</p>
-            <div className="flex items-center space-x-2">
-              <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
-              <span className="text-sm font-medium text-zinc-300">Mode en ligne</span>
+          <div className="p-5 bg-gradient-to-br from-zinc-900/80 to-zinc-950/80 rounded-[2rem] border border-zinc-800/50 shadow-xl">
+            <p className="text-[10px] text-zinc-500 mb-3 font-black uppercase tracking-[0.2em]">Données Locales</p>
+            <div className="flex items-center space-x-3">
+              <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse" />
+              <span className="text-xs font-bold text-zinc-300 uppercase tracking-widest">Connecté</span>
             </div>
           </div>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12 relative">
-        <div className="max-w-4xl mx-auto h-full">
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12 relative scroll-smooth">
+        <div className="max-w-5xl mx-auto h-full">
           {view === AppView.HOME && (
-            <div className="flex flex-col items-center justify-center min-h-[80vh] text-center space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+            <div className="flex flex-col items-center justify-center min-h-[85vh] text-center space-y-16 animate-in fade-in slide-in-from-bottom-12 duration-1000">
                <div className="relative group">
-                 <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-                 <div className="relative w-32 h-32 bg-zinc-900 border border-zinc-800 rounded-3xl flex items-center justify-center shadow-2xl mb-4 transition-transform group-hover:scale-105">
-                    <BookOpen size={64} className="text-blue-500" />
+                 <div className="absolute -inset-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-[3rem] blur-2xl opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+                 <div className="relative w-36 h-36 bg-zinc-900 border border-zinc-800/50 rounded-[2.5rem] flex items-center justify-center shadow-2xl mb-4 transition-all group-hover:scale-105 group-hover:-rotate-2">
+                    <BookOpen size={72} className="text-blue-500" />
                  </div>
                </div>
                
-               <div className="space-y-4">
-                  <h1 className="text-5xl md:text-7xl font-black mb-4 bg-gradient-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent tracking-tighter">
-                    Préparez-vous <br/> avec Excellence.
+               <div className="space-y-6">
+                  <h1 className="text-6xl md:text-8xl font-black mb-4 bg-gradient-to-b from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent tracking-tighter leading-[0.9]">
+                    L'excellence <br/> spirituelle.
                   </h1>
-                  <p className="text-zinc-400 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed font-medium">
-                    L'assistant intelligent pour approfondir votre étude personnelle de la Bible et de nos publications.
+                  <p className="text-zinc-400 text-lg md:text-2xl max-w-2xl mx-auto leading-relaxed font-bold tracking-tight opacity-80">
+                    Générez des réponses profondes et trouvez des leçons pratiques pour vos réunions.
                   </p>
                </div>
 
-               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-2xl">
-                  <button onClick={() => navigateTo(AppView.MINISTRY)} className="p-8 bg-zinc-900/50 backdrop-blur-sm border border-zinc-800 rounded-[2.5rem] hover:border-blue-500/50 hover:bg-zinc-800/80 transition-all group text-left shadow-lg">
-                    <div className="w-12 h-12 bg-blue-600/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                      <Calendar className="text-blue-500" size={28} />
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 w-full max-w-3xl">
+                  <button onClick={() => navigateTo(AppView.MINISTRY)} className="p-10 bg-zinc-900/40 backdrop-blur-md border border-zinc-800 rounded-[3rem] hover:border-blue-500/50 hover:bg-zinc-800 transition-all group text-left shadow-2xl relative overflow-hidden active:scale-95">
+                    <div className="w-14 h-14 bg-blue-600/10 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 group-hover:rotate-3 transition-transform border border-blue-500/20">
+                      <Calendar className="text-blue-500" size={32} />
                     </div>
-                    <h3 className="font-black text-2xl mb-2 text-zinc-100">Vie et Ministère</h3>
-                    <p className="text-sm text-zinc-500 leading-relaxed">Réponses pour les perles, exposés et l'étude biblique de l'assemblée.</p>
+                    <h3 className="font-black text-3xl mb-3 text-zinc-100">Vie et Ministère</h3>
+                    <p className="text-zinc-500 font-bold leading-relaxed">Perles, exposés et étude biblique avec leçons exclusives.</p>
                   </button>
 
-                  <button onClick={() => navigateTo(AppView.WATCHTOWER)} className="p-8 bg-zinc-900/50 backdrop-blur-sm border border-zinc-800 rounded-[2.5rem] hover:border-indigo-500/50 hover:bg-zinc-800/80 transition-all group text-left shadow-lg">
-                    <div className="w-12 h-12 bg-indigo-600/10 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                      <BookOpen className="text-indigo-500" size={28} />
+                  <button onClick={() => navigateTo(AppView.WATCHTOWER)} className="p-10 bg-zinc-900/40 backdrop-blur-md border border-zinc-800 rounded-[3rem] hover:border-indigo-500/50 hover:bg-zinc-800 transition-all group text-left shadow-2xl relative overflow-hidden active:scale-95">
+                    <div className="w-14 h-14 bg-indigo-600/10 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 group-hover:-rotate-3 transition-transform border border-indigo-500/20">
+                      <BookOpen className="text-indigo-500" size={32} />
                     </div>
-                    <h3 className="font-black text-2xl mb-2 text-zinc-100">La Tour de Garde</h3>
-                    <p className="text-sm text-zinc-500 leading-relaxed">Analyses détaillées, réponses structurées et applications bibliques.</p>
+                    <h3 className="font-black text-3xl mb-3 text-zinc-100">La Tour de Garde</h3>
+                    <p className="text-zinc-500 font-bold leading-relaxed">Analyses complètes de tous les paragraphes et révision.</p>
                   </button>
                </div>
 
-               <div className="flex flex-wrap justify-center gap-4 text-xs font-bold text-zinc-600 uppercase tracking-[0.2em]">
-                 <span className="flex items-center space-x-1"><div className="w-1 h-1 bg-zinc-700 rounded-full" /> <span>HORS LIGNE</span></span>
-                 <span className="flex items-center space-x-1"><div className="w-1 h-1 bg-zinc-700 rounded-full" /> <span>TMN 2013</span></span>
-                 <span className="flex items-center space-x-1"><div className="w-1 h-1 bg-zinc-700 rounded-full" /> <span>RÉFLEXION IA</span></span>
+               <div className="flex flex-wrap justify-center gap-6 text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">
+                 <span className="flex items-center space-x-2 bg-zinc-900/50 px-4 py-2 rounded-full border border-zinc-800/50"><span>HORS LIGNE OK</span></span>
+                 <span className="flex items-center space-x-2 bg-zinc-900/50 px-4 py-2 rounded-full border border-zinc-800/50"><span>TMN 2013</span></span>
+                 <span className="flex items-center space-x-2 bg-zinc-900/50 px-4 py-2 rounded-full border border-zinc-800/50"><span>IA GEMINI 2.5</span></span>
                </div>
             </div>
           )}
@@ -162,7 +169,7 @@ const App: React.FC = () => {
       {/* Overlay for mobile sidebar */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-30 md:hidden animate-in fade-in duration-300"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
