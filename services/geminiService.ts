@@ -8,17 +8,17 @@ export const generateStudyContent = async (
   part: StudyPart = 'tout'
 ): Promise<{ text: string; title: string; sources: any[] }> => {
   
-  // Protection contre le crash 'process is not defined' sur navigateur
+  // Accès sécurisé à la clé API pour éviter le crash au chargement
   let apiKey = "";
   try {
     // @ts-ignore
-    apiKey = (typeof process !== 'undefined' && process.env?.API_KEY) ? process.env.API_KEY : "";
+    apiKey = (typeof process !== 'undefined' && process.env && process.env.API_KEY) ? process.env.API_KEY : "";
   } catch (e) {
-    console.error("Erreur d'accès à la clé API");
+    console.error("Clé API inaccessible");
   }
   
   if (!apiKey) {
-    throw new Error("Clé API non trouvée. Veuillez configurer API_KEY dans Vercel.");
+    throw new Error("Clé API manquante. Veuillez configurer API_KEY dans vos variables d'environnement Vercel.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -28,32 +28,35 @@ export const generateStudyContent = async (
   if (type === 'WATCHTOWER') {
     prompt = `
       TU ES UN EXPERT EN RECHERCHE BIBLIQUE POUR LES TÉMOINS DE JÉHOVAH. 
+      SOURCE : jw.org
       ARTICLE : "${input}"
       BIBLE : Traduction du Monde Nouveau (TMN)
       
-      INSTRUCTIONS :
-      1. TRAITE CHAQUE PARAGRAPHE SANS EXCEPTION, de 1 à la fin.
-      2. POUR CHAQUE PARAGRAPHE :
-         - Numéro et Question exacte.
-         - "Réponse (Points clés) :" Détails du paragraphe.
-         - "Commentaire :" Analyse profonde et biblique.
-         - "Application :" Mise en pratique concrète.
-      3. RÉVISION : Réponds à TOUTES les questions de révision à la fin.
+      TA MISSION :
+      1. TRAITE TOUS LES PARAGRAPHES de 1 jusqu'à la fin de l'article.
+      2. POUR CHAQUE PARAGRAPHE, GÉNÈRE :
+         - Le numéro du paragraphe et sa question.
+         - "Réponse (Points clés) :" Informations directes du paragraphe.
+         - "Commentaire :" Une analyse profonde et encourageante.
+         - "Application :" Comment appliquer cela concrètement.
+      3. RÉVISION : Réponds à TOUTES les questions de la boîte de révision finale.
       
-      RÈGLES BIBLE :
-      - Écris le texte COMPLET des versets entre parenthèses juste après leur référence.
+      CONSIGNE BIBLIQUE :
+      - Cite CHAQUE verset en entier entre parenthèses immédiatement après sa référence (ex: Jean 3:16 (Car Dieu a tant aimé...)).
     `;
   } else {
     prompt = `
       TU ES UN EXPERT EN RECHERCHE BIBLIQUE POUR LES TÉMOINS DE JÉHOVAH.
-      ARTICLE : "${input}" (Réunion Vie et Ministère)
+      REUNION : Vie et Ministère
+      ARTICLE : "${input}"
       SECTION : ${part === 'tout' ? 'Toutes les parties' : part}.
+      BIBLE : Traduction du Monde Nouveau (TMN)
 
-      IMPORTANT POUR L'ÉTUDE BIBLIQUE :
-      Si c'est l'étude biblique, fournis OBLIGATOIREMENT ces 6 leçons :
-      - Leçon pour soi / Leçon pour la prédication / Leçon pour la famille / Leçon pour l'assemblée / Sur Jéhovah / Sur Jésus.
+      IMPORTANT POUR L'ÉTUDE BIBLIQUE DE L'ASSEMBLÉE :
+      Fournis obligatoirement les 6 leçons suivantes :
+      - Leçon pour soi / Prédication / Famille / Assemblée / Qualités de Jéhovah / Exemple de Jésus.
       
-      RÈGLES BIBLE :
+      CONSIGNE BIBLIQUE :
       - Texte COMPLET des versets entre parenthèses.
     `;
   }
@@ -68,17 +71,18 @@ export const generateStudyContent = async (
       },
     });
 
-    if (!response.text) throw new Error("Réponse vide de l'IA.");
+    if (!response.text) throw new Error("L'IA n'a retourné aucune réponse.");
 
     const text = response.text;
-    const title = text.split('\n')[0].replace(/[#*]/g, '').trim() || (type === 'WATCHTOWER' ? 'Tour de Garde' : 'Cahier de réunion');
+    const title = text.split('\n')[0].replace(/[#*]/g, '').trim() || (type === 'WATCHTOWER' ? 'Étude de la Tour de Garde' : 'Cahier de réunion');
 
     return { text, title, sources: [] };
   } catch (error: any) {
     console.error("Gemini API Error:", error);
-    if (error.message?.includes("429") || error.message?.includes("quota")) {
-      throw new Error("QUOTA ÉPUISÉ : Vous avez atteint la limite gratuite de votre clé API Gemini. Veuillez réessayer plus tard ou utiliser une autre clé.");
+    const errorMsg = error.message || "";
+    if (errorMsg.includes("429") || errorMsg.includes("quota")) {
+      throw new Error("LIMITE ATTEINTE (429) : Vous avez épuisé votre quota gratuit pour aujourd'hui. Veuillez réessayer dans quelques heures ou utiliser une autre clé API.");
     }
-    throw error;
+    throw new Error("Erreur de l'IA : " + errorMsg);
   }
 };

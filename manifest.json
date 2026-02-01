@@ -1,11 +1,12 @@
 
 {
-  "short_name": "JW STUDY",
+  "short_name": "JW Study",
   "name": "JW Study Assistant Pro",
+  "description": "Assistant d'étude biblique pour les Témoins de Jéhovah.",
   "icons": [
     {
-      "src": "https://img.icons8.com/ios-filled/512/4a70b5/book.png",
-      "type": "image/png",
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%234a70b5'/><text x='50%' y='68%' font-family='Arial, sans-serif' font-weight='900' font-size='52' fill='white' text-anchor='middle'>JW</text></svg>",
+      "type": "image/svg+xml",
       "sizes": "512x512"
     }
   ],
