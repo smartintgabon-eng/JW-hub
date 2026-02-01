@@ -1,17 +1,18 @@
 
-const CACHE_NAME = 'jw-study-pro-v11';
+const CACHE_NAME = 'jw-study-pro-v12';
 const ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/index.tsx',
-  '/types.ts'
+  '/types.ts',
+  'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Lora:ital,wght@0,400..700;1,400..700&display=swap'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('Mise en cache des ressources PWA');
+      console.log('Installation de la PWA JW Study...');
       return cache.addAll(ASSETS);
     })
   );
@@ -35,7 +36,6 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Mettre à jour le cache avec la nouvelle réponse
         const clone = response.clone();
         caches.open(CACHE_NAME).then((cache) => {
           cache.put(event.request, clone);

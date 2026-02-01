@@ -1,15 +1,16 @@
 
 {
   "short_name": "JW Study",
-  "name": "JW Study Assistant",
-  "description": "Assistant d'étude biblique pour les réunions.",
-  "id": "/",
+  "name": "JW Study Assistant Pro",
+  "description": "Assistant d'étude biblique avancé pour les réunions.",
+  "id": "jw-study-assistant",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
   "theme_color": "#4a70b5",
   "background_color": "#09090b",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%234a70b5'/%3E%3Ctext x='96' y='120' font-family='sans-serif' font-weight='900' font-size='70' fill='white' text-anchor='middle'%3EJW%3C/text%3E%3C/svg%3E",
@@ -26,7 +27,7 @@
   ],
   "screenshots": [
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1080' height='1920' viewBox='0 0 1080 1920'%3E%3Crect width='1080' height='1920' fill='%2309090b'/%3E%3Ctext x='540' y='960' font-family='sans-serif' font-size='60' fill='white' text-anchor='middle'%3EJW Study Mobile%3C/text%3E%3C/svg%3E",
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1080' height='1920' viewBox='0 0 1080 1920'%3E%3Crect width='1080' height='1920' fill='%2309090b'/%3E%3Ctext x='540' y='960' font-family='sans-serif' font-size='60' fill='white' text-anchor='middle'%3EJW Study Assistant%3C/text%3E%3C/svg%3E",
       "sizes": "1080x1920",
       "type": "image/svg+xml",
       "form_factor": "narrow"
