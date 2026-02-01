@@ -3,17 +3,17 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>JW Study - Assistant Spirituel</title>
     
-    <!-- Meta tags pour PWA -->
+    <!-- Meta tags pour PWA (Android & iOS) -->
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="JW Study">
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%234a70b5'/><text x='50%' y='68%' font-family='Arial, sans-serif' font-weight='900' font-size='55' fill='white' text-anchor='middle'>JW</text></svg>">
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Utilisation de chemin relatif pour le manifest -->
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#4a70b5">
     
@@ -35,6 +35,8 @@
             min-height: 100vh;
             -webkit-user-select: none;
             user-select: none;
+            /* Support pour les encoches (notches) des téléphones modernes */
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
         }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -57,15 +59,23 @@
 </head>
 <body class="selection:bg-blue-600/40">
     <div id="root"></div>
-    <!-- Utilisation de chemin relatif pour le script principal -->
     <script type="module" src="./index.tsx"></script>
     <script>
-        // Enregistrement sécurisé du Service Worker avec chemin relatif
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                // Utiliser ./sw.js au lieu de /sw.js pour respecter l'origine du déploiement
                 navigator.serviceWorker.register('./sw.js', { scope: './' })
-                    .then(reg => console.log('SW Registered'))
+                    .then(reg => {
+                        console.log('SW Registered');
+                        // Forcer la mise à jour si un nouveau SW est disponible
+                        reg.onupdatefound = () => {
+                            const installingWorker = reg.installing;
+                            installingWorker.onstatechange = () => {
+                                if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    window.location.reload();
+                                }
+                            };
+                        };
+                    })
                     .catch(err => console.log('SW Registration failed', err));
             });
         }
