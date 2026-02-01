@@ -8,7 +8,6 @@ export const generateStudyContent = async (
   part: StudyPart = 'tout'
 ): Promise<{ text: string; title: string; sources: any[] }> => {
   
-  // Accès sécurisé à la clé API pour éviter le crash au chargement
   let apiKey = "";
   try {
     // @ts-ignore
@@ -22,7 +21,9 @@ export const generateStudyContent = async (
   }
 
   const ai = new GoogleGenAI({ apiKey });
-  const model = 'gemini-3-pro-preview';
+  
+  // Utilisation de gemini-3-flash-preview qui a des limites de quota beaucoup plus élevées que le modèle Pro
+  const model = 'gemini-3-flash-preview';
   
   let prompt = "";
   if (type === 'WATCHTOWER') {
@@ -33,16 +34,16 @@ export const generateStudyContent = async (
       BIBLE : Traduction du Monde Nouveau (TMN)
       
       TA MISSION :
-      1. TRAITE TOUS LES PARAGRAPHES de 1 jusqu'à la fin de l'article.
+      1. TRAITE TOUS LES PARAGRAPHES de l'article sans exception.
       2. POUR CHAQUE PARAGRAPHE, GÉNÈRE :
          - Le numéro du paragraphe et sa question.
-         - "Réponse (Points clés) :" Informations directes du paragraphe.
-         - "Commentaire :" Une analyse profonde et encourageante.
-         - "Application :" Comment appliquer cela concrètement.
-      3. RÉVISION : Réponds à TOUTES les questions de la boîte de révision finale.
+         - "Réponse (Points clés) :" Détails du paragraphe.
+         - "Commentaire :" Une réflexion encourageante pour les réunions.
+         - "Application :" Mise en pratique.
+      3. RÉVISION : Réponds à TOUTES les questions de révision.
       
       CONSIGNE BIBLIQUE :
-      - Cite CHAQUE verset en entier entre parenthèses immédiatement après sa référence (ex: Jean 3:16 (Car Dieu a tant aimé...)).
+      - Écris le texte COMPLET des versets entre parenthèses après chaque référence.
     `;
   } else {
     prompt = `
@@ -52,8 +53,8 @@ export const generateStudyContent = async (
       SECTION : ${part === 'tout' ? 'Toutes les parties' : part}.
       BIBLE : Traduction du Monde Nouveau (TMN)
 
-      IMPORTANT POUR L'ÉTUDE BIBLIQUE DE L'ASSEMBLÉE :
-      Fournis obligatoirement les 6 leçons suivantes :
+      INSTRUCTION SPÉCIALE ÉTUDE BIBLIQUE :
+      Si c'est l'étude biblique, tu dois obligatoirement fournir ces 6 leçons :
       - Leçon pour soi / Prédication / Famille / Assemblée / Qualités de Jéhovah / Exemple de Jésus.
       
       CONSIGNE BIBLIQUE :
@@ -71,18 +72,21 @@ export const generateStudyContent = async (
       },
     });
 
-    if (!response.text) throw new Error("L'IA n'a retourné aucune réponse.");
+    if (!response.text) throw new Error("Réponse vide de l'IA.");
 
     const text = response.text;
-    const title = text.split('\n')[0].replace(/[#*]/g, '').trim() || (type === 'WATCHTOWER' ? 'Étude de la Tour de Garde' : 'Cahier de réunion');
+    const title = text.split('\n')[0].replace(/[#*]/g, '').trim() || (type === 'WATCHTOWER' ? 'Tour de Garde' : 'Réunion Vie et Ministère');
 
     return { text, title, sources: [] };
   } catch (error: any) {
     console.error("Gemini API Error:", error);
     const errorMsg = error.message || "";
-    if (errorMsg.includes("429") || errorMsg.includes("quota")) {
-      throw new Error("LIMITE ATTEINTE (429) : Vous avez épuisé votre quota gratuit pour aujourd'hui. Veuillez réessayer dans quelques heures ou utiliser une autre clé API.");
+    
+    // Gestion explicite de l'erreur 429
+    if (errorMsg.includes("429") || errorMsg.includes("quota") || errorMsg.includes("RESOURCE_EXHAUSTED")) {
+      throw new Error("LIMITE DE L'IA ATTEINTE : Google limite le nombre de recherches gratuites par minute. Veuillez patienter 1 ou 2 minutes avant de réessayer, cela refonctionnera tout seul.");
     }
-    throw new Error("Erreur de l'IA : " + errorMsg);
+    
+    throw new Error("L'IA a rencontré un problème. Vérifiez le lien ou réessayez dans un instant.");
   }
 };

@@ -48,7 +48,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated }) => {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex items-center space-x-5 mb-6">
-        <div className={`p-4 rounded-[1.5rem] ${type === 'WATCHTOWER' ? 'bg-[#4a70b5]/20 text-[#4a70b5]' : 'bg-[#4a70b5]/20 text-[#4a70b5]'}`}>
+        <div className={`p-4 rounded-[1.5rem] bg-[#4a70b5]/20 text-[#4a70b5] shadow-inner`}>
           {type === 'WATCHTOWER' ? <Calendar size={32} /> : <Search size={32} />}
         </div>
         <div>
@@ -101,9 +101,12 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated }) => {
         )}
 
         {error && (
-          <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start space-x-4 text-red-400">
-            <AlertCircle size={24} className="shrink-0" />
-            <span className="font-bold leading-relaxed">{error}</span>
+          <div className="p-6 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-start space-x-4 text-amber-200">
+            <AlertCircle size={24} className="shrink-0 mt-0.5" />
+            <div className="space-y-2">
+              <p className="font-black uppercase text-xs tracking-widest text-amber-500">Note sur le quota</p>
+              <p className="font-bold leading-relaxed text-sm">{error}</p>
+            </div>
           </div>
         )}
 
@@ -119,7 +122,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated }) => {
           {loading ? (
             <>
               <Loader2 className="animate-spin" size={24} />
-              <span>Analyse JW...</span>
+              <span>Recherche en cours...</span>
             </>
           ) : (
             <>
