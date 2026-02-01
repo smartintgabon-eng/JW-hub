@@ -2,25 +2,25 @@
 import { GoogleGenAI } from "@google/genai";
 import { StudyPart, AppSettings } from "../types";
 
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export const generateStudyContent = async (
   type: 'WATCHTOWER' | 'MINISTRY',
   input: string,
   part: StudyPart = 'tout',
-  settings: AppSettings
+  settings: AppSettings,
+  retryCount = 0
 ): Promise<{ text: string; title: string; theme?: string }> => {
   
   const apiKey = process.env.API_KEY || "";
   if (!apiKey) throw new Error("Clé API manquante.");
 
   const ai = new GoogleGenAI({ apiKey });
-  
-  // Flash est utilisé pour sa rapidité et son efficacité avec les outils de recherche
   const modelName = 'gemini-3-flash-preview';
   
   const isLink = input.startsWith('http');
   const isDate = !isLink && /^\d{4}-\d{2}-\d{2}$/.test(input);
 
-  // Construction de requêtes de recherche très ciblées
   let searchQuery = input;
   if (isDate) {
     const dateObj = new Date(input);
@@ -31,60 +31,65 @@ export const generateStudyContent = async (
   }
 
   const systemInstruction = `
-    TON RÔLE : Tu es un assistant expert pour l'étude des publications des Témoins de Jéhovah sur jw.org.
+    RÔLE : Assistant d'étude JW.ORG.
     
-    RÈGLE CRITIQUE : Tu ne dois JAMAIS inventer de contenu. Tu DOIS obligatoirement utiliser l'outil googleSearch pour trouver l'article source sur jw.org avant de répondre.
+    INSTRUCTION : Tu DOIS utiliser l'outil googleSearch pour accéder au contenu réel de jw.org. 
+    Ne te base jamais sur tes connaissances internes.
     
-    MÉTHODE :
-    1. Utilise googleSearch pour localiser précisément l'article sur jw.org lié à : "${searchQuery}".
-    2. Analyse le texte complet de l'article (titre, thème, questions, paragraphes et versets).
-    3. Génère une réponse structurée fidèle au texte original.
+    TACHE :
+    1. Trouve et lis l'article source : "${searchQuery}".
+    2. Génère l'étude complète paragraphe par paragraphe.
     
-    FORMAT DE RÉPONSE ATTENDU :
-    # [TITRE DE L'ARTICLE]
-    Thème : [Thème central]
+    STRUCTURE :
+    # [TITRE]
+    Thème : [Sujet]
     
-    PARAGRAPHE 1
-    QUESTION : [La question exacte de l'article]
-    VERSET : [Citer le ou les versets mentionnés dans le paragraphe]
-    RÉPONSE : [Réponse précise basée sur le paragraphe]
-    COMMENTAIRE : [Un commentaire profond et encourageant]
-    APPLICATION : [Une application pratique pour la vie chrétienne]
+    PARAGRAPHE X
+    QUESTION : [Texte]
+    VERSET : [Citations]
+    RÉPONSE : [Précise]
+    COMMENTAIRE : [Encourageant]
+    APPLICATION : [Pratique]
     
-    (Répète pour chaque paragraphe trouvé)
-    
-    ${settings.answerPreferences ? `PRÉFÉRENCES DE L'UTILISATEUR : ${settings.answerPreferences}` : ''}
+    ${settings.answerPreferences ? `PRÉFÉRENCES : ${settings.answerPreferences}` : ''}
   `;
 
   try {
     const response = await ai.models.generateContent({
       model: modelName,
-      contents: isLink ? `Analyse cet article : ${input}` : `Recherche et prépare l'étude pour : ${searchQuery}`,
+      contents: isLink ? `Analyse cet article : ${input}` : `Cherche l'étude : ${searchQuery}`,
       config: {
-        systemInstruction: systemInstruction,
-        temperature: 0.1, // Très bas pour assurer la fidélité au texte source
+        systemInstruction,
+        temperature: 0.1,
         tools: [{ googleSearch: {} }] 
       },
     });
 
     const text = response.text || "";
-    if (!text || text.length < 150) {
-       throw new Error("L'IA n'a pas pu extraire assez d'informations. Veuillez vérifier que le lien ou la date correspond bien à un article existant sur jw.org.");
+    if (!text || text.length < 100) {
+       throw new Error("Contenu insuffisant trouvé.");
     }
 
-    const lines = text.split('\n').filter(l => l.trim() !== '');
     const titleMatch = text.match(/^#\s*(.*)/m);
-    const title = titleMatch ? titleMatch[1].trim() : (lines[0].replace(/[#*]/g, '').trim() || "Étude jw.org");
-    
-    const themeLine = lines.find(l => l.toLowerCase().includes('thème') || l.toLowerCase().includes('sujet'));
-    const theme = themeLine ? themeLine.replace(/^[#*\s]*thème\s*:\s*/i, '').trim() : "";
+    const title = titleMatch ? titleMatch[1].trim() : "Étude JW";
+    const theme = text.match(/Thème\s*:\s*(.*)/i)?.[1]?.trim() || "";
 
     return { text, title, theme };
+
   } catch (error: any) {
-    console.error("Erreur Gemini:", error);
-    if (error.message?.includes('429')) {
-      throw new Error("Le service est temporairement surchargé. Attendez 30 secondes.");
+    console.error("Gemini Error:", error);
+
+    // Gestion intelligente du 429 (Rate Limit)
+    if (error.message?.includes('429') && retryCount < 2) {
+      console.log(`Rate limit atteint. Tentative ${retryCount + 1}...`);
+      await sleep(2000 * (retryCount + 1)); // Attendre un peu
+      return generateStudyContent(type, input, part, settings, retryCount + 1);
     }
-    throw new Error(`Échec de la recherche : ${error.message || "Impossible d'accéder aux données de jw.org."}`);
+
+    if (error.message?.includes('429')) {
+      throw new Error("Le serveur Google est très sollicité. Réessayez dans 1 minute ou utilisez un lien direct.");
+    }
+
+    throw new Error(error.message || "Erreur de connexion aux serveurs de recherche.");
   }
 };

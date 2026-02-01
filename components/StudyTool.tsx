@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Search, Link as LinkIcon, Calendar, Loader2, Globe, Check, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Search, Link as LinkIcon, Calendar, Loader2, Globe, Check, ShieldCheck, AlertTriangle, RefreshCw } from 'lucide-react';
 import { StudyPart, GeneratedStudy, AppSettings } from '../types';
 import { generateStudyContent } from '../services/geminiService';
 
@@ -28,20 +28,29 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
     localStorage.setItem(`draft_${type}`, val);
   };
 
+  const resetState = () => {
+    setLoading(false);
+    setError(null);
+    setLoadingStep('');
+  };
+
   const handleGenerate = async (isRetry = false) => {
+    if (loading) return; // Sécurité anti-double-clic
+    
     setLoading(true);
     setError(null);
-    setLoadingStep('Recherche sur jw.org...');
+    setLoadingStep('Initialisation...');
     
     try {
-      if (isRetry) setLoadingStep('Analyse des paragraphes...');
+      setLoadingStep('Recherche Web JW.ORG...');
+      if (isRetry) setLoadingStep('Analyse approfondie...');
       
       const result = await generateStudyContent(type, input, 'tout', settings);
       
       if (!isRetry && !preview) {
         setPreview({ title: result.title, theme: result.theme });
       } else {
-        setLoadingStep('Finalisation...');
+        setLoadingStep('Enregistrement...');
         const newStudy: GeneratedStudy = {
           id: Date.now().toString(),
           type,
@@ -57,7 +66,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
         localStorage.removeItem(`draft_${type}`);
       }
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || "Une erreur inconnue est survenue.");
     } finally {
       setLoading(false);
       setLoadingStep('');
@@ -74,8 +83,8 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
           <h2 className="text-2xl font-black uppercase tracking-tight">{type === 'WATCHTOWER' ? 'Tour de Garde' : 'Cahier de Réunion'}</h2>
         </div>
         <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
-          <button onClick={() => { setMode('link'); setInput(''); }} className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${mode === 'link' ? 'bg-white/10 shadow' : 'opacity-40'}`}>Lien</button>
-          <button onClick={() => { setMode('date'); setInput(''); }} className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${mode === 'date' ? 'bg-white/10 shadow' : 'opacity-40'}`}>Date</button>
+          <button onClick={() => { setMode('link'); setInput(''); setError(null); }} className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${mode === 'link' ? 'bg-white/10 shadow' : 'opacity-40'}`}>Lien</button>
+          <button onClick={() => { setMode('date'); setInput(''); setError(null); }} className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${mode === 'date' ? 'bg-white/10 shadow' : 'opacity-40'}`}>Date</button>
         </div>
       </div>
 
@@ -89,7 +98,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
               type={mode === 'link' ? "text" : "date"}
               value={input}
               onChange={(e) => handleInputChange(e.target.value)}
-              placeholder={mode === 'link' ? "https://www.jw.org/fr/bibliotheque/..." : ""}
+              placeholder={mode === 'link' ? "https://www.jw.org/fr/..." : ""}
               className="w-full bg-black/40 border border-white/10 rounded-xl py-5 pl-14 pr-4 focus:border-[var(--btn-color)] outline-none transition-all font-medium"
             />
             <div className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30">
@@ -99,9 +108,18 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
         </div>
 
         {error && (
-          <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm font-bold flex items-start space-x-3 animate-in fade-in zoom-in duration-300">
-            <AlertTriangle size={20} className="mt-0.5 flex-shrink-0" />
-            <span>{error}</span>
+          <div className="p-5 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-sm font-bold flex flex-col space-y-3 animate-in fade-in zoom-in duration-300">
+            <div className="flex items-start space-x-3">
+              <AlertTriangle size={20} className="mt-0.5 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+            <button 
+              onClick={() => resetState()} 
+              className="text-[10px] uppercase tracking-widest bg-white/10 self-end px-3 py-1 rounded-md hover:bg-white/20 transition-all flex items-center space-x-2"
+            >
+              <RefreshCw size={12} />
+              <span>Réinitialiser la recherche</span>
+            </button>
           </div>
         )}
 
@@ -109,12 +127,12 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
           onClick={() => handleGenerate()}
           disabled={loading || !input}
           style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }}
-          className="w-full py-5 rounded-xl font-black uppercase tracking-widest flex flex-col items-center justify-center space-y-1 shadow-2xl active:scale-95 disabled:opacity-20 transition-all min-h-[80px]"
+          className="w-full py-5 rounded-xl font-black uppercase tracking-widest flex flex-col items-center justify-center space-y-1 shadow-2xl active:scale-95 disabled:opacity-20 transition-all min-h-[90px]"
         >
           {loading ? (
             <>
               <Loader2 className="animate-spin mb-1" size={24} />
-              <span className="text-xs opacity-70 animate-pulse">{loadingStep}</span>
+              <span className="text-[10px] opacity-70 animate-pulse font-bold tracking-widest">{loadingStep}</span>
             </>
           ) : (
             <>
@@ -130,32 +148,22 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
           <div className="absolute top-0 left-0 w-2 h-full bg-[var(--btn-color)] shadow-[0_0_15px_var(--btn-color)]" />
           <div className="flex items-center space-x-3 mb-6 text-[var(--btn-color)]">
             <Check size={24} className="stroke-[3]" />
-            <span className="text-xs font-black uppercase tracking-[0.3em]">Article Trouvé</span>
+            <span className="text-xs font-black uppercase tracking-[0.3em]">Article Validé</span>
           </div>
           <h3 className="text-3xl font-black mb-3 leading-tight uppercase tracking-tighter">{preview.title}</h3>
-          <p className="text-lg opacity-60 mb-8 font-serif italic">{preview.theme || "Prêt pour l'analyse approfondie"}</p>
+          <p className="text-lg opacity-60 mb-8 font-serif italic">{preview.theme || "Prêt pour la préparation spirituelle"}</p>
           
-          <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-6 mb-10 flex items-start space-x-4">
-             <ShieldCheck className="text-blue-400 mt-1 flex-shrink-0" size={24} />
-             <div className="space-y-1">
-                <p className="font-black text-sm uppercase text-blue-200">Prêt pour la génération</p>
-                <p className="text-xs leading-relaxed opacity-70">
-                   L'IA va maintenant analyser chaque paragraphe pour extraire les perles spirituelles et préparer vos commentaires.
-                </p>
-             </div>
-          </div>
-
           <div className="flex flex-col sm:flex-row gap-4">
             <button 
               onClick={() => handleGenerate(true)} 
               disabled={loading}
               style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
-              className="flex-1 py-4 rounded-xl font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center space-x-2"
+              className="flex-1 py-5 rounded-xl font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center space-x-2"
             >
-              {loading && <Loader2 className="animate-spin" size={18} />}
-              <span>{loading ? "Génération..." : "Confirmer & Générer"}</span>
+              {loading ? <Loader2 className="animate-spin" size={18} /> : <ShieldCheck size={18} />}
+              <span>{loading ? "Génération en cours..." : "Générer les réponses"}</span>
             </button>
-            <button onClick={() => setPreview(null)} className="flex-1 bg-white/5 border border-white/10 py-4 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-white/10 transition-all">Annuler</button>
+            <button onClick={() => setPreview(null)} className="flex-1 bg-white/5 border border-white/10 py-5 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-white/10 transition-all">Annuler</button>
           </div>
         </div>
       )}

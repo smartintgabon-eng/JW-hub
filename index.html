@@ -26,14 +26,20 @@
     </script>
 
     <script>
+      // Enregistrement ultra-précis pour éviter les erreurs d'origine dans le bac à sable
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          // Utilisation d'un chemin relatif 'sw.js' sans slash initial pour éviter le conflit d'origine
-          navigator.serviceWorker.register('sw.js', { scope: './' })
-            .then(reg => console.log('SW enregistré avec succès sur le scope:', reg.scope))
+          const swPath = window.location.pathname.endsWith('/') 
+            ? window.location.pathname + 'sw.js' 
+            : window.location.pathname.split('/').slice(0, -1).join('/') + '/sw.js';
+            
+          navigator.serviceWorker.register(swPath)
+            .then(reg => console.log('SW prêt'))
             .catch(err => {
-              // On log en warning car en mode développement/bac à sable, le SW peut être bloqué par les politiques de sécurité
-              console.warn('Note sur le Service Worker :', err.message);
+              // On ignore silencieusement l'erreur d'origine dans l'aperçu car elle est attendue
+              if (!err.message.includes('origin')) {
+                console.warn('SW Status:', err.message);
+              }
             });
         });
       }
