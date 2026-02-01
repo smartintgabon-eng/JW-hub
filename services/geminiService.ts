@@ -16,54 +16,56 @@ export const generateStudyContent = async (
   const modelName = 'gemini-3-pro-preview';
   
   const isLink = input.startsWith('http');
-  // Amélioration du prompt de recherche pour jw.org
-  const searchQuery = isLink ? "" : `Recherche précisément sur jw.org l'article de ${type === 'WATCHTOWER' ? 'la Tour de Garde' : 'la réunion Vie et Ministère'} correspondant à la date ou au thème : "${input}".`;
+  
+  // Amélioration de la requête de recherche pour garantir que l'IA trouve l'article sur jw.org
+  const searchQuery = isLink ? "" : `Cherche sur jw.org l'article officiel pour : ${type === 'WATCHTOWER' ? 'Étude de la Tour de Garde' : 'Réunion Vie et Ministère'} correspondant à "${input}". Identifie le titre exact et le contenu avant de générer les réponses.`;
 
   let prompt = "";
-  const customPrefs = settings.answerPreferences ? `PREFERENCES UTILISATEUR SUPPLEMENTAIRES : ${settings.answerPreferences}` : "";
+  // Inclusion des préférences utilisateur
+  const customInstructions = settings.answerPreferences 
+    ? `\nCONSIGNES DE PERSONNALISATION DE L'UTILISATEUR : ${settings.answerPreferences}`
+    : "";
 
   if (type === 'WATCHTOWER') {
     prompt = `
-      TU ES UN EXPERT EN RECHERCHE BIBLIQUE POUR LES TÉMOINS DE JÉHOVAH.
-      ARTICLE SOURCE : ${isLink ? input : "Article trouvé via Google Search sur jw.org"}
-      BIBLE : Traduction du Monde Nouveau (TMN)
+      TU ES UN EXPERT EN RECHERCHE BIBLIQUE POUR LES TÉMOINS DE JÉHOVAH. 
+      BIBLE : Traduction du Monde Nouveau (TMN).
+      SOURCE : jw.org.
       
-      CONSIGNES STRICTES DE FORMATAGE :
-      1. ANALYSE TOUS LES PARAGRAPHES SANS EXCEPTION.
-      2. POUR CHAQUE PARAGRAPHE, FOURNIS :
-         - "PARAGRAPHE [Numéro] : [Question complète]"
-         - "VERSET À LIRE : (Écris ici le texte COMPLET du verset principal cité entre parenthèses)"
-         - "RÉPONSE : Commence par 'D'après [cite le chapitre et verset]...', puis donne la réponse."
-         - "COMMENTAIRE : [Propose un commentaire personnel et encourageant pour la réunion]"
-         - "APPLICATION : [Comment appliquer ce point concrètement aujourd'hui]"
-      3. RÉVISION : Réponds à TOUTES les questions de révision finales.
-
-      ${customPrefs}
-      STYLE : Élégant, spirituel et profond.
+      MISSION :
+      1. Analyse l'article ${isLink ? input : 'trouvé'}.
+      2. Pour CHAQUE paragraphe (ne saute aucun paragraphe), suis ce format :
+         - "PARAGRAPHE [Numéro] : [Question de l'article]"
+         - "VERSET À LIRE : (Texte COMPLET du verset cité entre parenthèses)"
+         - "RÉPONSE : Commence par 'D'après [chapitre:verset]...', puis donne la réponse basée sur l'article."
+         - "COMMENTAIRE : Propose un commentaire pour la réunion."
+         - "APPLICATION : Comment appliquer ce point concrètement."
+      3. Réponds aux "QUESTIONS DE RÉVISION" à la fin.
+      ${customInstructions}
+      
+      STYLE : Noble, spirituel et respectueux.
     `;
   } else {
     prompt = `
       TU ES UN EXPERT EN RECHERCHE BIBLIQUE POUR LES TÉMOINS DE JÉHOVAH.
-      CAHIER SOURCE : ${isLink ? input : "Cahier de réunion trouvé via Google Search sur jw.org"}
-      SECTION DEMANDÉE : ${part === 'tout' ? 'Toutes les parties' : part}
+      CAHIER : Vie et Ministère (${isLink ? input : 'recherche par date'}).
+      SECTION : ${part === 'tout' ? 'Tout le cahier' : part}.
       
       MISSION :
-      - Pour les perles spirituelles : Trouve 5 perles minimum. Chaque perle doit commencer par le VERSET COMPLET entre parenthèses.
-      - Pour les exposés et discours : Propose une structure complète (Introduction, points clés, Conclusion) avec des versets lus.
-      - Pour l'étude biblique de l'assemblée : Questions, versets complets, réponses et commentaires.
-      - Utilise "D'après [chapitre/verset]..." pour introduire tes pensées.
-
-      ${customPrefs}
-      STYLE : Structuré, noble et basé exclusivement sur jw.org et la TMN.
+      - Perles Spirituelles : Trouve 5 perles. Cite le VERSET COMPLET entre parenthèses au début de chaque point.
+      - Exposés/Discours : Structure complète (Intro, corps, conclusion) avec versets.
+      - Étude Biblique : Questions, versets complets, réponses détaillées et commentaires.
+      - Utilise "D'après [chapitre:verset]..." pour introduire tes pensées.
+      ${customInstructions}
     `;
   }
 
   try {
     const response = await ai.models.generateContent({
       model: modelName,
-      contents: searchQuery ? `${searchQuery}\n\nUne fois l'article identifié, applique ce plan : ${prompt}` : prompt,
+      contents: searchQuery ? `${searchQuery}\n\nUne fois identifié, prépare l'étude : ${prompt}` : prompt,
       config: {
-        temperature: 0.7,
+        temperature: 0.75,
         topP: 0.95,
         thinkingConfig: { thinkingBudget: 4000 },
         tools: isLink ? [] : [{ googleSearch: {} }] 
@@ -71,12 +73,12 @@ export const generateStudyContent = async (
     });
 
     const text = response.text;
-    if (!text) throw new Error("Aucun contenu généré.");
+    if (!text) throw new Error("Réponse vide de l'IA.");
     
-    const title = text.split('\n')[0].replace(/[#*]/g, '').trim() || "Étude Générée";
+    const title = text.split('\n')[0].replace(/[#*]/g, '').trim() || "Étude Préparée";
     return { text, title, sources: response.candidates?.[0]?.groundingMetadata?.groundingChunks || [] };
   } catch (error: any) {
     console.error("Gemini Error:", error);
-    throw new Error("Impossible de générer l'étude. Vérifiez le lien ou la date.");
+    throw new Error("L'IA n'a pas pu trouver l'article. Essayez avec un lien direct jw.org.");
   }
 };
