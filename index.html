@@ -6,24 +6,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>JW Study - Assistant Spirituel</title>
     
-    <!-- Meta tags pour PWA (iOS & Android) -->
+    <!-- Meta tags pour PWA -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="JW Study">
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%234a70b5'/><text x='50%' y='68%' font-family='Arial, sans-serif' font-weight='900' font-size='55' fill='white' text-anchor='middle'>JW</text></svg>">
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="manifest" href="/manifest.json">
+    <!-- Utilisation de chemin relatif pour le manifest -->
+    <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#4a70b5">
     
-    <!-- Sécurité critique pour Vercel -->
     <script>
       if (typeof window !== 'undefined') {
         window.process = window.process || { env: {} };
       }
     </script>
 
-    <!-- Favicon Officiel JW Bleu Ciel -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%234a70b5'/><text x='50%' y='68%' font-family='Arial, sans-serif' font-weight='900' font-size='55' fill='white' text-anchor='middle'>JW</text></svg>">
     
     <style>
@@ -58,14 +57,16 @@
 </head>
 <body class="selection:bg-blue-600/40">
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
+    <!-- Utilisation de chemin relatif pour le script principal -->
+    <script type="module" src="./index.tsx"></script>
     <script>
-        // Enregistrement du Service Worker pour PWA
+        // Enregistrement sécurisé du Service Worker avec chemin relatif
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js').catch(err => {
-                    console.error('Service Worker registration failed:', err);
-                });
+                // Utiliser ./sw.js au lieu de /sw.js pour respecter l'origine du déploiement
+                navigator.serviceWorker.register('./sw.js', { scope: './' })
+                    .then(reg => console.log('SW Registered'))
+                    .catch(err => console.log('SW Registration failed', err));
             });
         }
     </script>
