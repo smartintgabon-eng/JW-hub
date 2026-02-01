@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   BookOpen, 
   Calendar, 
@@ -10,7 +10,8 @@ import {
   Menu,
   X,
   Home as HomeIcon,
-  WifiOff
+  WifiOff,
+  Download
 } from 'lucide-react';
 import { AppView, GeneratedStudy, AppSettings } from './types';
 import { getSettings, getHistory, saveToHistory } from './utils/storage';
@@ -36,8 +37,15 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [history, setHistory] = useState<GeneratedStudy[]>(getHistory());
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
     const handleStatus = () => setIsOnline(navigator.onLine);
     window.addEventListener('online', handleStatus);
     window.addEventListener('offline', handleStatus);
@@ -58,8 +66,16 @@ const App: React.FC = () => {
     return () => {
       window.removeEventListener('online', handleStatus);
       window.removeEventListener('offline', handleStatus);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, [settings]);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') setDeferredPrompt(null);
+  };
 
   const navigateTo = (newView: AppView) => {
     setView(newView);
@@ -130,6 +146,16 @@ const App: React.FC = () => {
           <NavItem icon={HelpCircle} label="Tutoriel" active={view === AppView.TUTORIAL} onClick={() => navigateTo(AppView.TUTORIAL)} />
           <NavItem icon={SettingsIcon} label="Paramètres" active={view === AppView.SETTINGS} onClick={() => navigateTo(AppView.SETTINGS)} />
         </nav>
+
+        {deferredPrompt && (
+          <button 
+            onClick={handleInstallClick}
+            className="mt-4 w-full bg-blue-600/20 border border-blue-600/30 text-blue-400 py-3 rounded-xl flex items-center justify-center space-x-2 text-xs font-bold uppercase tracking-widest hover:bg-blue-600/30 transition-all"
+          >
+            <Download size={16} />
+            <span>Installer l'App</span>
+          </button>
+        )}
       </aside>
 
       {/* Main Content */}

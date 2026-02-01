@@ -3,41 +3,40 @@
   "short_name": "JW Study",
   "name": "JW Study Assistant Pro",
   "description": "Assistant spirituel pour l'étude biblique et les réunions.",
-  "id": "com.jwstudy.app.v1",
-  "start_url": "/",
+  "id": "jw-study-pro-v3",
+  "start_url": ".",
   "scope": "/",
   "display": "standalone",
-  "display_override": ["standalone", "window-controls-overlay"],
   "orientation": "any",
   "theme_color": "#4a70b5",
   "background_color": "#09090b",
   "icons": [
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='45' fill='%234a70b5'/%3E%3Ctext x='96' y='125' font-family='sans-serif' font-weight='900' font-size='85' fill='white' text-anchor='middle'%3EJW%3C/text%3E%3C/svg%3E",
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%234a70b5'/%3E%3Ctext x='96' y='125' font-family='sans-serif' font-weight='900' font-size='85' fill='white' text-anchor='middle'%3EJW%3C/text%3E%3C/svg%3E",
       "sizes": "192x192",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='120' fill='%234a70b5'/%3E%3Ctext x='256' y='330' font-family='sans-serif' font-weight='900' font-size='230' fill='white' text-anchor='middle'%3EJW%3C/text%3E%3C/svg%3E",
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%234a70b5'/%3E%3Ctext x='256' y='330' font-family='sans-serif' font-weight='900' font-size='230' fill='white' text-anchor='middle'%3EJW%3C/text%3E%3C/svg%3E",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='120' fill='%234a70b5'/%3E%3Ctext x='256' y='330' font-family='sans-serif' font-weight='900' font-size='230' fill='white' text-anchor='middle'%3EJW%3C/text%3E%3C/svg%3E",
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%234a70b5'/%3E%3Ctext x='256' y='330' font-family='sans-serif' font-weight='900' font-size='230' fill='white' text-anchor='middle'%3EJW%3C/text%3E%3C/svg%3E",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "maskable"
     }
   ],
-  "categories": ["productivity", "education"],
-  "prefer_related_applications": false,
-  "shortcuts": [
+  "categories": ["education", "productivity"],
+  "screenshots": [
     {
-      "name": "Tour de Garde",
-      "url": "/#watchtower",
-      "icons": [{ "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'%3E%3Cpath d='M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z'%3E%3C/path%3E%3Cpath d='M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z'%3E%3C/path%3E%3C/svg%3E", "sizes": "96x96" }]
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1080' height='1920' viewBox='0 0 1080 1920'%3E%3Crect width='1080' height='1920' fill='%2309090b'/%3E%3Ctext x='540' y='960' font-family='sans-serif' font-weight='900' font-size='80' fill='white' text-anchor='middle'%3EJW STUDY PRO%3C/text%3E%3C/svg%3E",
+      "sizes": "1080x1920",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
     }
   ]
 }
