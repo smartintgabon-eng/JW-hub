@@ -1,21 +1,16 @@
 
 {
-  "short_name": "JWStudy",
-  "name": "JW Study Assistant",
+  "short_name": "JW STUDY",
+  "name": "JW Study Assistant Pro",
   "icons": [
     {
-      "src": "https://picsum.photos/192/192",
-      "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "https://picsum.photos/512/512",
+      "src": "https://img.icons8.com/ios-filled/512/4a70b5/book.png",
       "type": "image/png",
       "sizes": "512x512"
     }
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#1e1e1e",
-  "background_color": "#1e1e1e"
+  "theme_color": "#4a70b5",
+  "background_color": "#09090b"
 }
