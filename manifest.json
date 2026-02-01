@@ -2,9 +2,9 @@
 {
   "short_name": "JW Study",
   "name": "JW Study Assistant Pro",
-  "description": "Assistant d'étude biblique avancé pour les réunions.",
-  "id": "jw-study-assistant",
-  "start_url": "/",
+  "description": "Assistant spirituel avancé pour l'étude biblique et les réunions.",
+  "id": "jw-study-assistant-pro",
+  "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
@@ -13,13 +13,13 @@
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%234a70b5'/%3E%3Ctext x='96' y='120' font-family='sans-serif' font-weight='900' font-size='70' fill='white' text-anchor='middle'%3EJW%3C/text%3E%3C/svg%3E",
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='42' fill='%234a70b5'/%3E%3Ctext x='96' y='125' font-family='sans-serif' font-weight='900' font-size='80' fill='white' text-anchor='middle'%3EJW%3C/text%3E%3C/svg%3E",
       "sizes": "192x192",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%234a70b5'/%3E%3Ctext x='256' y='320' font-family='sans-serif' font-weight='900' font-size='180' fill='white' text-anchor='middle'%3EJW%3C/text%3E%3C/svg%3E",
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='110' fill='%234a70b5'/%3E%3Ctext x='256' y='330' font-family='sans-serif' font-weight='900' font-size='220' fill='white' text-anchor='middle'%3EJW%3C/text%3E%3C/svg%3E",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "maskable"
