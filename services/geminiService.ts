@@ -13,62 +13,56 @@ export const generateStudyContent = async (
   if (!apiKey) throw new Error("Clé API manquante.");
 
   const ai = new GoogleGenAI({ apiKey });
+  
+  // Utilisation systématique de Gemini 3 Pro pour la recherche web
   const modelName = 'gemini-3-pro-preview';
   
   const isLink = input.startsWith('http');
-  // Utilisation systématique de googleSearch pour accéder au contenu dynamique de jw.org
-  const query = isLink 
-    ? `Utilise tes outils de recherche pour lire le contenu de ce lien jw.org : ${input}. Analyse ensuite chaque paragraphe dans l'ordre.`
-    : `Cherche sur jw.org l'article pour : ${input}.`;
-
-  const customInstructions = settings.answerPreferences 
-    ? `\nPRÉFÉRENCES UTILISATEUR : ${settings.answerPreferences}`
-    : "";
-
-  const prompt = type === 'WATCHTOWER' ? `
-    TU ES UN EXPERT BIBLIQUE DES TÉMOINS DE JÉHOVAH.
-    MISSION : Génère l'étude complète en suivant STRICTEMENT l'ordre des paragraphes de l'article (1, 2, 1-2, 3, etc.).
+  
+  // Instruction système très spécifique pour forcer l'usage du moteur de recherche sur jw.org
+  const systemInstruction = `
+    TU ES UN EXPERT EN RECHERCHE BIBLIQUE POUR LES TÉMOINS DE JÉHOVAH.
+    MISSION : Tu DOIS utiliser l'outil Google Search pour accéder au contenu de l'article sur jw.org.
     
-    FORMAT PAR PARAGRAPHE :
-    - PARAGRAPHE [Numéro] : [Question]
-    - VERSET À LIRE : [Texte complet TMN]
-    - RÉPONSE : D'après [verset], [réponse détaillée]
-    - COMMENTAIRE : [Point spirituel profond]
-    - APPLICATION : [Comment appliquer aujourd'hui]
+    RÈGLES D'ANALYSE :
+    1. Lis l'article entièrement.
+    2. Liste TOUS les paragraphes dans l'ordre (1, 2, 3...). Ne saute rien.
+    3. Pour chaque paragraphe : Donne la Question, le Verset à lire (texte complet), la Réponse basée sur le texte, un Commentaire pour la réunion, et une Application pratique.
+    4. Utilise un ton noble et spirituel.
     
-    Termine par les questions de révision.
-    ${customInstructions}
-  ` : `
-    TU ES UN EXPERT BIBLIQUE DES TÉMOINS DE JÉHOVAH.
-    MISSION : Prépare la réunion Vie et Ministère pour : ${part}.
-    Suit l'ordre du cahier de réunion.
-    - JOYAUX : Analyse verset par verset.
-    - PERLES : 5 perles minimum avec versets complets.
-    - ÉTUDE : Questions/Réponses dans l'ordre.
-    ${customInstructions}
+    ${settings.answerPreferences ? `CONSIGNES SPÉCIFIQUES : ${settings.answerPreferences}` : ''}
   `;
+
+  const userPrompt = isLink 
+    ? `Analyse cet article via ce lien direct : ${input}. Trouve le titre, le thème et génère l'étude complète paragraphe par paragraphe.`
+    : `Cherche sur jw.org l'article pour la date/sujet suivant : ${input}. Identifie l'article officiel et génère l'étude complète.`;
 
   try {
     const response = await ai.models.generateContent({
       model: modelName,
-      contents: `${query}\n\n${prompt}`,
+      contents: userPrompt,
       config: {
-        temperature: 0.7,
-        thinkingConfig: { thinkingBudget: 8000 },
-        tools: [{ googleSearch: {} }] // Toujours actif pour lire jw.org
+        systemInstruction: systemInstruction,
+        temperature: 0.5,
+        thinkingConfig: { thinkingBudget: 12000 },
+        tools: [{ googleSearch: {} }] 
       },
     });
 
     const text = response.text || "";
-    if (!text || text.length < 50) throw new Error("L'IA n'a pas pu extraire le contenu. Vérifiez le lien.");
+    if (!text || text.length < 100) {
+      throw new Error("L'IA n'a pas renvoyé assez de contenu. Réessayez.");
+    }
 
     const lines = text.split('\n');
-    const title = lines[0].replace(/[#*]/g, '').trim();
-    const theme = lines.find(l => l.toLowerCase().includes('thème') || l.toLowerCase().includes('article'))?.replace(/[#*]/g, '').trim();
+    const title = lines[0].replace(/[#*]/g, '').trim() || "Étude Biblique";
+    const themeLine = lines.find(l => l.toLowerCase().includes('thème') || l.toLowerCase().includes('titre'));
+    const theme = themeLine ? themeLine.replace(/[#*]/g, '').trim() : "Article JW.ORG";
 
     return { text, title, theme };
   } catch (error: any) {
-    console.error("Search Error:", error);
-    throw new Error("Impossible d'accéder à jw.org. Assurez-vous que le lien est correct et public.");
+    console.error("Gemini Search Error:", error);
+    if (error.message?.includes('429')) throw new Error("Trop de requêtes. Attendez une minute.");
+    throw new Error("Échec de la recherche sur jw.org. L'IA n'a pas pu accéder à la page. Vérifiez votre connexion ou le lien.");
   }
 };
