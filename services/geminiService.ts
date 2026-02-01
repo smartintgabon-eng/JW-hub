@@ -16,58 +16,59 @@ export const generateStudyContent = async (
   const modelName = 'gemini-3-pro-preview';
   
   const isLink = input.startsWith('http');
-  const searchQuery = isLink ? "" : `Identifie précisément l'article jw.org pour : ${input}.`;
+  // Utilisation systématique de googleSearch pour accéder au contenu dynamique de jw.org
+  const query = isLink 
+    ? `Utilise tes outils de recherche pour lire le contenu de ce lien jw.org : ${input}. Analyse ensuite chaque paragraphe dans l'ordre.`
+    : `Cherche sur jw.org l'article pour : ${input}.`;
 
   const customInstructions = settings.answerPreferences 
-    ? `\nINSTRUCTIONS PERSONNELLES : ${settings.answerPreferences}`
+    ? `\nPRÉFÉRENCES UTILISATEUR : ${settings.answerPreferences}`
     : "";
 
-  let prompt = "";
-  if (type === 'WATCHTOWER') {
-    prompt = `
-      TU ES UN EXPERT BIBLIQUE. SOURCE : jw.org. 
-      ORDRE CHRONOLOGIQUE STRICT : Analyse l'article paragraphe par paragraphe (1, 2, 3, etc. ou 1-2, 3...). 
-      NE SAUTE AUCUN NUMÉRO.
-      
-      FORMAT POUR CHAQUE SECTION :
-      - "PARAGRAPHE [Numéro(s)] : [Question exacte]"
-      - "VERSET À LIRE : [Texte complet du verset principal]"
-      - "RÉPONSE : D'après [verset], [réponse précise]"
-      - "COMMENTAIRE : [Pensée encourageante]"
-      - "APPLICATION : [Mise en pratique]"
-      
-      ${customInstructions}
-    `;
-  } else {
-    prompt = `
-      TU ES UN EXPERT BIBLIQUE. SOURCE : jw.org.
-      PRÉPARE LA RÉUNION VIE ET MINISTÈRE : ${part}.
-      RESTE FIDELE AU CAHIER DE RÉUNION.
-      - JOYAUX : Analyse profonde.
-      - PERLES : 5 minimum avec versets complets.
-      - ÉTUDE : Questions/Réponses dans l'ordre de l'article de l'étude.
-      ${customInstructions}
-    `;
-  }
+  const prompt = type === 'WATCHTOWER' ? `
+    TU ES UN EXPERT BIBLIQUE DES TÉMOINS DE JÉHOVAH.
+    MISSION : Génère l'étude complète en suivant STRICTEMENT l'ordre des paragraphes de l'article (1, 2, 1-2, 3, etc.).
+    
+    FORMAT PAR PARAGRAPHE :
+    - PARAGRAPHE [Numéro] : [Question]
+    - VERSET À LIRE : [Texte complet TMN]
+    - RÉPONSE : D'après [verset], [réponse détaillée]
+    - COMMENTAIRE : [Point spirituel profond]
+    - APPLICATION : [Comment appliquer aujourd'hui]
+    
+    Termine par les questions de révision.
+    ${customInstructions}
+  ` : `
+    TU ES UN EXPERT BIBLIQUE DES TÉMOINS DE JÉHOVAH.
+    MISSION : Prépare la réunion Vie et Ministère pour : ${part}.
+    Suit l'ordre du cahier de réunion.
+    - JOYAUX : Analyse verset par verset.
+    - PERLES : 5 perles minimum avec versets complets.
+    - ÉTUDE : Questions/Réponses dans l'ordre.
+    ${customInstructions}
+  `;
 
   try {
     const response = await ai.models.generateContent({
       model: modelName,
-      contents: searchQuery ? `${searchQuery}\n\nGénère maintenant l'étude complète en suivant l'ordre de l'article : ${prompt}` : prompt,
+      contents: `${query}\n\n${prompt}`,
       config: {
         temperature: 0.7,
-        thinkingConfig: { thinkingBudget: 4000 },
-        tools: isLink ? [] : [{ googleSearch: {} }] 
+        thinkingConfig: { thinkingBudget: 8000 },
+        tools: [{ googleSearch: {} }] // Toujours actif pour lire jw.org
       },
     });
 
     const text = response.text || "";
+    if (!text || text.length < 50) throw new Error("L'IA n'a pas pu extraire le contenu. Vérifiez le lien.");
+
     const lines = text.split('\n');
     const title = lines[0].replace(/[#*]/g, '').trim();
-    const theme = lines.length > 2 ? lines[1].replace(/[#*]/g, '').trim() : "";
+    const theme = lines.find(l => l.toLowerCase().includes('thème') || l.toLowerCase().includes('article'))?.replace(/[#*]/g, '').trim();
 
     return { text, title, theme };
-  } catch (error) {
-    throw new Error("Erreur lors de la recherche sur jw.org.");
+  } catch (error: any) {
+    console.error("Search Error:", error);
+    throw new Error("Impossible d'accéder à jw.org. Assurez-vous que le lien est correct et public.");
   }
 };
