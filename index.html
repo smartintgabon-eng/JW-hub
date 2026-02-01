@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>JW Study - Assistant Spirituel</title>
     
+    <!-- Meta tags pour PWA -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -38,6 +39,21 @@
             padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
         }
     </style>
+
+    <!-- Point 1 : Enregistrement du Service Worker placé dans le HEAD -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .then(reg => {
+              console.log('Service Worker enregistré avec succès !', reg.scope);
+              reg.update(); // Force la mise à jour si disponible
+            })
+            .catch(err => console.log('Échec de l\'enregistrement du Service Worker :', err));
+        });
+      }
+    </script>
+
 <script type="importmap">
 {
   "imports": {
@@ -53,17 +69,5 @@
 <body class="selection:bg-blue-600/40">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js', { scope: '/' })
-                    .then(reg => {
-                        console.log('SW Registered');
-                        reg.update();
-                    })
-                    .catch(err => console.log('SW Error', err));
-            });
-        }
-    </script>
 </body>
 </html>
