@@ -13,7 +13,7 @@ export const generateStudyContent = async (
 
   const ai = new GoogleGenAI({ apiKey });
   
-  // Utilisation de Gemini 3 Pro pour assurer une logique parfaite et ne pas sauter de paragraphes
+  // Utilisation de Gemini 3 Pro pour une réflexion profonde et sans oubli
   const modelName = 'gemini-3-pro-preview';
   
   let prompt = "";
@@ -21,34 +21,35 @@ export const generateStudyContent = async (
     prompt = `
       TU ES UN EXPERT EN RECHERCHE BIBLIQUE POUR LES TÉMOINS DE JÉHOVAH. 
       SOURCE : jw.org
-      ARTICLE : "${input}"
+      ARTICLE OU SUJET : "${input}"
       BIBLE : Traduction du Monde Nouveau (TMN)
       
-      MISSION CRITIQUE : 
-      1. ANALYSE l'intégralité de l'article SANS SAUTER AUCUN PARAGRAPHE. 
-      2. SUIS l'ordre numérique exact (1, 2, 3...). 
-      3. POUR CHAQUE PARAGRAPHE, FOURNIS :
-         - "PARAGRAPHE [Numéro] : [Question de l'article]"
-         - "VERSET À LIRE : [Cite le texte COMPLET du verset principal mentionné entre parenthèses]"
-         - "RÉPONSE : [Donne une réponse précise basée uniquement sur le texte]"
-         - "COMMENTAIRE : [Fournis une réflexion personnelle et encourageante pour la réunion]"
-         - "APPLICATION : [Comment mettre ce point en pratique dans notre vie]"
-      4. RÉVISION : Réponds à TOUTES les questions de révision à la fin de l'article.
-      
-      STYLE : Écriture élégante, respectueuse et profonde. Utilise des expressions comme "D'après tel chapitre et verset...".
+      CONSIGNES CRITIQUES DE STRUCTURE :
+      - NE SAUTE AUCUN PARAGRAPHE. Commence au paragraphe 1 et finis au dernier paragraphe de l'article.
+      - TRAITE chaque paragraphe INDIVIDUELLEMENT (ne les regroupe pas).
+      - FOURNIS pour chaque paragraphe :
+        1. "PARAGRAPHE [Numéro] : [Question complète de l'article]"
+        2. "VERSET À LIRE : (Écris ici le texte COMPLET du verset principal cité dans le paragraphe entre parenthèses)"
+        3. "RÉPONSE : D'après le texte, [Réponse détaillée et biblique]"
+        4. "COMMENTAIRE : [Une réflexion personnelle profonde pour lever la main à la réunion]"
+        5. "APPLICATION : [Comment appliquer ce point concrètement]"
+      - FINIS obligatoirement par la section "QUESTIONS DE RÉVISION" avec les réponses complètes à chaque question de révision à la fin de l'article.
+
+      STYLE : Utilise un langage spirituel, noble et encourageant. Sois précis et complet.
     `;
   } else {
     prompt = `
       TU ES UN EXPERT EN RECHERCHE BIBLIQUE POUR LES TÉMOINS DE JÉHOVAH.
       REUNION : Vie et Ministère
-      SUJET : "${input}"
-      SECTION : ${part === 'tout' ? 'Toutes les parties' : part}.
-      
+      SUJET OU LIEN : "${input}"
+      SECTION : ${part === 'tout' ? 'Toutes les parties (Joyaux, Perles, Ministère, Vie Chrétienne, Étude Biblique)' : part}.
+      BIBLE : Traduction du Monde Nouveau (TMN)
+
       INSTRUCTIONS :
-      - Pour chaque partie, cite le verset COMPLET au début de la réponse entre parenthèses.
-      - Utilise la Traduction du Monde Nouveau.
-      - Donne des perles spirituelles (au moins 5), des propositions d'exposés structurés et des réponses pour l'étude biblique.
-      - NE RÉUNIS PAS les paragraphes, traite chaque point distinctement.
+      - NE RÉUNIS PAS LES POINTS.
+      - Pour chaque perle ou point, cite le texte BIBLIQUE COMPLET entre parenthèses au début de ta réponse.
+      - Pour l'étude biblique, fournis les paragraphes, questions et réponses comme pour la Tour de Garde.
+      - Pour les exposés, propose une introduction, un corps et une conclusion avec des versets lus.
     `;
   }
 
@@ -57,19 +58,25 @@ export const generateStudyContent = async (
       model: modelName,
       contents: prompt,
       config: {
-        temperature: 0.7,
+        temperature: 0.8,
         topP: 0.95,
-        thinkingConfig: { thinkingBudget: 0 } // On veut une réponse directe et complète
+        // Supprimé thinkingBudget: 0 qui causait l'erreur 400. 
+        // Le modèle utilisera son budget par défaut pour garantir la qualité.
+        thinkingConfig: { thinkingBudget: 4000 } 
       },
     });
 
     const text = response.text;
     if (!text) throw new Error("L'IA n'a pas pu générer de contenu.");
     
-    const title = text.split('\n')[0].replace(/[#*]/g, '').trim() || "Étude Générée";
+    const title = text.split('\n')[0].replace(/[#*]/g, '').trim() || (type === 'WATCHTOWER' ? 'Étude de la Tour de Garde' : 'Vie et Ministère');
+
     return { text, title, sources: [] };
   } catch (error: any) {
     console.error("Gemini Error:", error);
-    throw new Error("L'IA a rencontré un problème. Vérifiez votre connexion ou le lien jw.org.");
+    if (error.status === "INVALID_ARGUMENT") {
+      throw new Error("Erreur de configuration de l'IA. Merci de réessayer, le système se réinitialise.");
+    }
+    throw new Error("L'IA est occupée ou le lien est incorrect. Attendez 30 secondes.");
   }
 };
