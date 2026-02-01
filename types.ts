@@ -8,7 +8,7 @@ export enum AppView {
   HISTORY = 'HISTORY'
 }
 
-export type StudyPart {
+export type StudyPart =
   | 'perles' 
   | 'joyaux' 
   | 'ministere' 
