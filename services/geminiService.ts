@@ -8,85 +8,80 @@ export const generateStudyContent = async (
   part: StudyPart = 'tout'
 ): Promise<{ text: string; title: string; sources: any[] }> => {
   
-  let apiKey = "";
-  try {
-    // @ts-ignore
-    apiKey = (typeof process !== 'undefined' && process.env && process.env.API_KEY) ? process.env.API_KEY : "";
-  } catch (e) {
-    console.error("Clé API inaccessible");
-  }
+  const apiKey = process.env.API_KEY || "";
   
   if (!apiKey) {
-    throw new Error("Clé API manquante. Veuillez configurer API_KEY dans vos variables d'environnement Vercel.");
+    throw new Error("Clé API manquante. L'administrateur doit configurer API_KEY.");
   }
 
+  // Création d'une nouvelle instance à chaque appel pour garantir la fraîcheur
   const ai = new GoogleGenAI({ apiKey });
   
-  // Utilisation de gemini-3-flash-preview qui a des limites de quota beaucoup plus élevées que le modèle Pro
-  const model = 'gemini-3-flash-preview';
+  // Modèle flash pour une vitesse maximale et moins de limites de quota
+  const modelName = 'gemini-3-flash-preview';
   
   let prompt = "";
   if (type === 'WATCHTOWER') {
     prompt = `
       TU ES UN EXPERT EN RECHERCHE BIBLIQUE POUR LES TÉMOINS DE JÉHOVAH. 
       SOURCE : jw.org
-      ARTICLE : "${input}"
+      ARTICLE OU SUJET : "${input}"
       BIBLE : Traduction du Monde Nouveau (TMN)
       
       TA MISSION :
-      1. TRAITE TOUS LES PARAGRAPHES de l'article sans exception.
-      2. POUR CHAQUE PARAGRAPHE, GÉNÈRE :
-         - Le numéro du paragraphe et sa question.
-         - "Réponse (Points clés) :" Détails du paragraphe.
-         - "Commentaire :" Une réflexion encourageante pour les réunions.
-         - "Application :" Mise en pratique.
-      3. RÉVISION : Réponds à TOUTES les questions de révision.
+      1. ANALYSE l'article et génère pour CHAQUE paragraphe :
+         - Le numéro du paragraphe et sa question associée.
+         - "Réponse (Points clés) :" Détails bibliques extraits.
+         - "Commentaire :" Une réflexion personnelle et encourageante pour les réunions.
+         - "Application :" Comment appliquer cela dans notre vie.
+      2. RÉVISION : Réponds de manière concise à TOUTES les questions de révision à la fin.
       
-      CONSIGNE BIBLIQUE :
-      - Écris le texte COMPLET des versets entre parenthèses après chaque référence.
+      CONSIGNE CRITIQUE :
+      - Pour CHAQUE verset cité, écris impérativement son texte COMPLET entre parenthèses.
     `;
   } else {
     prompt = `
       TU ES UN EXPERT EN RECHERCHE BIBLIQUE POUR LES TÉMOINS DE JÉHOVAH.
       REUNION : Vie et Ministère
-      ARTICLE : "${input}"
-      SECTION : ${part === 'tout' ? 'Toutes les parties' : part}.
+      SUJET : "${input}"
+      SECTION : ${part === 'tout' ? 'Toutes les parties (Joyaux, Perles, Ministère, Vie Chrétienne)' : part}.
       BIBLE : Traduction du Monde Nouveau (TMN)
 
-      INSTRUCTION SPÉCIALE ÉTUDE BIBLIQUE :
-      Si c'est l'étude biblique, tu dois obligatoirement fournir ces 6 leçons :
-      - Leçon pour soi / Prédication / Famille / Assemblée / Qualités de Jéhovah / Exemple de Jésus.
+      INSTRUCTIONS :
+      - Si c'est "Joyaux", donne les points forts.
+      - Si c'est "Perles", donne au moins 5 perles spirituelles avec versets.
+      - Si c'est "Étude biblique", donne les 6 leçons d'application habituelles.
       
-      CONSIGNE BIBLIQUE :
-      - Texte COMPLET des versets entre parenthèses.
+      CONSIGNE CRITIQUE :
+      - Écris le texte COMPLET des versets bibliques cités.
     `;
   }
 
   try {
     const response = await ai.models.generateContent({
-      model,
+      model: modelName,
       contents: prompt,
       config: {
-        tools: [{ googleSearch: {} }],
-        temperature: 0.7,
+        // Désactivation de thinkingBudget pour éviter les délais inutiles sur ce type de tâche
+        temperature: 0.8,
+        topP: 0.95,
       },
     });
 
-    if (!response.text) throw new Error("Réponse vide de l'IA.");
+    if (!response.text) throw new Error("L'IA a retourné une réponse vide.");
 
     const text = response.text;
-    const title = text.split('\n')[0].replace(/[#*]/g, '').trim() || (type === 'WATCHTOWER' ? 'Tour de Garde' : 'Réunion Vie et Ministère');
+    const title = text.split('\n')[0].replace(/[#*]/g, '').trim() || (type === 'WATCHTOWER' ? 'Étude de la Tour de Garde' : 'Vie et Ministère');
 
     return { text, title, sources: [] };
   } catch (error: any) {
-    console.error("Gemini API Error:", error);
-    const errorMsg = error.message || "";
+    console.error("Gemini Error:", error);
+    const msg = error.message || "";
     
-    // Gestion explicite de l'erreur 429
-    if (errorMsg.includes("429") || errorMsg.includes("quota") || errorMsg.includes("RESOURCE_EXHAUSTED")) {
-      throw new Error("LIMITE DE L'IA ATTEINTE : Google limite le nombre de recherches gratuites par minute. Veuillez patienter 1 ou 2 minutes avant de réessayer, cela refonctionnera tout seul.");
+    if (msg.includes("429") || msg.includes("quota") || msg.includes("RESOURCE_EXHAUSTED")) {
+      throw new Error("LIMITE ATTEINTE : Google demande d'attendre 60 secondes entre chaque étude gratuite. Merci de patienter un petit instant.");
     }
     
-    throw new Error("L'IA a rencontré un problème. Vérifiez le lien ou réessayez dans un instant.");
+    throw new Error("L'IA est temporairement indisponible. Réessayez dans 30 secondes.");
   }
 };

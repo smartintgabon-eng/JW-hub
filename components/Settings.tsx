@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Settings as SettingsIcon, Palette, Smartphone, Info, ShieldCheck, Home as HomeIcon } from 'lucide-react';
+import { Settings as SettingsIcon, Palette, Info } from 'lucide-react';
 import { AppSettings } from '../types';
 import { saveSettings } from '../utils/storage';
 
@@ -43,14 +43,14 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
         </div>
         <div className="bg-zinc-900/50 border border-zinc-800 rounded-[2.5rem] p-8 space-y-8 shadow-2xl">
           <div className="space-y-6">
-            <label className="text-xs font-black text-zinc-500 uppercase tracking-widest">Couleurs Proposées</label>
+            <label className="text-xs font-black text-zinc-500 uppercase tracking-widest">Couleurs Préfabriquées</label>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
               {bgOptions.map((opt) => (
                 <button
                   key={opt.value}
                   onClick={() => {
-                    updateSetting('backgroundColor', opt.value);
                     updateSetting('customHex', '');
+                    updateSetting('backgroundColor', opt.value);
                   }}
                   className={`flex flex-col items-center space-y-3 p-4 rounded-3xl border-2 transition-all ${
                     settings.backgroundColor === opt.value && !settings.customHex 
@@ -66,16 +66,19 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
           </div>
 
           <div className="space-y-4 pt-6 border-t border-zinc-800">
-            <label className="text-xs font-black text-zinc-500 uppercase tracking-widest">Code Hexadécimal Personnalisé</label>
+            <div className="flex flex-col space-y-2">
+              <label className="text-xs font-black text-zinc-500 uppercase tracking-widest">Code Couleur Personnalisé</label>
+              <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-tight">Insérez un code hexadécimal (ex: #4a70b5 ou #000000)</p>
+            </div>
             <div className="relative group">
               <input
                 type="text"
                 value={settings.customHex}
                 onChange={(e) => updateSetting('customHex', e.target.value)}
-                placeholder="Exemple: #0F172A"
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl py-5 px-6 focus:outline-none focus:ring-2 focus:ring-blue-500/40 text-left font-mono text-xl group-hover:border-zinc-700 transition-all"
+                placeholder="#4A70B5"
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-2xl py-5 px-6 focus:outline-none focus:ring-2 focus:ring-blue-500/40 text-left font-mono text-xl group-hover:border-zinc-700 transition-all text-white"
               />
-              <div className="absolute right-6 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg border border-white/10" style={{ backgroundColor: settings.customHex || '#000' }} />
+              <div className="absolute right-6 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg border border-white/10 shadow-lg" style={{ backgroundColor: settings.customHex || (settings.backgroundColor || '#000') }} />
             </div>
           </div>
         </div>
@@ -84,7 +87,7 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
       <div className="p-6 bg-blue-600/10 border border-blue-500/20 rounded-[2rem] flex items-start space-x-4 shadow-xl">
          <Info size={24} className="text-blue-400 shrink-0 mt-1" />
          <p className="text-sm text-blue-300 leading-relaxed font-medium italic">
-           Note : Les données sont stockées dans le cache de votre navigateur. Aucune donnée n'est envoyée sur un serveur externe à part pour la génération IA.
+           Note : Vos choix sont enregistrés localement. Si l'IA est lente, cela peut être dû au quota Google Flash. Patientez 1 min.
          </p>
       </div>
     </div>

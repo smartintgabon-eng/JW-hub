@@ -9,8 +9,7 @@ import {
   ChevronLeft,
   Menu,
   X,
-  Home as HomeIcon,
-  LayoutDashboard
+  Home as HomeIcon
 } from 'lucide-react';
 import { AppView, GeneratedStudy, AppSettings } from './types';
 import { getSettings, getHistory, saveToHistory } from './utils/storage';
@@ -21,15 +20,12 @@ import History from './components/History';
 import Settings from './components/Settings';
 import Tutorial from './components/Tutorial';
 
-// Composant Logo JW Bleu Ciel - Design Aéré
 const JWLogo = ({ size = "md", className = "" }: { size?: "sm" | "md" | "lg", className?: string }) => {
   const sizes = {
     sm: "w-10 h-10 text-[18px] rounded-lg",
     md: "w-14 h-14 text-[24px] rounded-xl",
     lg: "w-28 h-28 text-[48px] rounded-[2rem]"
   };
-  
-  // Note: On réduit la taille de police par rapport au conteneur pour l'effet "aéré"
   return (
     <div className={`${sizes[size]} bg-[#4a70b5] flex items-center justify-center shadow-lg shadow-[#4a70b5]/30 text-white font-black tracking-tighter shrink-0 select-none ${className}`}>
       <span className="mt-1">JW</span>
@@ -44,17 +40,12 @@ const App: React.FC = () => {
   const [history, setHistory] = useState<GeneratedStudy[]>(getHistory());
   const [isReady, setIsReady] = useState(false);
 
+  // Application dynamique de la couleur de fond
   useEffect(() => {
-    try {
-      const s = getSettings();
-      setAppSettings(s);
-      document.body.style.backgroundColor = s.customHex || s.backgroundColor || '#09090b';
-      setIsReady(true);
-    } catch (e) {
-      console.error("Erreur init app:", e);
-      setIsReady(true);
-    }
-  }, []);
+    const bgColor = settings.customHex || settings.backgroundColor || '#09090b';
+    document.body.style.backgroundColor = bgColor;
+    setIsReady(true);
+  }, [settings.backgroundColor, settings.customHex]);
 
   const navigateTo = (newView: AppView) => {
     setView(newView);
@@ -86,7 +77,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row transition-colors duration-700 font-sans selection:bg-blue-600/30">
-      {/* Header Mobile */}
       <header className="md:hidden flex items-center justify-between p-4 bg-zinc-900/95 border-b border-zinc-800 sticky top-0 z-50 backdrop-blur-xl">
         <div className="flex items-center space-x-3 cursor-pointer" onClick={() => navigateTo(AppView.HOME)}>
           <JWLogo size="sm" />
@@ -97,7 +87,6 @@ const App: React.FC = () => {
         </button>
       </header>
 
-      {/* Barre latérale (Sidebar) */}
       <aside className={`
         fixed inset-y-0 left-0 z-40 w-72 bg-zinc-950/95 backdrop-blur-3xl border-r border-zinc-800 p-6 transform transition-transform duration-500 ease-in-out md:translate-x-0 md:static flex flex-col h-full
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -127,10 +116,8 @@ const App: React.FC = () => {
         </div>
       </aside>
 
-      {/* Zone de contenu principale */}
       <main className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-12 h-screen relative scroll-smooth bg-transparent">
         <div className="max-w-5xl mx-auto h-full">
-          {/* Bouton de retour universel */}
           {view !== AppView.HOME && (
             <button 
               onClick={() => navigateTo(AppView.HOME)}
@@ -176,12 +163,6 @@ const App: React.FC = () => {
                     <p className="text-zinc-500 font-bold leading-relaxed">Réponses complètes paragraphe par paragraphe et révision.</p>
                   </button>
                </div>
-
-               <div className="flex flex-wrap justify-center gap-6 text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em]">
-                 <span className="px-4 py-2 bg-zinc-900 rounded-full border border-zinc-800/50">TMN Bible</span>
-                 <span className="px-4 py-2 bg-zinc-900 rounded-full border border-zinc-800/50">Gemini 3 Flash</span>
-                 <span className="px-4 py-2 bg-zinc-900 rounded-full border border-zinc-800/50">Offline Cache</span>
-               </div>
             </div>
           )}
 
@@ -193,12 +174,8 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      {/* Overlay mobile */}
       {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/85 backdrop-blur-sm z-30 md:hidden animate-in fade-in duration-300"
-          onClick={() => setIsSidebarOpen(false)}
-        />
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-30 md:hidden animate-in fade-in duration-300" onClick={() => setIsSidebarOpen(false)} />
       )}
     </div>
   );
