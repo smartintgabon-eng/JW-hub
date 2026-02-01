@@ -4,6 +4,16 @@ import { StudyPart, AppSettings } from "../types";
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+/**
+ * Nettoie l'entrée utilisateur pour éviter les erreurs de recherche
+ */
+const cleanInput = (input: string): string => {
+  let cleaned = input.trim();
+  // Retire les virgules ou points accidentels à la fin de l'URL
+  cleaned = cleaned.replace(/[,.;]+$/, '');
+  return cleaned;
+};
+
 export const generateStudyContent = async (
   type: 'WATCHTOWER' | 'MINISTRY',
   input: string,
@@ -13,43 +23,41 @@ export const generateStudyContent = async (
 ): Promise<{ text: string; title: string; theme?: string }> => {
   
   const apiKey = process.env.API_KEY || "";
-  if (!apiKey) throw new Error("Clé API manquante.");
+  if (!apiKey) throw new Error("Clé API manquante. Veuillez rafraîchir la page.");
 
   const ai = new GoogleGenAI({ apiKey });
+  // Utilisation de gemini-3-flash-preview pour sa vitesse, 
+  // mais avec une gestion stricte des erreurs de quota.
   const modelName = 'gemini-3-flash-preview';
   
-  const isLink = input.startsWith('http');
-  const isDate = !isLink && /^\d{4}-\d{2}-\d{2}$/.test(input);
+  const rawInput = cleanInput(input);
+  const isLink = rawInput.startsWith('http');
+  const isDate = !isLink && /^\d{4}-\d{2}-\d{2}$/.test(rawInput);
 
-  let searchQuery = input;
+  let searchQuery = rawInput;
   if (isDate) {
-    const dateObj = new Date(input);
+    const dateObj = new Date(rawInput);
     const formattedDate = dateObj.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-    searchQuery = `site:jw.org ${type === 'WATCHTOWER' ? 'article étude Tour de Garde' : 'cahier vie et ministère'} semaine du ${formattedDate}`;
-  } else if (!isLink) {
-    searchQuery = `site:jw.org ${type === 'WATCHTOWER' ? 'Tour de Garde' : 'Cahier réunion'} ${input}`;
+    searchQuery = `site:jw.org article ${type === 'WATCHTOWER' ? 'étude Tour de Garde' : 'vie et ministère'} ${formattedDate}`;
   }
 
   const systemInstruction = `
     RÔLE : Assistant d'étude JW.ORG.
     
-    INSTRUCTION : Tu DOIS utiliser l'outil googleSearch pour accéder au contenu réel de jw.org. 
-    Ne te base jamais sur tes connaissances internes.
+    IMPORTANT : Si un lien est fourni, analyse UNIQUEMENT ce lien. Si c'est une recherche, trouve l'article exact.
     
-    TACHE :
-    1. Trouve et lis l'article source : "${searchQuery}".
-    2. Génère l'étude complète paragraphe par paragraphe.
+    STRUCTURE DE RÉPONSE :
+    # [TITRE DE L'ARTICLE]
+    Thème : [Thème]
     
-    STRUCTURE :
-    # [TITRE]
-    Thème : [Sujet]
-    
-    PARAGRAPHE X
+    PARAGRAPHE 1
     QUESTION : [Texte]
     VERSET : [Citations]
-    RÉPONSE : [Précise]
+    RÉPONSE : [Précise et basée sur le texte]
     COMMENTAIRE : [Encourageant]
     APPLICATION : [Pratique]
+    
+    (Continue pour tous les paragraphes)
     
     ${settings.answerPreferences ? `PRÉFÉRENCES : ${settings.answerPreferences}` : ''}
   `;
@@ -57,17 +65,17 @@ export const generateStudyContent = async (
   try {
     const response = await ai.models.generateContent({
       model: modelName,
-      contents: isLink ? `Analyse cet article : ${input}` : `Cherche l'étude : ${searchQuery}`,
+      contents: isLink ? `Analyse cet article : ${rawInput}` : `Prépare l'étude pour : ${searchQuery}`,
       config: {
         systemInstruction,
-        temperature: 0.1,
+        temperature: 0.15,
         tools: [{ googleSearch: {} }] 
       },
     });
 
     const text = response.text || "";
     if (!text || text.length < 100) {
-       throw new Error("Contenu insuffisant trouvé.");
+       throw new Error("L'article n'a pas pu être lu correctement. Vérifiez le lien.");
     }
 
     const titleMatch = text.match(/^#\s*(.*)/m);
@@ -79,17 +87,18 @@ export const generateStudyContent = async (
   } catch (error: any) {
     console.error("Gemini Error:", error);
 
-    // Gestion intelligente du 429 (Rate Limit)
-    if (error.message?.includes('429') && retryCount < 2) {
-      console.log(`Rate limit atteint. Tentative ${retryCount + 1}...`);
-      await sleep(2000 * (retryCount + 1)); // Attendre un peu
-      return generateStudyContent(type, input, part, settings, retryCount + 1);
-    }
-
+    // Si on dépasse le quota (Erreur 429)
     if (error.message?.includes('429')) {
-      throw new Error("Le serveur Google est très sollicité. Réessayez dans 1 minute ou utilisez un lien direct.");
+      if (retryCount < 3) {
+        const waitTime = (retryCount + 1) * 5000; // Attend 5s, puis 10s, puis 15s
+        console.warn(`Quota atteint. Nouvelle tentative dans ${waitTime/1000}s...`);
+        await sleep(waitTime);
+        return generateStudyContent(type, input, part, settings, retryCount + 1);
+      }
+      throw new Error("LIMITE ATTEINTE : Google limite l'utilisation gratuite de l'IA. Veuillez attendre 2 à 3 minutes sans cliquer sur le bouton.");
     }
 
+    // Autres erreurs
     throw new Error(error.message || "Erreur de connexion aux serveurs de recherche.");
   }
 };

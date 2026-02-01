@@ -32,20 +32,21 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
     setLoading(false);
     setError(null);
     setLoadingStep('');
+    setPreview(null);
   };
 
   const handleGenerate = async (isRetry = false) => {
-    if (loading) return; // Sécurité anti-double-clic
+    if (loading || !input.trim()) return;
     
     setLoading(true);
     setError(null);
-    setLoadingStep('Initialisation...');
+    setLoadingStep('Préparation...');
     
     try {
-      setLoadingStep('Recherche Web JW.ORG...');
-      if (isRetry) setLoadingStep('Analyse approfondie...');
+      setLoadingStep('Recherche sur jw.org...');
+      if (isRetry) setLoadingStep('Génération des réponses...');
       
-      const result = await generateStudyContent(type, input, 'tout', settings);
+      const result = await generateStudyContent(type, input.trim(), 'tout', settings);
       
       if (!isRetry && !preview) {
         setPreview({ title: result.title, theme: result.theme });
@@ -58,7 +59,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
           date: new Date().toLocaleDateString('fr-FR'),
           content: result.text,
           timestamp: Date.now(),
-          url: input.startsWith('http') ? input : undefined
+          url: input.startsWith('http') ? input.trim() : undefined
         };
         onGenerated(newStudy);
         setPreview(null);
@@ -66,7 +67,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
         localStorage.removeItem(`draft_${type}`);
       }
     } catch (err: any) {
-      setError(err.message || "Une erreur inconnue est survenue.");
+      setError(err.message);
     } finally {
       setLoading(false);
       setLoadingStep('');
@@ -99,7 +100,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
               value={input}
               onChange={(e) => handleInputChange(e.target.value)}
               placeholder={mode === 'link' ? "https://www.jw.org/fr/..." : ""}
-              className="w-full bg-black/40 border border-white/10 rounded-xl py-5 pl-14 pr-4 focus:border-[var(--btn-color)] outline-none transition-all font-medium"
+              className={`w-full bg-black/40 border border-white/10 rounded-xl py-5 pl-14 pr-4 focus:border-[var(--btn-color)] outline-none transition-all font-medium ${error ? 'border-red-500/50' : ''}`}
             />
             <div className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30">
               {mode === 'link' ? <LinkIcon size={22} /> : <Calendar size={22} />}
@@ -108,37 +109,40 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
         </div>
 
         {error && (
-          <div className="p-5 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-sm font-bold flex flex-col space-y-3 animate-in fade-in zoom-in duration-300">
+          <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-sm font-bold flex flex-col space-y-4 animate-in fade-in zoom-in duration-300">
             <div className="flex items-start space-x-3">
-              <AlertTriangle size={20} className="mt-0.5 flex-shrink-0" />
-              <span>{error}</span>
+              <AlertTriangle size={20} className="mt-0.5 flex-shrink-0 text-red-500" />
+              <div className="space-y-1">
+                 <p>{error}</p>
+                 {error.includes('LIMITE') && <p className="text-xs opacity-60 font-normal">C'est une restriction de Google sur les comptes gratuits. Inutile de réinitialiser le site, il faut juste patienter.</p>}
+              </div>
             </div>
             <button 
               onClick={() => resetState()} 
-              className="text-[10px] uppercase tracking-widest bg-white/10 self-end px-3 py-1 rounded-md hover:bg-white/20 transition-all flex items-center space-x-2"
+              className="text-[10px] uppercase tracking-[0.2em] bg-white/10 self-center px-6 py-2 rounded-full hover:bg-white/20 transition-all flex items-center space-x-2 border border-white/5"
             >
               <RefreshCw size={12} />
-              <span>Réinitialiser la recherche</span>
+              <span>Réessayer maintenant</span>
             </button>
           </div>
         )}
 
         <button
           onClick={() => handleGenerate()}
-          disabled={loading || !input}
+          disabled={loading || !input.trim()}
           style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }}
-          className="w-full py-5 rounded-xl font-black uppercase tracking-widest flex flex-col items-center justify-center space-y-1 shadow-2xl active:scale-95 disabled:opacity-20 transition-all min-h-[90px]"
+          className="w-full py-6 rounded-xl font-black uppercase tracking-widest flex flex-col items-center justify-center space-y-1 shadow-2xl active:scale-95 disabled:opacity-20 transition-all min-h-[100px]"
         >
           {loading ? (
-            <>
-              <Loader2 className="animate-spin mb-1" size={24} />
+            <div className="flex flex-col items-center space-y-2">
+              <Loader2 className="animate-spin" size={28} />
               <span className="text-[10px] opacity-70 animate-pulse font-bold tracking-widest">{loadingStep}</span>
-            </>
+            </div>
           ) : (
-            <>
+            <div className="flex items-center space-x-3">
               <Search size={24} />
-              <span className="text-lg uppercase">Lancer l'Analyse</span>
-            </>
+              <span className="text-xl">Lancer l'Analyse</span>
+            </div>
           )}
         </button>
       </div>
@@ -148,10 +152,10 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
           <div className="absolute top-0 left-0 w-2 h-full bg-[var(--btn-color)] shadow-[0_0_15px_var(--btn-color)]" />
           <div className="flex items-center space-x-3 mb-6 text-[var(--btn-color)]">
             <Check size={24} className="stroke-[3]" />
-            <span className="text-xs font-black uppercase tracking-[0.3em]">Article Validé</span>
+            <span className="text-xs font-black uppercase tracking-[0.3em]">Article Détecté</span>
           </div>
           <h3 className="text-3xl font-black mb-3 leading-tight uppercase tracking-tighter">{preview.title}</h3>
-          <p className="text-lg opacity-60 mb-8 font-serif italic">{preview.theme || "Prêt pour la préparation spirituelle"}</p>
+          <p className="text-lg opacity-60 mb-8 font-serif italic">{preview.theme || "Prêt pour la préparation"}</p>
           
           <div className="flex flex-col sm:flex-row gap-4">
             <button 
@@ -161,7 +165,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
               className="flex-1 py-5 rounded-xl font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center space-x-2"
             >
               {loading ? <Loader2 className="animate-spin" size={18} /> : <ShieldCheck size={18} />}
-              <span>{loading ? "Génération en cours..." : "Générer les réponses"}</span>
+              <span>{loading ? "Génération..." : "Confirmer & Générer"}</span>
             </button>
             <button onClick={() => setPreview(null)} className="flex-1 bg-white/5 border border-white/10 py-5 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-white/10 transition-all">Annuler</button>
           </div>
