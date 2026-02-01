@@ -11,7 +11,7 @@ import {
   AlertTriangle 
 } from 'lucide-react';
 import { AppSettings } from '../types';
-import { saveSettings, clearHistory, resetSettings } from '../utils/storage';
+import { saveSettings, clearHistory, totalReset } from '../utils/storage';
 
 interface Props {
   settings: AppSettings;
@@ -31,13 +31,17 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
     if (window.confirm("⚠️ ATTENTION : Voulez-vous supprimer TOUTES les études de l'historique ? Cette action est irréversible.")) {
       clearHistory();
       alert("Historique effacé avec succès.");
+      window.location.reload(); // Recharger pour rafraîchir l'état
     }
   };
 
-  const handleResetApp = () => {
-    if (window.confirm("Voulez-vous réinitialiser tous les réglages (couleurs et préférences) ? L'application va redémarrer.")) {
-      resetSettings();
-      window.location.reload();
+  const handleResetApp = async () => {
+    const confirm = window.confirm(
+      "☢️ RÉINITIALISATION TOTALE\n\nCela va supprimer :\n- Tout l'historique\n- Tous vos réglages\n- Les fichiers mis en cache (PWA)\n\nL'application redeviendra comme neuve. Continuer ?"
+    );
+    
+    if (confirm) {
+      await totalReset();
     }
   };
 
@@ -171,10 +175,10 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
             className="flex items-center justify-center space-x-3 p-5 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-amber-400 font-black uppercase text-[10px] tracking-[0.2em] hover:bg-amber-500/20 transition-all active:scale-95"
           >
             <RotateCcw size={18} />
-            <span>Réinitialiser App</span>
+            <span>Réinitialisation Totale</span>
           </button>
         </div>
-        <p className="text-[10px] opacity-30 text-center font-bold italic">Ces actions supprimeront vos données locales.</p>
+        <p className="text-[10px] opacity-30 text-center font-bold italic">Attention : La réinitialisation totale efface TOUT et vide le cache de l'appareil.</p>
       </section>
     </div>
   );
