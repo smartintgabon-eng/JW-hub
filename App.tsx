@@ -21,16 +21,18 @@ import History from './components/History';
 import Settings from './components/Settings';
 import Tutorial from './components/Tutorial';
 
-// Composant Logo JW Bleu Ciel
+// Composant Logo JW Bleu Ciel - Design Aéré
 const JWLogo = ({ size = "md", className = "" }: { size?: "sm" | "md" | "lg", className?: string }) => {
   const sizes = {
-    sm: "w-10 h-10 text-xl rounded-lg",
-    md: "w-14 h-14 text-2xl rounded-xl",
-    lg: "w-28 h-28 text-5xl rounded-[2rem]"
+    sm: "w-10 h-10 text-[18px] rounded-lg",
+    md: "w-14 h-14 text-[24px] rounded-xl",
+    lg: "w-28 h-28 text-[48px] rounded-[2rem]"
   };
+  
+  // Note: On réduit la taille de police par rapport au conteneur pour l'effet "aéré"
   return (
     <div className={`${sizes[size]} bg-[#4a70b5] flex items-center justify-center shadow-lg shadow-[#4a70b5]/30 text-white font-black tracking-tighter shrink-0 select-none ${className}`}>
-      JW
+      <span className="mt-1">JW</span>
     </div>
   );
 };
@@ -43,7 +45,6 @@ const App: React.FC = () => {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // Initialisation robuste
     try {
       const s = getSettings();
       setAppSettings(s);
@@ -178,7 +179,7 @@ const App: React.FC = () => {
 
                <div className="flex flex-wrap justify-center gap-6 text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em]">
                  <span className="px-4 py-2 bg-zinc-900 rounded-full border border-zinc-800/50">TMN Bible</span>
-                 <span className="px-4 py-2 bg-zinc-900 rounded-full border border-zinc-800/50">Gemini Pro 2.5</span>
+                 <span className="px-4 py-2 bg-zinc-900 rounded-full border border-zinc-800/50">Gemini 3 Flash</span>
                  <span className="px-4 py-2 bg-zinc-900 rounded-full border border-zinc-800/50">Offline Cache</span>
                </div>
             </div>
