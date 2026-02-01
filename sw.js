@@ -1,10 +1,9 @@
 
-const CACHE_NAME = 'jw-study-cache-v5';
+const CACHE_NAME = 'jw-study-v7';
 const ASSETS = [
-  './',
-  './index.html',
-  './index.tsx',
-  './manifest.json'
+  '/',
+  '/index.html',
+  '/manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
@@ -28,15 +27,18 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Toujours répondre avec le cache si disponible, sinon réseau
+  if (event.request.method !== 'GET') return;
+
+  // Stratégie : Essayer le réseau d'abord pour les navigations (évite le 404)
+  // Sinon utiliser le cache pour les ressources statiques
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      return cachedResponse || fetch(event.request);
-    }).catch(() => {
-      // Fallback vers l'index si hors ligne et navigation
-      if (event.request.mode === 'navigate') {
-        return caches.match('./index.html');
-      }
+    fetch(event.request).catch(() => {
+      return caches.match(event.request).then((response) => {
+        if (response) return response;
+        if (event.request.mode === 'navigate') {
+          return caches.match('/');
+        }
+      });
     })
   );
 });
