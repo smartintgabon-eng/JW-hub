@@ -8,7 +8,7 @@ export enum AppView {
   HISTORY = 'HISTORY'
 }
 
-export type StudyPart = 
+export type StudyPart {
   | 'perles' 
   | 'joyaux' 
   | 'ministere' 
@@ -29,6 +29,8 @@ export interface GeneratedStudy {
 export interface AppSettings {
   backgroundColor: string;
   customHex: string;
+  buttonColor: string;
+  customButtonHex: string;
   autoSave: boolean;
   modelName: string;
 }

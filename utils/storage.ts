@@ -6,7 +6,7 @@ const SETTINGS_KEY = 'jw_study_settings';
 
 export const saveToHistory = (study: GeneratedStudy) => {
   const history = getHistory();
-  const newHistory = [study, ...history].slice(0, 50); // Keep last 50
+  const newHistory = [study, ...history].slice(0, 50); // Garder les 50 dernières
   localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
 };
 
@@ -34,6 +34,8 @@ export const getSettings = (): AppSettings => {
   const defaultSettings: AppSettings = {
     backgroundColor: '#09090b',
     customHex: '',
+    buttonColor: '#4a70b5',
+    customButtonHex: '',
     autoSave: true,
     modelName: 'gemini-3-pro-preview'
   };
