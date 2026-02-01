@@ -40,10 +40,13 @@ const App: React.FC = () => {
   const [history, setHistory] = useState<GeneratedStudy[]>(getHistory());
   const [isReady, setIsReady] = useState(false);
 
-  // Application dynamique de la couleur de fond
+  // Application dynamique et forcée de la couleur de fond
   useEffect(() => {
     const bgColor = settings.customHex || settings.backgroundColor || '#09090b';
     document.body.style.backgroundColor = bgColor;
+    // On l'applique aussi au root pour être sûr que tout l'écran est couvert
+    const root = document.getElementById('root');
+    if (root) root.style.backgroundColor = bgColor;
     setIsReady(true);
   }, [settings.backgroundColor, settings.customHex]);
 

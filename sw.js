@@ -1,5 +1,5 @@
 
-const CACHE_NAME = 'jw-study-pro-v9';
+const CACHE_NAME = 'jw-study-native-v10';
 const ASSETS = [
   '/',
   '/index.html',

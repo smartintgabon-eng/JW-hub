@@ -23,7 +23,7 @@
       }
     </script>
 
-    <!-- Script d'enregistrement demandé -->
+    <!-- Script d'enregistrement demandé exactement -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -44,10 +44,13 @@
             color: #f4f4f5;
             margin: 0;
             min-height: 100vh;
-            transition: background-color 0.5s ease;
+            transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             -webkit-user-select: none;
             user-select: none;
             padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+        #root {
+            min-height: 100vh;
         }
     </style>
 <script type="importmap">
