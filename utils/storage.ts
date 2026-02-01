@@ -29,6 +29,10 @@ export const saveSettings = (settings: AppSettings) => {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 };
 
+export const resetSettings = () => {
+  localStorage.removeItem(SETTINGS_KEY);
+};
+
 export const getSettings = (): AppSettings => {
   const data = localStorage.getItem(SETTINGS_KEY);
   const defaultSettings: AppSettings = {

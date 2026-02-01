@@ -1,8 +1,17 @@
 
 import React from 'react';
-import { Settings as SettingsIcon, Palette, Info, MessageSquareText, MousePointer2 } from 'lucide-react';
+import { 
+  Settings as SettingsIcon, 
+  Palette, 
+  Info, 
+  MessageSquareText, 
+  MousePointer2, 
+  Trash2, 
+  RotateCcw, 
+  AlertTriangle 
+} from 'lucide-react';
 import { AppSettings } from '../types';
-import { saveSettings } from '../utils/storage';
+import { saveSettings, clearHistory, resetSettings } from '../utils/storage';
 
 interface Props {
   settings: AppSettings;
@@ -16,6 +25,20 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
     if (key === 'buttonColor') newSettings.customButtonHex = '';
     setSettings(newSettings);
     saveSettings(newSettings);
+  };
+
+  const handleClearHistory = () => {
+    if (window.confirm("⚠️ ATTENTION : Voulez-vous supprimer TOUTES les études de l'historique ? Cette action est irréversible.")) {
+      clearHistory();
+      alert("Historique effacé avec succès.");
+    }
+  };
+
+  const handleResetApp = () => {
+    if (window.confirm("Voulez-vous réinitialiser tous les réglages (couleurs et préférences) ? L'application va redémarrer.")) {
+      resetSettings();
+      window.location.reload();
+    }
   };
 
   const bgOptions = [
@@ -41,7 +64,7 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
           <SettingsIcon size={28} />
         </div>
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Paramètres</h2>
+          <h2 className="text-3xl font-bold tracking-tight uppercase">Paramètres</h2>
           <p className="opacity-50 text-sm">Personnalisez votre assistant.</p>
         </div>
       </div>
@@ -86,7 +109,7 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
           <textarea
             value={settings.answerPreferences}
             onChange={(e) => updateSetting('answerPreferences', e.target.value)}
-            placeholder="Ex: Sois bref dans les réponses, utilise un ton simple pour les enfants, ou concentre-toi sur l'application pratique..."
+            placeholder="Ex: Sois bref dans les réponses, utilise un ton simple pour les enfants..."
             className="w-full h-32 bg-black/20 border border-white/10 rounded-2xl py-4 px-5 focus:border-[var(--btn-color)] outline-none resize-none text-sm leading-relaxed"
           />
           <div className="flex items-start space-x-2 opacity-40 text-[11px] italic">
@@ -125,6 +148,33 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
           />
           <div className="w-12 h-12 rounded-xl shadow-lg border-2 border-white/10" style={{ backgroundColor: settings.customButtonHex || settings.buttonColor }} />
         </div>
+      </section>
+
+      {/* ZONE DE DANGER */}
+      <section className="bg-red-500/5 border border-red-500/10 rounded-3xl p-8 space-y-6 shadow-xl">
+        <div className="flex items-center space-x-2 text-red-400 opacity-70">
+          <AlertTriangle size={18} />
+          <h3 className="font-bold uppercase text-xs tracking-widest">Zone de danger</h3>
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <button 
+            onClick={handleClearHistory}
+            className="flex items-center justify-center space-x-3 p-5 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 font-black uppercase text-[10px] tracking-[0.2em] hover:bg-red-500/20 transition-all active:scale-95"
+          >
+            <Trash2 size={18} />
+            <span>Effacer Historique</span>
+          </button>
+          
+          <button 
+            onClick={handleResetApp}
+            className="flex items-center justify-center space-x-3 p-5 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-amber-400 font-black uppercase text-[10px] tracking-[0.2em] hover:bg-amber-500/20 transition-all active:scale-95"
+          >
+            <RotateCcw size={18} />
+            <span>Réinitialiser App</span>
+          </button>
+        </div>
+        <p className="text-[10px] opacity-30 text-center font-bold italic">Ces actions supprimeront vos données locales.</p>
       </section>
     </div>
   );
