@@ -33,5 +33,5 @@ export interface AppSettings {
   customButtonHex: string;
   autoSave: boolean;
   modelName: string;
-  answerPreferences: string; // Nouvelles préférences de personnalisation
+  answerPreferences: string;
 }

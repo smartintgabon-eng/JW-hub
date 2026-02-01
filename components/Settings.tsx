@@ -26,6 +26,14 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
     { name: 'Sable', value: '#fef3c7' },
   ];
 
+  const btnOptions = [
+    { name: 'Bleu Pro', value: '#4a70b5' },
+    { name: 'Indigo', value: '#6366f1' },
+    { name: 'Émeraude', value: '#10b981' },
+    { name: 'Ambre', value: '#f59e0b' },
+    { name: 'Rose', value: '#ec4899' },
+  ];
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex items-center space-x-4 mb-2">
@@ -93,7 +101,21 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
           <MousePointer2 size={18} />
           <h3 className="font-bold uppercase text-xs tracking-widest">Couleur des boutons</h3>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+          {btnOptions.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => updateSetting('buttonColor', opt.value)}
+              className={`p-4 rounded-xl border-2 transition-all ${
+                (settings.buttonColor === opt.value && !settings.customButtonHex) ? 'border-white bg-white/5' : 'border-white/5'
+              }`}
+            >
+              <div className="w-full h-8 rounded-lg mb-2" style={{ backgroundColor: opt.value }} />
+              <span className="text-[10px] font-bold uppercase block text-center opacity-60">{opt.name}</span>
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center space-x-4 pt-4 border-t border-white/5">
           <input
             type="text"
             value={settings.customButtonHex}
