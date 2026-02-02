@@ -59,7 +59,7 @@ export const generateStudyContent = async (
         systemInstruction,
         temperature,
         tools: [{ googleSearch: {} }],
-        responseMimeType: "text/markdown",
+        // responseMimeType: "text/markdown", // Supprimé car non supporté par gemini-2.5-flash
       },
     });
 
