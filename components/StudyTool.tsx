@@ -48,7 +48,8 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
     
     setLoading(true);
     setError(null);
-    setLoadingStep('Analyse en cours...');
+    const isLinkMode = mode === 'link';
+    setLoadingStep(isLinkMode ? 'Analyse du lien...' : 'Recherche sur JW.ORG...');
     
     try {
       const result = await generateStudyContent(type, input.trim(), 'tout', settings);
@@ -73,8 +74,11 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
       }
     } catch (err: any) {
       if (err.message === 'COOLDOWN_REQUIRED') {
-        setError("Limite de requêtes atteinte (Quota Google).");
-        setCooldown(60);
+        setError("Limite globale des requêtes Google atteinte.");
+        setCooldown(90); // Cooldown plus long pour les limites API globales
+      } else if (err.message === 'SEARCH_QUOTA_EXCEEDED') {
+        setError("Le service de recherche Google est temporairement saturé. Veuillez réessayer avec un 'Lien direct' ou patientez.");
+        setCooldown(60); // Cooldown spécifique à la recherche
       } else {
         setError(err.message);
       }
@@ -127,7 +131,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
                  <p className="uppercase text-xs font-black tracking-widest">Alerte de Quota</p>
                  <p className="font-normal opacity-90 leading-relaxed">
                    {cooldown > 0 
-                    ? "Google limite l'utilisation gratuite. Patientez la fin du décompte pour réessayer."
+                    ? `Google limite l'utilisation gratuite. Veuillez patienter ${cooldown} secondes.`
                     : error}
                  </p>
               </div>
@@ -167,7 +171,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
         
         {mode === 'date' && (
           <p className="text-[10px] text-center opacity-30 font-bold uppercase tracking-tighter">
-            Note: La recherche par date consomme plus de quota que le lien direct.
+            Note: La recherche par date utilise l'outil Google Search, qui est soumis à des quotas plus stricts.
           </p>
         )}
       </div>

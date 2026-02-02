@@ -76,7 +76,7 @@ export const getSettings = (): AppSettings => {
     buttonColor: '#4a70b5',
     customButtonHex: '',
     autoSave: true,
-    modelName: 'gemini-3-pro-preview',
+    modelName: 'gemini-2.5-flash', // Changed to gemini-2.5-flash
     answerPreferences: ''
   };
   return data ? { ...defaultSettings, ...JSON.parse(data) } : defaultSettings;
