@@ -33,10 +33,20 @@ export const generateStudyContent = async (
   const cleanedInput = cleanUrl(input);
   const isLink = cleanedInput.startsWith('http');
 
-  // Choisir le modèle dynamiquement:
-  // - Pour les liens directs, utiliser le modèle configuré par l'utilisateur (par défaut gemini-2.5-flash).
-  // - Pour la recherche (date/thème), utiliser gemini-3-flash-preview car il supporte googleSearch.
-  const modelToUse = isLink ? settings.modelName : 'gemini-3-flash-preview';
+  let modelToUse: string;
+  let toolsConfig: any[] | undefined; // Définir explicitement le type pour tools
+
+  if (isLink) {
+    // Pour les liens directs, utiliser le modèle configuré par l'utilisateur (par défaut gemini-2.5-flash).
+    // PAS besoin de googleSearch pour les liens directs, et gemini-2.5-flash n'est pas compatible avec.
+    modelToUse = settings.modelName;
+    toolsConfig = undefined; // Retirer l'outil googleSearch si ce n'est pas nécessaire
+  } else {
+    // Pour la recherche (date/thème), utiliser gemini-3-flash-preview car il supporte googleSearch (selon les exemples de la doc).
+    // Cela implique des quotas plus stricts et potentiellement des exigences de facturation.
+    modelToUse = 'gemini-3-flash-preview';
+    toolsConfig = [{ googleSearch: {} }]; // Inclure l'outil googleSearch
+  }
 
   let systemInstruction = '';
   let temperature = 0.1;
@@ -62,7 +72,7 @@ export const generateStudyContent = async (
       config: {
         systemInstruction,
         temperature,
-        tools: [{ googleSearch: {} }], // Toujours inclus, le modèle compatible décidera s'il l'utilise
+        tools: toolsConfig, // Utiliser la configuration d'outils dynamique
       },
     });
 
