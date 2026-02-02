@@ -43,7 +43,7 @@ export const generateStudyContent = async (
     toolsConfig = undefined; // Retirer l'outil googleSearch si ce n'est pas nécessaire
   } else {
     // Pour la recherche (date/thème), utiliser gemini-3-flash-preview car il supporte googleSearch (selon les exemples de la doc).
-    // Cela implique des quotas plus stricts et potentiellement des exigences de facturation.
+    // Cela implique des quotas plus strictes et potentiellement des exigences de facturation.
     modelToUse = 'gemini-3-flash-preview';
     toolsConfig = [{ googleSearch: {} }]; // Inclure l'outil googleSearch
   }
@@ -52,10 +52,10 @@ export const generateStudyContent = async (
   let temperature = 0.1;
 
   if (type === 'WATCHTOWER') {
-    systemInstruction = `Assistant JW. Extrait et analyse l'article de la Tour de Garde à partir du ${isLink ? "lien" : "sujet/date"} "${input}" pour le subdiviser.
-    La réponse doit être basée sur les publications de jw.org et la Bible Traduction du Monde Nouveau.
+    systemInstruction = `En tant qu'Assistant JW, votre tâche est d'extraire et d'analyser l'article de la Tour de Garde à partir du ${isLink ? "lien" : "sujet/date"} "${input}", puis de le subdiviser de manière structurée.
+    La réponse doit être **impérativement basée** sur les publications de jw.org et la Bible Traduction du Monde Nouveau.
     Structure: # [Titre de l'article] \n Thème: [Thème de l'article] \n PARAGRAPHE [N°]: Question, Verset (inclure le texte complet du verset entre parenthèses), Réponse (d'après le verset biblique et le paragraphe), Commentaire, Application. 
-    À la fin, si disponibles, inclure les QUESTIONS DE RÉVISION: Question, Réponse.
+    À la fin, si disponibles, inclure les QUESTIONS DE RÉVISION: Question, Réponse (basées sur le contenu de l'article).
     Style: ${settings.answerPreferences || 'Précis, factuel et fidèle aux enseignements bibliques'}. Réponds en Markdown.`;
     temperature = 0.1; 
   } else if (type === 'MINISTRY') {
@@ -65,10 +65,10 @@ export const generateStudyContent = async (
         partInstruction = 'Concentre-toi uniquement sur la section "Perles Spirituelles" en fournissant des réponses détaillées.';
         break;
       case 'joyaux':
-        partInstruction = 'Concentre-toi uniquement sur la section "Joyaux de la Parole de Dieu", en incluant des propositions de discours basées sur les références.';
+        partInstruction = 'Concentre-toi uniquement sur la section "Joyaux de la Parole de Dieu", en incluant des propositions de discours basées sur les références bibliques et les publications.';
         break;
       case 'ministere':
-        partInstruction = 'Concentre-toi uniquement sur la section "Applique-toi au Ministère", en incluant des propositions d\'exposés pour les différents types (visite initiale, nouvelle visite, cours biblique).';
+        partInstruction = 'Concentre-toi uniquement sur la section "Applique-toi au Ministère", en incluant des propositions d\'exposés pour les différents types (visite initiale, nouvelle visite, cours biblique), en vous basant sur les suggestions des publications.';
         break;
       case 'vie_chretienne':
         partInstruction = 'Concentre-toi uniquement sur la section "Vie Chrétienne", en incluant des réponses et des discours basés sur les articles.';
@@ -82,8 +82,8 @@ export const generateStudyContent = async (
         break;
     }
 
-    systemInstruction = `Assistant JW. Extrait et analyse l'article du Cahier Vie et Ministère à partir du ${isLink ? "lien" : "sujet/date"} "${input}". ${partInstruction}
-    La réponse doit être basée sur les publications de jw.org et la Bible Traduction du Monde Nouveau, en utilisant la réflexion biblique.
+    systemInstruction = `En tant qu'Assistant JW, votre tâche est d'extraire et d'analyser l'article du Cahier Vie et Ministère à partir du ${isLink ? "lien" : "sujet/date"} "${input}". ${partInstruction}
+    La réponse doit être **impérativement basée** sur les publications de jw.org et la Bible Traduction du Monde Nouveau, en utilisant la réflexion biblique.
     Structure: # [Titre de l'article] \n Thème: [Thème de l'article] \n Pour chaque section/leçon:\n TITRE_SECTION: Question, Verset (inclure le texte complet du verset entre parenthèses), Réponse (d'après le verset biblique et le paragraphe), Commentaire, Application.
     À la fin de CHAQUE leçon/section, ajoute ces questions d'application: \n - Quelle leçon pouvons-nous tirer pour nous? \n - Quelle leçon pour la prédication? \n - Quelle leçon pour la famille? \n - Quelle leçon pour l'assemblée ou la salle du royaume? \n - Quelle leçon sur Jéhovah et Jésus?
     Style: ${settings.answerPreferences || 'Précis, factuel et fidèle aux enseignements bibliques. Élabore avec des points pertinents.'}. Réponds en Markdown.`;
