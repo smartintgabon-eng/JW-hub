@@ -85,7 +85,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
       }
     } catch (err: any) {
       if (err.message === 'COOLDOWN_REQUIRED') {
-        setError("Limite globale des requêtes Google atteinte. Veuillez patienter pour réessayer.");
+        setError("Limite globale des requêtes Google atteinte. Les tentatives répétées prolongeront le délai de récupération. Veuillez patienter pour réessayer.");
         setCooldown(90); // Cooldown plus long pour les limites API globales
       } else if (err.message === 'SEARCH_QUOTA_EXCEEDED') {
         setError("Le service de recherche Google est temporairement saturé. Veuillez réessayer avec un 'Lien direct' ou patientez.");
@@ -173,7 +173,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
                  <p className="uppercase text-xs font-black tracking-widest">Alerte de Quota</p>
                  <p className="font-normal opacity-90 leading-relaxed">
                    {cooldown > 0 
-                    ? `Google limite l'utilisation gratuite. Veuillez patienter ${cooldown} secondes.`
+                    ? `Google limite l'utilisation gratuite. Veuillez patienter ${cooldown} secondes. Les tentatives répétées prolongent ce délai.`
                     : error}
                  </p>
               </div>
