@@ -83,6 +83,18 @@
           background: rgba(255, 255, 255, 0.1);
           border-radius: 10px;
         }
+
+        /* Styles pour le mode lecture */
+        body.reading-mode-active #root > div > aside,
+        body.reading-mode-active #root > div > header {
+            display: none !important;
+        }
+        body.reading-mode-active #root > div > main {
+            margin-left: 0 !important;
+            padding: 0 !important;
+            width: 100%;
+            max-width: 100%;
+        }
     </style>
 <script type="importmap">
 {
@@ -91,7 +103,10 @@
     "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
     "react/": "https://esm.sh/react@^19.2.4/",
     "@google/genai": "https://esm.sh/@google/genai@^1.39.0",
-    "lucide-react": "https://esm.sh/lucide-react@^0.563.0"
+    "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
+    "file-saver": "https://esm.sh/file-saver@^2.0.5",
+    "docx": "https://esm.sh/docx@^8.5.0",
+    "jspdf": "https://esm.sh/jspdf@^2.5.1"
   }
 }
 </script>

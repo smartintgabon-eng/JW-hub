@@ -20,7 +20,7 @@ const cleanUrl = (url: string): string => {
 export const generateStudyContent = async (
   type: 'WATCHTOWER' | 'MINISTRY',
   input: string,
-  part: StudyPart = 'tout',
+  part: StudyPart = 'tout', // Ajout de la partie d'étude
   settings: AppSettings,
   retryCount = 0
 ): Promise<{ text: string; title: string; theme?: string }> => {
@@ -51,15 +51,40 @@ export const generateStudyContent = async (
   let systemInstruction = '';
   let temperature = 0.1;
 
-  if (isLink) {
-    systemInstruction = `Assistant JW. Extrait et analyse l'article de ce lien pour le subdiviser.
-    Structure: # [Titre] \n Thème: [Thème] \n PARAGRAPHE [N°]: Question, Verset, Réponse, Commentaire, Application. 
-    Style: ${settings.answerPreferences || 'Précis'}. Réponds en Markdown.`;
+  if (type === 'WATCHTOWER') {
+    systemInstruction = `Assistant JW. Extrait et analyse l'article de la Tour de Garde à partir du ${isLink ? "lien" : "sujet/date"} "${input}" pour le subdiviser.
+    Structure: # [Titre de l'article] \n Thème: [Thème de l'article] \n PARAGRAPHE [N°]: Question, Verset (inclure le texte complet du verset entre parenthèses), Réponse (d'après le verset biblique et le paragraphe), Commentaire, Application. 
+    À la fin, si disponibles, inclure les QUESTIONS DE RÉVISION: Question, Réponse.
+    Style: ${settings.answerPreferences || 'Précis, basé sur les publications de jw.org et la Traduction du Monde Nouveau'}. Réponds en Markdown.`;
     temperature = 0.1; 
-  } else {
-    systemInstruction = `Assistant JW. Utilise l'outil de recherche Google pour trouver l'article de JW.ORG correspondant à "${input}" pour "${type}", puis extrait et analyse son contenu.
-    Structure: # [Titre] \n Thème: [Thème] \n PARAGRAPHE [N°]: Question, Verset, Réponse, Commentaire, Application. 
-    Style: ${settings.answerPreferences || 'Précis'}. Réponds en Markdown.`;
+  } else if (type === 'MINISTRY') {
+    let partInstruction = '';
+    switch (part) {
+      case 'perles':
+        partInstruction = 'Concentre-toi uniquement sur la section "Perles Spirituelles".';
+        break;
+      case 'joyaux':
+        partInstruction = 'Concentre-toi uniquement sur la section "Joyaux de la Parole de Dieu", en incluant des propositions de discours.';
+        break;
+      case 'ministere':
+        partInstruction = 'Concentre-toi uniquement sur la section "Applique-toi au Ministère", en incluant des propositions d\'exposés.';
+        break;
+      case 'vie_chretienne':
+        partInstruction = 'Concentre-toi uniquement sur la section "Vie Chrétienne", en incluant des réponses et des discours.';
+        break;
+      case 'etude_biblique':
+        partInstruction = 'Concentre-toi uniquement sur la section "Étude Biblique de l\'Assemblée" (étude de livre), en fournissant les réponses.';
+        break;
+      case 'tout':
+      default:
+        partInstruction = 'Fournis toutes les réponses et exemples d\'exposés pour chaque partie.';
+        break;
+    }
+
+    systemInstruction = `Assistant JW. Extrait et analyse l'article du Cahier Vie et Ministère à partir du ${isLink ? "lien" : "sujet/date"} "${input}". ${partInstruction}
+    Structure: # [Titre de l'article] \n Thème: [Thème de l'article] \n Pour chaque section/leçon:\n TITRE_SECTION: Question, Verset (inclure le texte complet du verset entre parenthèses), Réponse (d'après le verset biblique et le paragraphe), Commentaire, Application.
+    À la fin de CHAQUE leçon/section, ajoute ces questions d'application: \n - Quelle leçon pouvons-nous tirer pour nous? \n - Quelle leçon pour la prédication? \n - Quelle leçon pour la famille? \n - Quelle leçon pour l'assemblée ou la salle du royaume? \n - Quelle leçon sur Jéhovah et Jésus?
+    Style: ${settings.answerPreferences || 'Précis, basé sur les publications de jw.org et la Traduction du Monde Nouveau. Utilise la réflexion biblique.'}. Réponds en Markdown.`;
     temperature = 0.4;
   }
 

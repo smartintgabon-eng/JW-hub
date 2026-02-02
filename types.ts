@@ -24,6 +24,7 @@ export interface GeneratedStudy {
   url?: string;
   content: string;
   timestamp: number;
+  part?: StudyPart; // Nouvelle propriété pour stocker la partie d'étude demandée
 }
 
 export interface AppSettings {

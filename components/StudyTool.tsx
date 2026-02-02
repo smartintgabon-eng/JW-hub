@@ -10,9 +10,19 @@ interface Props {
   settings: AppSettings;
 }
 
+const studyPartOptions: { value: StudyPart; label: string }[] = [
+  { value: 'tout', label: 'Tout l\'article' },
+  { value: 'perles', label: 'Perles Spirituelles' },
+  { value: 'joyaux', label: 'Joyaux de la Parole de Dieu' },
+  { value: 'ministere', label: 'Applique-toi au Ministère' },
+  { value: 'vie_chretienne', label: 'Vie Chrétienne' },
+  { value: 'etude_biblique', label: 'Étude Biblique de l\'Assemblée' },
+];
+
 const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
   const [mode, setMode] = useState<'link' | 'date'>('link');
   const [input, setInput] = useState('');
+  const [selectedPart, setSelectedPart] = useState<StudyPart>('tout'); // État pour la partie d'étude
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState('');
   const [preview, setPreview] = useState<{title: string, theme?: string} | null>(null);
@@ -52,7 +62,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
     setLoadingStep(isLinkMode ? 'Analyse du lien...' : 'Recherche sur JW.ORG...');
     
     try {
-      const result = await generateStudyContent(type, input.trim(), 'tout', settings);
+      const result = await generateStudyContent(type, input.trim(), selectedPart, settings); // Passe selectedPart
       
       if (!isRetry && !preview) {
         setPreview({ title: result.title, theme: result.theme });
@@ -65,7 +75,8 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
           date: new Date().toLocaleDateString('fr-FR'),
           content: result.text,
           timestamp: Date.now(),
-          url: input.startsWith('http') ? input.trim() : undefined
+          url: input.startsWith('http') ? input.trim() : undefined,
+          part: type === 'MINISTRY' ? selectedPart : undefined // Sauvegarde la partie pour Ministry
         };
         onGenerated(newStudy);
         setPreview(null);
@@ -103,7 +114,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
           <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="p-4 rounded-2xl shadow-xl">
             {type === 'WATCHTOWER' ? <Globe size={28} /> : <Calendar size={28} />}
           </div>
-          <h2 className="text-2xl font-black uppercase tracking-tight">{type === 'WATCHTOWER' ? 'Tour de Garde' : 'Réunion'}</h2>
+          <h2 className="text-2xl font-black uppercase tracking-tight">{type === 'WATCHTOWER' ? 'Tour de Garde' : 'Cahier de Réunion'}</h2>
         </div>
         <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
           <button onClick={() => { setMode('link'); setInput(''); setError(null); }} className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${mode === 'link' ? 'bg-white/10 shadow' : 'opacity-40'}`}>Lien direct</button>
@@ -130,6 +141,29 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
             </div>
           </div>
         </div>
+
+        {type === 'MINISTRY' && (
+          <div className="space-y-3 pt-4 border-t border-white/5">
+            <label className="text-[10px] font-black uppercase opacity-40 ml-1 tracking-[0.2em]">
+              Choisir une partie de l'étude (Cahier)
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {studyPartOptions.map(option => (
+                <button
+                  key={option.value}
+                  onClick={() => setSelectedPart(option.value)}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                    selectedPart === option.value
+                      ? 'bg-[var(--btn-color)] text-[var(--btn-text)] shadow'
+                      : 'bg-white/5 opacity-60 hover:opacity-100'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-sm animate-in fade-in zoom-in duration-300">
