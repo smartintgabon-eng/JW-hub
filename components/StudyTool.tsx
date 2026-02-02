@@ -74,13 +74,21 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
       }
     } catch (err: any) {
       if (err.message === 'COOLDOWN_REQUIRED') {
-        setError("Limite globale des requêtes Google atteinte.");
+        setError("Limite globale des requêtes Google atteinte. Veuillez patienter pour réessayer.");
         setCooldown(90); // Cooldown plus long pour les limites API globales
       } else if (err.message === 'SEARCH_QUOTA_EXCEEDED') {
         setError("Le service de recherche Google est temporairement saturé. Veuillez réessayer avec un 'Lien direct' ou patientez.");
         setCooldown(60); // Cooldown spécifique à la recherche
+      } else if (err.message === 'INVALID_API_KEY') {
+        setError("Clé API invalide. Vérifiez que votre clé est correcte et configurée dans votre projet Google Cloud (et Vercel si déployé).");
+      } else if (err.message === 'BILLING_REQUIRED') {
+        setError("La recherche nécessite une configuration de facturation active sur Google Cloud, même pour les usages gratuits. (ai.google.dev/gemini-api/docs/billing)");
+      } else if (err.message.startsWith('GENERIC_API_ERROR')) {
+        setError(`Une erreur de communication est survenue avec l'API Gemini (${err.message.split(': ')[1]}). Vérifiez votre connexion.`);
+      } else if (err.message === "MODEL_PROCESSING_ERROR") {
+          setError("L'IA n'a pas pu trouver ou analyser l'article. Essayez un lien direct ou une formulation différente.");
       } else {
-        setError(err.message);
+        setError("Connexion interrompue ou erreur inconnue. Veuillez vérifier votre connexion ou réessayer dans quelques minutes.");
       }
     } finally {
       setLoading(false);
