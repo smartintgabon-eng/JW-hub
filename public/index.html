@@ -1,0 +1,99 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>JW Study - Assistant Spirituel</title>
+    
+    <!-- PWA & Mobile Optimization -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="JW Study">
+    <meta name="application-name" content="JW Study">
+    
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%234a70b5'/%3E%3Ctext x='50' y='64' font-family='sans-serif' font-weight='900' font-size='38' fill='white' text-anchor='middle'%3EJW%3C/text%3E%3C/svg%3E">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4a70b5">
+    
+    <script>
+      if (typeof window !== 'undefined') {
+        window.process = window.process || { env: {} };
+      }
+    </script>
+
+    <script>
+      // Enregistrement ultra-précis pour éviter les erreurs d'origine dans le bac à sable
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('SW prêt'))
+            .catch(err => {
+              // On ignore silencieusement l'erreur d'origine dans l'aperçu car elle est attendue
+              if (!err.message.includes('origin')) {
+                console.warn('SW Status:', err.message);
+              }
+            });
+        });
+      }
+    </script>
+
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%234a70b5'/%3E%3Ctext x='50' y='64' font-family='sans-serif' font-weight='900' font-size='38' fill='white' text-anchor='middle'%3EJW%3C/text%3E%3C/svg%3E">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Lora:ital,wght@0,400..700;1,400..700&display=swap');
+        
+        :root {
+            --bg-color: #09090b;
+            --text-color: #f4f4f5;
+            --btn-color: #4a70b5;
+            --btn-text: #ffffff;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            min-height: 100vh;
+            overflow-x: hidden;
+            transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0;
+        }
+        
+        .font-serif {
+            font-family: 'Lora', serif;
+        }
+
+        #root {
+            min-height: 100vh;
+        }
+
+        ::-webkit-scrollbar {
+          width: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 10px;
+        }
+
+        /* Styles pour le mode lecture */
+        body.reading-mode-active #root > div > aside,
+        body.reading-mode-active #root > div > header {
+            display: none !important;
+        }
+        body.reading-mode-active #root > div > main {
+            margin-left: 0 !important;
+            padding: 0 !important;
+            width: 100%;
+            max-width: 100%;
+        }
+    </style>
+</head>
+<body class="selection:bg-blue-600/40">
+    <div id="root"></div>
+</body>
+</html>
