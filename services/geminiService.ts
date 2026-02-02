@@ -52,11 +52,11 @@ export const generateStudyContent = async (
   let temperature = 0.1;
 
   if (type === 'WATCHTOWER') {
-    systemInstruction = `En tant qu'Assistant JW, votre tâche est d'extraire et d'analyser l'article de la Tour de Garde à partir du ${isLink ? "lien" : "sujet/date"} "${input}", puis de le subdiviser de manière structurée.
-    La réponse doit être **impérativement basée** sur les publications de jw.org et la Bible Traduction du Monde Nouveau.
+    systemInstruction = `En tant qu'Assistant JW, votre tâche est d'extraire et d'analyser l'article de la Tour de Garde à partir du ${isLink ? "lien" : "sujet/date"} "${input}", puis de le subdiviser de manière structurée et très détaillée.
+    La réponse doit être **impérativement basée** et strictement fidèle aux publications officielles de jw.org et à la Bible Traduction du Monde Nouveau. Ne pas inventer d'informations.
     Structure: # [Titre de l'article] \n Thème: [Thème de l'article] \n PARAGRAPHE [N°]: Question, Verset (inclure le texte complet du verset entre parenthèses), Réponse (d'après le verset biblique et le paragraphe), Commentaire, Application. 
     À la fin, si disponibles, inclure les QUESTIONS DE RÉVISION: Question, Réponse (basées sur le contenu de l'article).
-    Style: ${settings.answerPreferences || 'Précis, factuel et fidèle aux enseignements bibliques'}. Réponds en Markdown.`;
+    Style: ${settings.answerPreferences || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé'}. Réponds en Markdown.`;
     temperature = 0.1; 
   } else if (type === 'MINISTRY') {
     let partInstruction = '';
@@ -65,10 +65,10 @@ export const generateStudyContent = async (
         partInstruction = 'Concentre-toi uniquement sur la section "Perles Spirituelles" en fournissant des réponses détaillées.';
         break;
       case 'joyaux':
-        partInstruction = 'Concentre-toi uniquement sur la section "Joyaux de la Parole de Dieu", en incluant des propositions de discours basées sur les références bibliques et les publications.';
+        partInstruction = 'Concentre-toi uniquement sur la section "Joyaux de la Parole de Dieu", en incluant des propositions de discours basées sur les références bibliques et les publications officielles de jw.org.';
         break;
       case 'ministere':
-        partInstruction = 'Concentre-toi uniquement sur la section "Applique-toi au Ministère", en incluant des propositions d\'exposés pour les différents types (visite initiale, nouvelle visite, cours biblique), en vous basant sur les suggestions des publications.';
+        partInstruction = 'Concentre-toi uniquement sur la section "Applique-toi au Ministère", en incluant des propositions d\'exposés pour les différents types (visite initiale, nouvelle visite, cours biblique), en vous basant strictement sur les suggestions des publications officielles de jw.org.';
         break;
       case 'vie_chretienne':
         partInstruction = 'Concentre-toi uniquement sur la section "Vie Chrétienne", en incluant des réponses et des discours basés sur les articles.';
@@ -83,10 +83,10 @@ export const generateStudyContent = async (
     }
 
     systemInstruction = `En tant qu'Assistant JW, votre tâche est d'extraire et d'analyser l'article du Cahier Vie et Ministère à partir du ${isLink ? "lien" : "sujet/date"} "${input}". ${partInstruction}
-    La réponse doit être **impérativement basée** sur les publications de jw.org et la Bible Traduction du Monde Nouveau, en utilisant la réflexion biblique.
+    La réponse doit être **impérativement basée** et strictement fidèle aux publications officielles de jw.org et à la Bible Traduction du Monde Nouveau, en utilisant une réflexion biblique approfondie. Ne pas inventer d'informations.
     Structure: # [Titre de l'article] \n Thème: [Thème de l'article] \n Pour chaque section/leçon:\n TITRE_SECTION: Question, Verset (inclure le texte complet du verset entre parenthèses), Réponse (d'après le verset biblique et le paragraphe), Commentaire, Application.
     À la fin de CHAQUE leçon/section, ajoute ces questions d'application: \n - Quelle leçon pouvons-nous tirer pour nous? \n - Quelle leçon pour la prédication? \n - Quelle leçon pour la famille? \n - Quelle leçon pour l'assemblée ou la salle du royaume? \n - Quelle leçon sur Jéhovah et Jésus?
-    Style: ${settings.answerPreferences || 'Précis, factuel et fidèle aux enseignements bibliques. Élabore avec des points pertinents.'}. Réponds en Markdown.`;
+    Style: ${settings.answerPreferences || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé. Élabore avec des points pertinents.'}. Réponds en Markdown.`;
     temperature = 0.2; // Diminué pour plus de précision et moins de créativité
   }
 
