@@ -18,7 +18,7 @@ import { deleteFromHistory, saveToHistory } from '../utils/storage';
 import { generateStudyContent } from '../services/geminiService';
 
 // Importations pour la génération de documents
-import { saveAs } from 'file-saver';
+import saveAs from 'file-saver'; // Correction ici : import par défaut
 import { Document, Paragraph, TextRun, Packer, HeadingLevel, AlignmentType } from 'docx';
 import jsPDF from 'jspdf';
 
