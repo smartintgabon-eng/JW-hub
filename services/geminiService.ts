@@ -29,10 +29,14 @@ export const generateStudyContent = async (
   if (!apiKey) throw new Error("Clé API absente. Vérifiez votre configuration.");
 
   const ai = new GoogleGenAI({ apiKey });
-  const modelName = 'gemini-2.5-flash';
   
   const cleanedInput = cleanUrl(input);
   const isLink = cleanedInput.startsWith('http');
+
+  // Choisir le modèle dynamiquement:
+  // - Pour les liens directs, utiliser le modèle configuré par l'utilisateur (par défaut gemini-2.5-flash).
+  // - Pour la recherche (date/thème), utiliser gemini-3-flash-preview car il supporte googleSearch.
+  const modelToUse = isLink ? settings.modelName : 'gemini-3-flash-preview';
 
   let systemInstruction = '';
   let temperature = 0.1;
@@ -51,15 +55,14 @@ export const generateStudyContent = async (
 
   try {
     const response = await ai.models.generateContent({
-      model: modelName,
+      model: modelToUse,
       contents: isLink 
         ? `Lien d'article à traiter: ${cleanedInput}` 
         : `Recherche et traite l'article pour: ${type} ${cleanedInput}`,
       config: {
         systemInstruction,
         temperature,
-        tools: [{ googleSearch: {} }],
-        // responseMimeType: "text/markdown", // Supprimé car non supporté par gemini-2.5-flash
+        tools: [{ googleSearch: {} }], // Toujours inclus, le modèle compatible décidera s'il l'utilise
       },
     });
 
@@ -85,11 +88,15 @@ export const generateStudyContent = async (
     if (status === 401 || errorStr.includes('Unauthorized') || errorStr.includes('invalid API key')) {
         throw new Error("INVALID_API_KEY");
     }
+    // Les modèles utilisant des outils (comme googleSearch) nécessitent la facturation,
+    // donc cette erreur est plus probable pour le modèle gemini-3-flash-preview.
     if (status === 403 || errorStr.includes('Forbidden') || errorStr.includes('billing')) {
         throw new Error("BILLING_REQUIRED");
     }
 
     const isRateLimit = errorStr.includes('429') || errorStr.includes('quota') || errorStr.includes('exhausted');
+    // Une erreur de l'outil de recherche est maintenant mieux gérée par le changement de modèle,
+    // mais si elle persiste, c'est probablement un quota de l'outil.
     const isSearchToolError = errorStr.includes('tool error') || errorStr.includes('Google Search');
     
     if (isRateLimit) {
@@ -114,6 +121,7 @@ export const generateStudyContent = async (
         throw new Error("L'IA n'a pas pu trouver ou analyser l'article. Essayez un lien direct ou une formulation différente.");
     }
 
+    // Erreur générique avec le statut si disponible, pour le diagnostic.
     throw new Error(`GENERIC_API_ERROR: ${status || 'unknown'}`);
   }
 };
