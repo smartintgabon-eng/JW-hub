@@ -148,7 +148,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
                  <p className="uppercase text-xs font-black tracking-widest">Alerte de Quota</p>
                  <p className="font-normal opacity-90 leading-relaxed">
                    {cooldown > 0 
-                    ? `Google limite l'utilisation gratuite. Veuillez patienter ${cooldown} secondes. Les tentatives répétées prolongent ce délai.`
+                    ? `Google limite l'utilisation gratuite. Veuillez patienter ${cooldown} secondes. Les tentatives répétées prolongeront ce délai.`
                     : error}
                  </p>
               </div>

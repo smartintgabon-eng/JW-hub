@@ -136,18 +136,14 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
       sections: [{
         children: [
           new Paragraph({
-            text: study.title,
-            heading: HeadingLevel.TITLE,
             alignment: AlignmentType.CENTER,
             spacing: { after: 240 },
-            children: [new TextRun({ text: study.title, color: defaultTextColor })]
+            children: [new TextRun({ text: study.title, color: defaultTextColor, size: 48, bold: true })] // Adjust size for TITLE
           }),
           new Paragraph({
-            text: study.type === 'WATCHTOWER' ? `Étude de la Tour de Garde - ${study.date}` : `Cahier Vie et Ministère - ${study.date}`,
             alignment: AlignmentType.CENTER,
             spacing: { after: 360 },
-            style: 'Strong',
-            children: [new TextRun({ text: study.type === 'WATCHTOWER' ? `Étude de la Tour de Garde - ${study.date}` : `Cahier Vie et Ministère - ${study.date}`, color: defaultTextColor })]
+            children: [new TextRun({ text: study.type === 'WATCHTOWER' ? `Étude de la Tour de Garde - ${study.date}` : `Cahier Vie et Ministère - ${study.date}`, color: defaultTextColor, size: 24, italics: true })] // Adjust size for date/type
           }),
           ...study.content.split('\n').map(line => {
             const trimmed = line.trim();

@@ -220,7 +220,7 @@ const App: React.FC = () => {
             {view === AppView.MINISTRY && <StudyTool type="MINISTRY" onGenerated={handleStudyGenerated} settings={settings} />}
             {view === AppView.WATCHTOWER && <StudyTool type="WATCHTOWER" onGenerated={handleStudyGenerated} settings={settings} />}
             {view === AppView.HISTORY && <History history={history} setHistory={setHistory} settings={settings} />}
-            {view === AppView.SETTINGS && <Settings settings={setAppSettings} />}
+            {view === AppView.SETTINGS && <Settings setSettings={setAppSettings} settings={settings} />}
             {view === AppView.TUTORIAL && <Tutorial />}
           </div>
         </div>

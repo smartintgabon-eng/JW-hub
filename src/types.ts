@@ -16,16 +16,6 @@ export type StudyPart =
   | 'etude_biblique_assemblee' 
   | 'tout';
 
-// Moved from StudyTool.tsx to be shared with History.tsx
-export const studyPartOptions: { value: StudyPart; label: string }[] = [
-  { value: 'joyaux_parole_dieu', label: 'Joyaux de la Parole de Dieu' },
-  { value: 'perles_spirituelles', label: 'Perles Spirituelles' },
-  { value: 'applique_ministere', label: 'Applique-toi au Ministère' },
-  { value: 'vie_chretienne', label: 'Vie Chrétienne' },
-  { value: 'etude_biblique_assemblee', label: 'Étude Biblique de l'Assemblée' },
-  { value: 'tout', label: 'Toutes les parties' },
-];
-
 export interface GeneratedStudy {
   id: string;
   type: 'WATCHTOWER' | 'MINISTRY';
