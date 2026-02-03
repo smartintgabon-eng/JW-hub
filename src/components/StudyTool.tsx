@@ -1,7 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Search, Link as LinkIcon, Calendar, Loader2, Globe, Check, ShieldCheck, AlertTriangle, RefreshCw, Timer } from 'lucide-react';
-import { StudyPart, GeneratedStudy, AppSettings } from '../types'; 
+// Correct: Import studyPartOptions from types.ts
+import { StudyPart, GeneratedStudy, AppSettings, studyPartOptions } from '../types'; 
 import { generateStudyContent } from '../services/geminiService'; 
 
 interface Props {
@@ -10,14 +10,7 @@ interface Props {
   settings: AppSettings;
 }
 
-const studyPartOptions: { value: StudyPart; label: string }[] = [
-  { value: 'joyaux_parole_dieu', label: 'Joyaux de la Parole de Dieu' },
-  { value: 'perles_spirituelles', label: 'Perles Spirituelles' },
-  { value: 'applique_ministere', label: 'Applique-toi au Ministère' },
-  { value: 'vie_chretienne', label: 'Vie Chrétienne' },
-  { value: 'etude_biblique_assemblee', label: 'Étude Biblique de l\'Assemblée' },
-  { value: 'tout', label: 'Toutes les parties' },
-];
+// Removed local definition of studyPartOptions, now imported from types.ts
 
 const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
   const [mode, setMode] = useState<'link' | 'date'>('link');
@@ -57,12 +50,17 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
   };
 
   const handleGenerate = async (isRetry = false) => {
-    if (loading || cooldown > 0 || !input.trim()) return;
+    if (loading || cooldown > 0 || (!input.trim() && !preview)) return; // Prevents generating without input, unless it's a retry after preview
     
     setLoading(true);
     setError(null);
-    const isLinkMode = mode === 'link';
-    setLoadingStep(isLinkMode ? 'Analyse du lien...' : 'Recherche sur JW.ORG...');
+    
+    // Only show "Analyse du lien..." or "Recherche..." for the initial preview step
+    if (!preview) {
+        setLoadingStep(mode === 'link' ? 'Analyse du lien...' : 'Recherche sur JW.ORG...');
+    } else {
+        setLoadingStep('Génération des réponses...');
+    }
     
     try {
       const result = await generateStudyContent(type, input.trim(), selectedPart, settings); // Passe selectedPart
@@ -134,39 +132,16 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
             <input
               type={mode === 'link' ? "text" : "text"}
               value={input}
-              disabled={cooldown > 0}
+              disabled={cooldown > 0 || loading || preview !== null} // Disable input if preview exists
               onChange={(e) => handleInputChange(e.target.value)}
               placeholder={mode === 'link' ? "https://www.jw.org/..." : "Ex: 25 novembre 2025"}
-              className={`w-full bg-black/40 border border-white/10 rounded-xl py-5 pl-14 pr-4 focus:border-[var(--btn-color)] outline-none transition-all font-medium ${cooldown > 0 ? 'opacity-30 cursor-not-allowed' : ''}`}
+              className={`w-full bg-black/40 border border-white/10 rounded-xl py-5 pl-14 pr-4 focus:border-[var(--btn-color)] outline-none transition-all font-medium ${cooldown > 0 || loading || preview !== null ? 'opacity-30 cursor-not-allowed' : ''}`}
             />
             <div className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30">
               {mode === 'link' ? <LinkIcon size={22} /> : <Search size={22} />}
             </div>
           </div>
         </div>
-
-        {type === 'MINISTRY' && preview && ( // Show part selection AFTER preview
-          <div className="space-y-3 pt-4 border-t border-white/5 animate-in fade-in duration-300">
-            <label className="text-[10px] font-black uppercase opacity-40 ml-1 tracking-[0.2em]">
-              Choisir une partie de l'étude (Cahier)
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {studyPartOptions.map(option => (
-                <button
-                  key={option.value}
-                  onClick={() => setSelectedPart(option.value)}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                    selectedPart === option.value
-                      ? 'bg-[var(--btn-color)] text-[var(--btn-text)] shadow'
-                      : 'bg-white/5 opacity-60 hover:opacity-100'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {error && (
           <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-sm animate-in fade-in zoom-in duration-300">
@@ -195,29 +170,53 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
           </div>
         )}
 
-        {preview ? (
-            <div className="bg-white/5 border border-white/20 rounded-[2.5rem] p-10 animate-in zoom-in-95 duration-500 shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-2 h-full bg-[var(--btn-color)]" />
-                <div className="flex items-center space-x-3 mb-6 text-[var(--btn-color)]">
-                <Check size={24} className="stroke-[3]" />
-                <span className="text-xs font-black uppercase tracking-[0.3em]">Article Trouvé</span>
+        {preview && (
+            <>
+                {type === 'MINISTRY' && ( // Show part selection AFTER preview
+                <div className="space-y-3 pt-4 border-t border-white/5 animate-in fade-in duration-300">
+                    <label className="text-[10px] font-black uppercase opacity-40 ml-1 tracking-[0.2em]">
+                    Choisir une partie de l'étude (Cahier)
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {studyPartOptions.map(option => (
+                        <button
+                        key={option.value}
+                        onClick={() => setSelectedPart(option.value)}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                            selectedPart === option.value
+                            ? 'bg-[var(--btn-color)] text-[var(--btn-text)] shadow'
+                            : 'bg-white/5 opacity-60 hover:opacity-100'
+                        }`}
+                        >
+                        {option.label}
+                        </button>
+                    ))}
+                    </div>
                 </div>
-                <h3 className="text-3xl font-black mb-3 uppercase tracking-tighter">{preview.title}</h3>
-                <p className="text-lg opacity-60 mb-8 font-serif italic">{preview.theme || "Prêt pour l'analyse"}</p>
-                
-                <div className="flex flex-col sm:flex-row gap-4">
-                    <button 
-                    onClick={() => handleGenerate(true)} 
-                    disabled={loading || cooldown > 0}
-                    style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
-                    className="flex-1 py-5 rounded-xl font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center space-x-2"
-                    >
-                    {loading ? <Loader2 className="animate-spin" size={18} /> : <ShieldCheck size={18} />}
-                    <span>Générer les réponses</span>
-                    </button>
-                    <button onClick={() => resetState()} className="flex-1 bg-white/5 border border-white/10 py-5 rounded-xl font-black text-sm uppercase tracking-widest">Recommencer la recherche</button>
+                )}
+                <div className="bg-white/5 border border-white/20 rounded-[2.5rem] p-10 animate-in zoom-in-95 duration-500 shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-2 h-full bg-[var(--btn-color)]" />
+                    <div className="flex items-center space-x-3 mb-6 text-[var(--btn-color)]">
+                    <Check size={24} className="stroke-[3]" />
+                    <span className="text-xs font-black uppercase tracking-[0.3em]">Article Trouvé</span>
+                    </div>
+                    <h3 className="text-3xl font-black mb-3 uppercase tracking-tighter">{preview.title}</h3>
+                    <p className="text-lg opacity-60 mb-8 font-serif italic">{preview.theme || "Prêt pour l'analyse"}</p>
+                    
+                    <div className="flex flex-col sm:flex-row gap-4">
+                        <button 
+                        onClick={() => handleGenerate(true)} 
+                        disabled={loading || cooldown > 0}
+                        style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
+                        className="flex-1 py-5 rounded-xl font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center space-x-2"
+                        >
+                        {loading ? <Loader2 className="animate-spin" size={18} /> : <ShieldCheck size={18} />}
+                        <span>Générer les réponses</span>
+                        </button>
+                        <button onClick={() => resetState()} className="flex-1 bg-white/5 border border-white/10 py-5 rounded-xl font-black text-sm uppercase tracking-widest">Recommencer la recherche</button>
+                    </div>
                 </div>
-            </div>
+            </>
         ) : (
             <button
                 onClick={() => handleGenerate()}
@@ -233,7 +232,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
                 ) : (
                     <div className="flex items-center space-x-3">
                     <Search size={24} />
-                    <span className="text-xl">Lancer l'étude</span>
+                    <span className="text-xl">Lancer la recherche</span>
                     </div>
                 )}
             </button>

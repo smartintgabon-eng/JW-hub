@@ -42,7 +42,7 @@ export const generateStudyContent = async (
   const isLink = cleanedInput.startsWith('http');
 
   let modelToUse: string;
-  let toolsConfig: any[] | undefined; // Définir explicitement le type pour tools
+  let toolsConfig: any[] | undefined; 
 
   // Utiliser gemini-3-flash-preview pour toutes les tâches nécessitant la recherche ou une bonne compréhension textuelle.
   // Ce modèle supporte `googleSearch` et est performant pour le texte.
@@ -57,7 +57,7 @@ export const generateStudyContent = async (
   }
 
   let systemInstruction = '';
-  let temperature = 0.2; // Légèrement augmenté pour plus de fluidité sans sacrifier la fidélité
+  let temperature = 0.2; 
 
   if (type === 'WATCHTOWER') {
     systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'extraire et d'analyser l'article de la Tour de Garde à partir du ${isLink ? "lien" : "sujet/date"} "${input}", puis de le subdiviser de manière structurée et très détaillée.
@@ -71,31 +71,28 @@ export const generateStudyContent = async (
     switch (part) {
       case 'perles_spirituelles':
         partInstruction = `Concentre-toi uniquement sur la section "Perles Spirituelles" de l'article.
-        Structure: Lis le verset clé (inclure le texte complet entre parenthèses), puis réponds à la première question en t'appuyant sur une publication de référence. Ensuite, réponds à la deuxième question en tirant des leçons de la lecture biblique de la semaine.
+        Structure: Pour chaque perle spirituelle, commence par "VERSET : [Verset biblique complet entre parenthèses]", puis pose la "QUESTION : [Question]", donne la "RÉPONSE : [Réponse détaillée basée sur la publication de référence]", un "COMMENTAIRE : [Point d'approfondissement]", et une "APPLICATION : [Comment appliquer personnellement]".
         À la fin de cette section, inclure les questions d'application suivantes : ${getApplicationQuestions()}`;
         break;
       case 'joyaux_parole_dieu':
-        partInstruction = `Concentre-toi uniquement sur la section "Joyaux de la Parole de Dieu". Fournis une proposition d'exposé détaillée, incluant un thème, des points principaux, des références bibliques (avec le texte complet du verset entre parenthèses) et des références aux publications officielles de jw.org. L'exposé doit être pratique et encourageant.
+        partInstruction = `Concentre-toi uniquement sur la section "Joyaux de la Parole de Dieu". Fournis une proposition d'exposé détaillée pour le discours principal, incluant un thème clair, des "POINTS PRINCIPAUX :" avec des références bibliques (avec le texte complet du verset entre parenthèses) et des références aux publications officielles de jw.org. L'exposé doit être pratique et encourageant.
         À la fin de cette section, inclure les questions d'application suivantes : ${getApplicationQuestions()}`;
         break;
       case 'applique_ministere':
-        // Pour "Applique-toi au Ministère", l'IA devra d'abord lister les exposés, puis le user choisira.
-        // Pour l'instant, je vais demander à l'IA de lister tous les exposés puis de donner une proposition pour chacun.
-        // Une interaction plus complexe (choix utilisateur en plusieurs étapes) est hors de portée du `generateContent` direct.
-        partInstruction = `Concentre-toi uniquement sur la section "Applique-toi au Ministère". Liste tous les exposés proposés dans le programme de la semaine. Pour chaque exposé, fournis une proposition d'introduction, des points à développer (avec références bibliques complètes et publications de jw.org), et une conclusion. Prépare-le comme si l'utilisateur avait choisi tous les exposés.
+        partInstruction = `Concentre-toi uniquement sur la section "Applique-toi au Ministère". Liste tous les exposés proposés dans le programme de la semaine. Pour chaque exposé, fournis une proposition d'introduction, des "POINTS À DÉVELOPPER :" avec des références bibliques complètes (avec le texte complet du verset entre parenthèses) et des publications de jw.org, et une "CONCLUSION :".
         À la fin de chaque proposition d'exposé, inclure les questions d'application suivantes : ${getApplicationQuestions()}`;
         break;
       case 'vie_chretienne':
-        partInstruction = `Concentre-toi uniquement sur la section "Vie Chrétienne". Analyse le texte de l'article (ignorer les mentions de vidéo si le contenu n'est pas vidéo) et les questions associées. Fournis des réponses détaillées aux questions et des points de discussion pratiques, basés sur les principes bibliques et les publications de jw.org.
+        partInstruction = `Concentre-toi uniquement sur la section "Vie Chrétienne". Analyse le texte de l'article (ignorer les mentions de vidéo si le contenu n'est pas vidéo et se concentrer sur l'écrit) et les questions associées. Fournis des "RÉPONSES :" détaillées aux questions et des "POINTS DE DISCUSSION :" pratiques, basés sur les principes bibliques et les publications de jw.org.
         À la fin de cette section, inclure les questions d'application suivantes : ${getApplicationQuestions()}`;
         break;
       case 'etude_biblique_assemblee':
-        partInstruction = `Concentre-toi uniquement sur la section "Étude Biblique de l'Assemblée" (étude de livre ou brochure). Fournis les réponses aux questions de l'étude de manière concise et biblique, en te basant sur le texte de la publication en référence.
+        partInstruction = `Concentre-toi uniquement sur la section "Étude Biblique de l'Assemblée" (étude de livre ou brochure). Fournis les "RÉPONSES :" aux questions de l'étude de manière concise et biblique, en te basant sur le texte de la publication en référence.
         À la fin de cette section, inclure les questions d'application suivantes : ${getApplicationQuestions()}`;
         break;
       case 'tout':
       default:
-        partInstruction = `Fournis des réponses et exemples d'exposés détaillés pour **Toutes les parties** du Cahier : "Joyaux de la Parole de Dieu", "Perles Spirituelles", "Applique-toi au Ministère", "Vie Chrétienne" et "Étude Biblique de l'Assemblée". Pour chaque section, suis les instructions de formatage spécifiques à cette section.
+        partInstruction = `Fournis des réponses et exemples d'exposés détaillés pour **Toutes les parties** du Cahier : "Joyaux de la Parole de Dieu", "Perles Spirituelles", "Applique-toi au Ministère", "Vie Chrétienne" et "Étude Biblique de l'Assemblée". Pour chaque section, suis le formatage spécifique demandé pour cette section.
         À la fin de CHAQUE leçon/section, ajoute ces questions d'application: ${getApplicationQuestions()}`;
         break;
     }
@@ -116,7 +113,7 @@ export const generateStudyContent = async (
       config: {
         systemInstruction,
         temperature,
-        tools: toolsConfig, // Utiliser la configuration d'outils dynamique
+        tools: toolsConfig, 
       },
     });
 
@@ -135,22 +132,17 @@ export const generateStudyContent = async (
   } catch (error: any) {
     console.error("Gemini API Error:", error);
     
-    const errorStr = JSON.stringify(error); // Stringify for robust error checking
-    const status = error.status || (error.response && error.response.status); // Get HTTP status if available
+    const errorStr = JSON.stringify(error); 
+    const status = error.status || (error.response && error.response.status); 
 
-    // Specific API key/billing errors
     if (status === 401 || errorStr.includes('Unauthorized') || errorStr.includes('invalid API key')) {
         throw new Error("INVALID_API_KEY");
     }
-    // Les modèles utilisant des outils (comme googleSearch) nécessitent la facturation,
-    // donc cette erreur est plus probable pour le modèle gemini-3-flash-preview.
     if (status === 403 || errorStr.includes('Forbidden') || errorStr.includes('billing')) {
         throw new Error("BILLING_REQUIRED");
     }
 
     const isRateLimit = errorStr.includes('429') || errorStr.includes('quota') || errorStr.includes('exhausted');
-    // Une erreur de l'outil de recherche est maintenant mieux gérée par le changement de modèle,
-    // mais si elle persiste, c'est probablement un quota de l'outil.
     const isSearchToolError = errorStr.includes('tool error') || errorStr.includes('Google Search');
     
     if (isRateLimit) {
@@ -175,7 +167,6 @@ export const generateStudyContent = async (
         throw new Error("L'IA n'a pas pu trouver ou analyser l'article. Essayez un lien direct ou une formulation différente.");
     }
 
-    // Erreur générique avec le statut si disponible, pour le diagnostic.
     throw new Error(`GENERIC_API_ERROR: ${status || 'unknown'}`);
   }
 };

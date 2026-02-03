@@ -32,10 +32,16 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
     const newSettings = { ...settings };
     if (type === 'background') {
       newSettings.customHex = value;
-      newSettings.backgroundColor = value; // Apply directly for live preview
+      // Appliquer la valeur directement pour la prévisualisation live
+      if (/^#([0-9A-F]{3}){1,2}$/i.test(value) || value === '') {
+        newSettings.backgroundColor = value === '' ? '#09090b' : value; // Fallback to default if empty
+      }
     } else {
       newSettings.customButtonHex = value;
-      newSettings.buttonColor = value; // Apply directly for live preview
+      // Appliquer la valeur directement pour la prévisualisation live
+      if (/^#([0-9A-F]{3}){1,2}$/i.test(value) || value === '') {
+        newSettings.buttonColor = value === '' ? '#4a70b5' : value; // Fallback to default if empty
+      }
     }
     setSettings(newSettings);
     saveSettings(newSettings);

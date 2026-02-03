@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   History as HistoryIcon, 
@@ -13,7 +12,8 @@ import {
   Download,
   FileSignature
 } from 'lucide-react';
-import { GeneratedStudy, AppSettings, StudyPart } from '../types'; 
+// Correct: Import studyPartOptions from types.ts
+import { GeneratedStudy, AppSettings, StudyPart, studyPartOptions } from '../types'; 
 import { deleteFromHistory, saveToHistory } from '../utils/storage'; 
 import { generateStudyContent } from '../services/geminiService'; 
 
@@ -73,11 +73,11 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
     }
   };
 
-  // Helper pour formater le texte avec des balises fortes ou italiques
+  // Helper pour formater le texte avec des balises fortes ou italiques pour DOCX
   const formatTextRun = (text: string, defaultColor: string) => {
     const children: TextRun[] = [];
     const boldRegex = /\*\*(.*?)\*\*/g;
-    const italicRegex = /\*(.*?)\*/g; // Simple italic, might need refinement for nested formatting
+    const italicRegex = /\*(.*?)\*/g; 
 
     let lastIndex = 0;
     let match;
@@ -122,14 +122,14 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
             text: segment.text,
             bold: segment.bold,
             italics: segment.italic,
-            color: defaultColor, // Keep default color for all, or adjust if needed
+            color: defaultColor, 
         }));
     }
     return children;
 };
 
   const exportToDocx = async (study: GeneratedStudy) => {
-    const defaultTextColor = settings.backgroundColor === '#f4f4f5' || settings.backgroundColor === '#fef3c7' ? '000000' : 'FFFFFF'; // Black for light backgrounds, white for dark
+    const defaultTextColor = (settings.backgroundColor === '#f4f4f5' || settings.backgroundColor === '#fef3c7') ? '000000' : 'FFFFFF'; // Black for light backgrounds, white for dark
     const btnColor = settings.buttonColor.replace('#', '');
 
     const doc = new Document({
@@ -153,23 +153,32 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
             const trimmed = line.trim();
             if (!trimmed) return new Paragraph({});
 
-            if (trimmed.startsWith('# ')) return new Paragraph({ text: trimmed.substring(2).trim(), heading: HeadingLevel.HEADING_1, spacing: { before: 240, after: 120 }, children: [new TextRun({ text: trimmed.substring(2).trim(), color: btnColor })] });
+            // Titres de section (ex: # PERLES SPIRITUELLES)
+            if (trimmed.startsWith('# ')) {
+                return new Paragraph({ 
+                  children: [new TextRun({ text: trimmed.substring(2).trim(), bold: true, color: btnColor, size: 28 })],
+                  spacing: { before: 480, after: 180 },
+                });
+            }
+            // Thème
             if (trimmed.startsWith('Thème:')) return new Paragraph({ text: trimmed, style: 'Intense Quote', spacing: { after: 240 }, children: formatTextRun(trimmed, defaultTextColor) });
             
-            // Nouveau traitement pour les titres de section du Cahier
-            if (trimmed.match(/^(JOYAUX|PERLES|APPLIQUE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE) DE LA PAROLE DE DIEU|APPLIQUE-TOI AU MINISTÈRE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE/i)) {
+            // Titres de section détaillés pour le Cahier (par exemple, "JOYAUX DE LA PAROLE DE DIEU")
+            if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE)/i)) {
               return new Paragraph({
                 children: [new TextRun({ text: trimmed, bold: true, color: btnColor, size: 28 })],
                 spacing: { before: 480, after: 180 },
               });
             }
             
+            // Paragraphes
             if (trimmed.includes('PARAGRAPHE')) {
                 return new Paragraph({
                     children: [new TextRun({ text: trimmed, bold: true, color: btnColor })],
                     spacing: { before: 360, after: 120 },
                 });
             }
+            // Versets bibliques
             if (trimmed.startsWith('VERSET')) {
               return new Paragraph({
                 children: formatTextRun(trimmed, defaultTextColor),
@@ -178,6 +187,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
                 spacing: { before: 120, after: 120 },
               });
             }
+            // Questions, Réponses, Commentaires, Applications
             if (trimmed.startsWith('QUESTION') || trimmed.startsWith('RÉPONSE') || trimmed.startsWith('COMMENTAIRE') || trimmed.startsWith('APPLICATION')) {
                 const [label, ...rest] = trimmed.split(':');
                 return new Paragraph({
@@ -196,6 +206,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
                 indent: { left: 240 },
               });
             }
+            // Texte normal
             return new Paragraph({ children: formatTextRun(trimmed, defaultTextColor), spacing: { after: 60 } });
           })
         ],
@@ -211,7 +222,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
     let y = 10;
     const margin = 10;
     const pageWidth = doc.internal.pageSize.getWidth();
-    const defaultTextColor = settings.backgroundColor === '#f4f4f5' || settings.backgroundColor === '#fef3c7' ? 0 : 255; // 0 for black, 255 for white
+    const defaultTextColor = (settings.backgroundColor === '#f4f4f5' || settings.backgroundColor === '#fef3c7') ? 0 : 255; // 0 for black, 255 for white
     const btnColorRgb = doc.colorParse(settings.buttonColor || '#4a70b5');
 
 
@@ -242,33 +253,33 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
         doc.setTextColor(defaultTextColor); // Reset color for new page
       }
 
-      if (trimmed.startsWith('# ')) { // Adjusted for '# '
+      if (trimmed.startsWith('# ')) { // Titres de section
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(btnColorRgb.r, btnColorRgb.g, btnColorRgb.b);
         doc.text(trimmed.substring(2).trim(), margin, y);
         y += 7;
         doc.setTextColor(defaultTextColor);
-      } else if (trimmed.startsWith('Thème:')) {
+      } else if (trimmed.startsWith('Thème:')) { // Thème
         doc.setFontSize(11);
         doc.setFont('helvetica', 'italic');
         doc.text(trimmed, margin, y);
         y += 7;
-      } else if (trimmed.match(/^(JOYAUX|PERLES|APPLIQUE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE) DE LA PAROLE DE DIEU|APPLIQUE-TOI AU MINISTÈRE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE/i)) {
+      } else if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE)/i)) {
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(btnColorRgb.r, btnColorRgb.g, btnColorRgb.b);
         doc.text(trimmed, margin, y);
         y += 7;
         doc.setTextColor(defaultTextColor);
-      } else if (trimmed.includes('PARAGRAPHE')) {
+      } else if (trimmed.includes('PARAGRAPHE')) { // Paragraphes
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(btnColorRgb.r, btnColorRgb.g, btnColorRgb.b);
         doc.text(trimmed, margin, y);
         y += 7;
         doc.setTextColor(defaultTextColor); // Reset color
-      } else if (trimmed.startsWith('VERSET')) {
+      } else if (trimmed.startsWith('VERSET')) { // Versets bibliques
         doc.setFontSize(11);
         doc.setFont('helvetica', 'italic');
         const textLines = doc.splitTextToSize(trimmed, pageWidth - 2 * margin - 10);
@@ -285,14 +296,14 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
         const textLines = doc.splitTextToSize(rest.join(':').trim(), pageWidth - 2 * margin - doc.getStringUnitWidth(`${label}: `) * doc.getFontSize());
         doc.text(textLines, margin + doc.getStringUnitWidth(`${label}: `) * doc.getFontSize(), y, { align: 'left' });
         y += (textLines.length * 5) + 3;
-      } else if (trimmed.startsWith('- Quelle leçon')) {
+      } else if (trimmed.startsWith('- Quelle leçon')) { // Questions d'application
         doc.setFontSize(10);
         doc.setFont('helvetica', 'italic');
         const textLines = doc.splitTextToSize(trimmed, pageWidth - 2 * margin - 10);
         doc.text(textLines, margin + 5, y);
         y += (textLines.length * 5) + 2;
       }
-      else {
+      else { // Texte normal
         doc.setFontSize(11);
         doc.setFont('helvetica', 'normal');
         const textLines = doc.splitTextToSize(trimmed, pageWidth - 2 * margin);
@@ -305,9 +316,16 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
     doc.save(`${study.title}.pdf`);
   };
 
+  const getPartLabel = (part: StudyPart | undefined) => {
+    // Correct: studyPartOptions is now imported and accessible
+    const option = studyPartOptions.find(opt => opt.value === part);
+    return option ? option.label : 'Toutes les parties';
+  };
+
   if (selectedStudy) {
     return (
       <div className={`animate-in fade-in slide-in-from-right-4 duration-500 pb-24 ${readingMode ? 'fixed inset-0 z-[100] bg-[var(--bg-color)] overflow-y-auto p-0 md:p-0' : ''}`}>
+        {/* En-tête avec boutons d'action (masqué en mode lecture) */}
         <div className={`flex items-center justify-between mb-10 sticky top-0 py-4 z-20 bg-[var(--bg-color)] border-b border-white/5 ${readingMode ? 'hidden' : ''} print:hidden`}>
           <button onClick={() => { setSelectedStudy(null); setReadingMode(false); }} className="flex items-center space-x-3 opacity-60 hover:opacity-100 transition-all group">
             <ChevronLeft size={24} className="group-hover:-translate-x-1 transition-transform" />
@@ -338,7 +356,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
         <article className={`max-w-4xl mx-auto ${readingMode ? 'pt-10 px-6' : ''} print:p-0 print:text-black`}>
           <header className="mb-16 text-center">
              <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="text-[10px] font-black uppercase tracking-[0.4em] px-6 py-2 rounded-full mb-8 inline-block shadow-lg">
-                {selectedStudy.type === 'WATCHTOWER' ? 'Étude de la Tour de Garde' : 'Vie et Ministère'}
+                {selectedStudy.type === 'WATCHTOWER' ? 'Étude de la Tour de Garde' : `Cahier Vie et Ministère - ${getPartLabel(selectedStudy.part)}`}
              </div>
              <h1 className="text-4xl md:text-6xl font-black leading-none mb-6 tracking-tighter uppercase">{selectedStudy.title}</h1>
              <p className="opacity-30 text-xs font-black uppercase tracking-[0.5em]">Mis à jour le {selectedStudy.date}</p>
@@ -351,7 +369,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
               if (trimmed.startsWith('# ')) return <h3 key={idx} className="text-3xl font-black pt-12 border-t border-white/10 mt-12 uppercase tracking-tight" style={{ color: 'var(--btn-color)' }}>{trimmed.substring(2).trim()}</h3>;
               
               // Nouveau traitement pour les titres de section du Cahier
-              if (trimmed.match(/^(JOYAUX|PERLES|APPLIQUE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE) DE LA PAROLE DE DIEU|APPLIQUE-TOI AU MINISTÈRE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE/i)) {
+              if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE)/i)) {
                 return <h3 key={idx} className="text-3xl font-black pt-12 border-t border-white/10 mt-12 uppercase tracking-tight" style={{ color: 'var(--btn-color)' }}>{trimmed}</h3>;
               }
 
@@ -405,7 +423,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
               <div className="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button onClick={(e) => handleDelete(study.id, e)} className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg"><Trash2 size={18}/></button>
               </div>
-              <div className="text-[9px] font-black uppercase tracking-widest opacity-30 mb-4">{study.type} {study.part && `- ${study.part.toUpperCase().replace(/_/g, ' ')}`}</div>
+              <div className="text-[9px] font-black uppercase tracking-widest opacity-30 mb-4">{study.type} {study.part && `- ${getPartLabel(study.part).toUpperCase()}`}</div>
               <h3 className="font-black text-2xl mb-6 line-clamp-2 leading-tight uppercase tracking-tight">{study.title}</h3>
               <div className="flex justify-between items-center mt-auto pt-6 border-t border-white/5">
                 <span className="text-[10px] font-bold opacity-30">{study.date}</span>

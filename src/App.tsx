@@ -6,7 +6,6 @@ import {
   Settings as SettingsIcon, 
   History as HistoryIcon, 
   HelpCircle, 
-  ChevronLeft,
   Menu,
   X,
   Home as HomeIcon,
@@ -38,6 +37,7 @@ const App: React.FC = () => {
   const [history, setHistory] = useState<GeneratedStudy[]>(getHistory());
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isReadingModeActive, setIsReadingModeActive] = useState(false); // État pour le mode lecture global
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
@@ -66,9 +66,29 @@ const App: React.FC = () => {
     return () => {
       window.removeEventListener('online', handleStatus);
       window.removeEventListener('offline', handleStatus);
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('beforeinstallPrompt', handleBeforeInstallPrompt);
     };
   }, [settings]);
+
+  // Observer le mode lecture de l'historique pour masquer globalement l'UI
+  useEffect(() => {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class') {
+          const body = document.body;
+          const newReadingModeState = body.classList.contains('reading-mode-active');
+          if (newReadingModeState !== isReadingModeActive) {
+            setIsReadingModeActive(newReadingModeState);
+          }
+        }
+      });
+    });
+
+    observer.observe(document.body, { attributes: true });
+
+    return () => observer.disconnect();
+  }, [isReadingModeActive]);
+
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
@@ -115,7 +135,7 @@ const App: React.FC = () => {
       )}
 
       {/* Mobile Header */}
-      <header className="md:hidden flex items-center justify-between p-4 border-b border-white/10 sticky top-0 z-50 bg-[var(--bg-color)]">
+      <header className={`md:hidden flex items-center justify-between p-4 border-b border-white/10 sticky top-0 z-50 bg-[var(--bg-color)] ${isReadingModeActive ? 'hidden' : ''}`}>
         <div className="flex items-center space-x-2" onClick={() => navigateTo(AppView.HOME)}>
            <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="w-8 h-8 flex items-center justify-center rounded-lg font-black text-sm">JW</div>
            <span className="font-bold text-lg tracking-tight uppercase">Study</span>
@@ -129,6 +149,7 @@ const App: React.FC = () => {
       <aside className={`
         fixed inset-y-0 left-0 z-40 w-72 bg-black/40 backdrop-blur-xl border-r border-white/10 p-6 transform transition-transform duration-300 md:translate-x-0 md:static flex flex-col
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        ${isReadingModeActive ? 'hidden' : ''}
       `}>
         <div className="mb-10 px-2 flex items-center space-x-3 cursor-pointer" onClick={() => navigateTo(AppView.HOME)}>
            <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="w-12 h-12 flex items-center justify-center rounded-xl font-black text-xl shadow-lg">JW</div>
