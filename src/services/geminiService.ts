@@ -1,4 +1,4 @@
-// Fix: Removed 'DELETE_FILE' from the beginning of the file.
+
 import { GoogleGenAI } from "@google/genai";
 import { StudyPart, AppSettings } from "../types"; 
 
@@ -16,6 +16,14 @@ const cleanUrl = (url: string): string => {
     return url.trim().replace(/[,.;]+$/, '');
   }
 };
+
+const getApplicationQuestions = () => `
+- Quelle leçon pouvons-nous tirer pour nous?
+- Quelle leçon pour la prédication?
+- Quelle leçon pour la famille?
+- Quelle leçon pour l'assemblée ou la salle du royaume?
+- Quelle leçon sur Jéhovah et Jésus?
+`;
 
 export const generateStudyContent = async (
   type: 'WATCHTOWER' | 'MINISTRY',
@@ -36,57 +44,67 @@ export const generateStudyContent = async (
   let modelToUse: string;
   let toolsConfig: any[] | undefined; // Définir explicitement le type pour tools
 
+  // Utiliser gemini-3-flash-preview pour toutes les tâches nécessitant la recherche ou une bonne compréhension textuelle.
+  // Ce modèle supporte `googleSearch` et est performant pour le texte.
+  modelToUse = 'gemini-3-flash-preview'; 
+
   if (isLink) {
-    // Pour les liens directs, utiliser le modèle configuré par l'utilisateur (par défaut gemini-3-flash-preview).
-    modelToUse = settings.modelName;
-    toolsConfig = undefined; // Retirer l'outil googleSearch si ce n'est pas nécessaire
+    // Si c'est un lien, pas besoin de googleSearch pour "trouver" l'article, juste l'analyser.
+    toolsConfig = undefined; 
   } else {
-    // Pour la recherche (date/thème), utiliser gemini-3-flash-preview car il supporte googleSearch (selon les exemples de la doc).
-    // Cela implique des quotas plus strictes et potentiellement des exigences de facturation.
-    modelToUse = 'gemini-3-flash-preview';
-    toolsConfig = [{ googleSearch: {} }]; // Inclure l'outil googleSearch
+    // Si c'est une recherche par date/thème, on a besoin de googleSearch.
+    toolsConfig = [{ googleSearch: {} }]; 
   }
 
   let systemInstruction = '';
-  let temperature = 0.1;
+  let temperature = 0.2; // Légèrement augmenté pour plus de fluidité sans sacrifier la fidélité
 
   if (type === 'WATCHTOWER') {
     systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'extraire et d'analyser l'article de la Tour de Garde à partir du ${isLink ? "lien" : "sujet/date"} "${input}", puis de le subdiviser de manière structurée et très détaillée.
     La réponse doit être **impérativement basée** et strictement fidèle aux publications officielles de jw.org et à la Bible Traduction du Monde Nouveau. Ne pas inventer d'informations. Priorise la clarté et la concision tout en étant exhaustif.
     Structure: # [Titre de l'article] \n Thème: [Thème de l'article] \n PARAGRAPHE [N°]: Question, Verset (inclure le texte complet du verset entre parenthèses), Réponse (d'après le verset biblique et le paragraphe), Commentaire, Application. 
-    À la fin, si disponibles, inclure les QUESTIONS DE RÉVISION: Question, Réponse (basées sur le contenu de l'article).
+    À la fin de l'article, inclure toutes les QUESTIONS DE RÉVISION: Question, Réponse (basées sur le contenu de l'article).
     Style: ${settings.answerPreferences || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé'}. Réponds en Markdown.`;
     temperature = 0.1; 
   } else if (type === 'MINISTRY') {
     let partInstruction = '';
     switch (part) {
-      case 'perles':
-        partInstruction = 'Concentre-toi uniquement sur la section "Perles Spirituelles" en fournissant des réponses détaillées et des points clés approfondis.';
+      case 'perles_spirituelles':
+        partInstruction = `Concentre-toi uniquement sur la section "Perles Spirituelles" de l'article.
+        Structure: Lis le verset clé (inclure le texte complet entre parenthèses), puis réponds à la première question en t'appuyant sur une publication de référence. Ensuite, réponds à la deuxième question en tirant des leçons de la lecture biblique de la semaine.
+        À la fin de cette section, inclure les questions d'application suivantes : ${getApplicationQuestions()}`;
         break;
-      case 'joyaux':
-        partInstruction = 'Concentre-toi uniquement sur la section "Joyaux de la Parole de Dieu", en incluant des propositions de discours basées sur les références bibliques et les publications officielles de jw.org.';
+      case 'joyaux_parole_dieu':
+        partInstruction = `Concentre-toi uniquement sur la section "Joyaux de la Parole de Dieu". Fournis une proposition d'exposé détaillée, incluant un thème, des points principaux, des références bibliques (avec le texte complet du verset entre parenthèses) et des références aux publications officielles de jw.org. L'exposé doit être pratique et encourageant.
+        À la fin de cette section, inclure les questions d'application suivantes : ${getApplicationQuestions()}`;
         break;
-      case 'ministere':
-        partInstruction = 'Concentre-toi uniquement sur la section "Applique-toi au Ministère", en incluant des propositions d\'exposés pour les différents types (visite initiale, nouvelle visite, cours biblique), en vous basant strictement sur les suggestions des publications officielles de jw.org.';
+      case 'applique_ministere':
+        // Pour "Applique-toi au Ministère", l'IA devra d'abord lister les exposés, puis le user choisira.
+        // Pour l'instant, je vais demander à l'IA de lister tous les exposés puis de donner une proposition pour chacun.
+        // Une interaction plus complexe (choix utilisateur en plusieurs étapes) est hors de portée du `generateContent` direct.
+        partInstruction = `Concentre-toi uniquement sur la section "Applique-toi au Ministère". Liste tous les exposés proposés dans le programme de la semaine. Pour chaque exposé, fournis une proposition d'introduction, des points à développer (avec références bibliques complètes et publications de jw.org), et une conclusion. Prépare-le comme si l'utilisateur avait choisi tous les exposés.
+        À la fin de chaque proposition d'exposé, inclure les questions d'application suivantes : ${getApplicationQuestions()}`;
         break;
       case 'vie_chretienne':
-        partInstruction = 'Concentre-toi uniquement sur la section "Vie Chrétienne", en incluant des réponses et des discours basés sur les articles et des applications pratiques.';
+        partInstruction = `Concentre-toi uniquement sur la section "Vie Chrétienne". Analyse le texte de l'article (ignorer les mentions de vidéo si le contenu n'est pas vidéo) et les questions associées. Fournis des réponses détaillées aux questions et des points de discussion pratiques, basés sur les principes bibliques et les publications de jw.org.
+        À la fin de cette section, inclure les questions d'application suivantes : ${getApplicationQuestions()}`;
         break;
-      case 'etude_biblique':
-        partInstruction = 'Concentre-toi uniquement sur la section "Étude Biblique de l\'Assemblée" (étude de livre ou brochure), en fournissant les réponses aux questions de manière concise et biblique.';
+      case 'etude_biblique_assemblee':
+        partInstruction = `Concentre-toi uniquement sur la section "Étude Biblique de l'Assemblée" (étude de livre ou brochure). Fournis les réponses aux questions de l'étude de manière concise et biblique, en te basant sur le texte de la publication en référence.
+        À la fin de cette section, inclure les questions d'application suivantes : ${getApplicationQuestions()}`;
         break;
       case 'tout':
       default:
-        partInstruction = 'Fournis toutes les réponses et exemples d\'exposés pour chaque partie de l\'étude.';
+        partInstruction = `Fournis des réponses et exemples d'exposés détaillés pour **Toutes les parties** du Cahier : "Joyaux de la Parole de Dieu", "Perles Spirituelles", "Applique-toi au Ministère", "Vie Chrétienne" et "Étude Biblique de l'Assemblée". Pour chaque section, suis les instructions de formatage spécifiques à cette section.
+        À la fin de CHAQUE leçon/section, ajoute ces questions d'application: ${getApplicationQuestions()}`;
         break;
     }
 
     systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'extraire et d'analyser l'article du Cahier Vie et Ministère à partir du ${isLink ? "lien" : "sujet/date"} "${input}". ${partInstruction}
     La réponse doit être **impérativement basée** et strictement fidèle aux publications officielles de jw.org et à la Bible Traduction du Monde Nouveau, en utilisant une réflexion biblique approfondie. Ne pas inventer d'informations.
-    Structure: # [Titre de l'article] \n Thème: [Thème de l'article] \n Pour chaque section/leçon:\n TITRE_SECTION: Question, Verset (inclure le texte complet du verset entre parenthèses), Réponse (d'après le verset biblique et le paragraphe), Commentaire, Application.
-    À la fin de CHAQUE leçon/section, ajoute ces questions d'application: \n - Quelle leçon pouvons-nous tirer pour nous? \n - Quelle leçon pour la prédication? \n - Quelle leçon pour la famille? \n - Quelle leçon pour l'assemblée ou la salle du royaume? \n - Quelle leçon sur Jéhovah et Jésus?
+    Structure: # [Titre de l'article] \n Thème: [Thème de l'article] \n Ensuite, pour chaque section du Cahier, suis le formatage spécifique demandé pour chaque partie.
     Style: ${settings.answerPreferences || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé. Élabore avec des points pertinents.'}. Réponds en Markdown.`;
-    temperature = 0.2; // Diminué pour plus de précision et moins de créativité
+    temperature = 0.2; 
   }
 
   try {

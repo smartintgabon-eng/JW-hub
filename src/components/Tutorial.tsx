@@ -1,6 +1,6 @@
-// Fix: Removed 'DELETE_FILE' from the beginning of the file.
+
 import React, { useState } from 'react';
-import { HelpCircle, ChevronRight, ChevronLeft, Lightbulb, Link as LinkIcon, Search, Save } from 'lucide-react';
+import { HelpCircle, ChevronRight, ChevronLeft, Lightbulb, Link as LinkIcon, Search, Save, Calendar, BookOpen, Settings as SettingsIcon, History as HistoryIcon, Download } from 'lucide-react';
 
 const Tutorial: React.FC = () => {
   const [step, setStep] = useState(0);
@@ -8,37 +8,87 @@ const Tutorial: React.FC = () => {
   const steps = [
     {
       title: "Bienvenue sur JW Study Pro",
-      content: "Cette application vous aide à préparer vos réunions en générant des réponses structurées, des commentaires profonds et des applications pratiques basés sur la Traduction du Monde Nouveau.",
+      content: "Cette application est votre assistant personnel pour une préparation approfondie de vos réunions et de votre étude biblique. Elle génère des réponses structurées, des commentaires et des applications pratiques basés sur la Bible Traduction du Monde Nouveau et les publications officielles de jw.org.",
       icon: <HelpCircle className="text-blue-500" size={48} />
     },
     {
-      title: "Comment obtenir les liens ?",
-      content: "Allez sur JW.org, trouvez l'article d'étude de la Tour de Garde ou du Cahier Vie et Ministère. Copiez le lien de la page (URL) pour le coller dans l'espace prévu dans l'application.",
-      icon: <LinkIcon className="text-indigo-500" size={48} />
+      title: "Navigation simple et rapide",
+      content: "Utilisez le menu latéral pour passer de l'Accueil aux sections 'Cahier Vie et Ministère' ou 'Tour de Garde', consulter votre 'Historique', accéder au 'Tutoriel' ou ajuster les 'Paramètres' de l'application. Sur mobile, le menu se trouve en haut à droite.",
+      icon: <Lightbulb className="text-cyan-500" size={48} />
     },
     {
-      title: "Recherche par semaine",
-      content: "Si vous n'avez pas le lien, vous pouvez simplement taper la date ou le thème, par exemple : 'Semaine du 15 mai' ou 'Article sur la patience'. L'IA cherchera pour vous.",
-      icon: <Search className="text-green-500" size={48} />
+      title: "Préparation de la Tour de Garde",
+      content: "Dans l'onglet 'Tour de Garde', vous pouvez coller le lien direct de l'article de jw.org ou rechercher l'article par sa date ou son thème. L'IA analysera le texte et vous fournira des questions, des versets clés (avec leur texte complet), des réponses, des commentaires et des applications, ainsi que les questions de révision.",
+      icon: <BookOpen className="text-emerald-500" size={48} />
     },
     {
-      title: "Personnalisation & Historique",
-      content: "Chaque réponse générée est stockée dans votre 'Historique' (mémoire cache locale). Vous pouvez changer la couleur de fond dans les 'Paramètres' pour un confort visuel optimal.",
-      icon: <Save className="text-amber-500" size={48} />
+      title: "Préparation du Cahier Vie et Ministère : Lien ou Recherche",
+      content: "Comme pour la Tour de Garde, vous pouvez entrer un lien direct vers l'article du Cahier de la semaine ou effectuer une recherche par date ou thème pour trouver le bon article sur jw.org.",
+      icon: <LinkIcon className="text-orange-500" size={48} />
+    },
+    {
+      title: "Cahier Vie et Ministère : Choix des parties d'étude",
+      content: "Après avoir confirmé l'article, vous pourrez choisir la partie spécifique du Cahier que vous souhaitez préparer : 'Joyaux de la Parole de Dieu', 'Perles Spirituelles', 'Applique-toi au Ministère', 'Vie Chrétienne', 'Étude Biblique de l'Assemblée', ou 'Toutes les parties' pour une préparation complète.",
+      icon: <Calendar className="text-red-500" size={48} />
+    },
+    {
+      title: "Détail : Joyaux de la Parole de Dieu",
+      content: "Cette option vous fournira une proposition d'exposé basée sur les versets et les publications de référence. Idéal pour préparer votre intervention.",
+      icon: <Lightbulb className="text-purple-500" size={48} />
+    },
+    {
+      title: "Détail : Perles Spirituelles",
+      content: "Obtenez des réponses concises aux questions, avec les versets clés et les références de publication, ainsi que des leçons pratiques à tirer de la lecture biblique de la semaine.",
+      icon: <Lightbulb className="text-yellow-500" size={48} />
+    },
+    {
+      title: "Détail : Applique-toi au Ministère",
+      content: "L'IA vous présentera les différents exposés possibles pour la semaine. Vous pourrez en choisir un ou plusieurs pour générer des propositions complètes (visite initiale, nouvelle visite, cours biblique).",
+      icon: <Lightbulb className="text-teal-500" size={48} />
+    },
+    {
+      title: "Détail : Vie Chrétienne",
+      content: "Cette section, souvent accompagnée d'une vidéo ou d'un article, vous fournira des réponses aux questions et des points de discussion pertinents, basés sur l'analyse du contenu par l'IA.",
+      icon: <Lightbulb className="text-pink-500" size={48} />
+    },
+    {
+      title: "Détail : Étude Biblique de l'Assemblée",
+      content: "Similaire à la Tour de Garde, l'IA répondra aux questions de l'étude (livre/brochure) et ajoutera des questions d'application pour vous aider à réfléchir sur les leçons personnelles, pour la prédication, la famille, l'assemblée, et sur Jéhovah/Jésus.",
+      icon: <Lightbulb className="text-lime-500" size={48} />
+    },
+    {
+      title: "Options après génération : Export & Régénération",
+      content: "Une fois les réponses générées, vous pourrez les lire directement sur le site, les télécharger au format DOCX ou PDF, ou même les régénérer si vous souhaitez une autre perspective. En mode lecture, seul le contenu s'affiche, sans distractions.",
+      icon: <Save className="text-gray-400" size={48} />
+    },
+    {
+      title: "Personnalisation de l'Apparence",
+      content: "Dans les 'Paramètres', vous pouvez changer la couleur de fond et des boutons de l'application. Choisissez parmi nos propositions ou entrez un code hexadécimal personnalisé pour une expérience visuelle unique.",
+      icon: <SettingsIcon className="text-gray-200" size={48} />
+    },
+    {
+      title: "Historique & Utilisation hors ligne",
+      content: "Toutes vos études générées sont automatiquement sauvegardées dans l'onglet 'Historique' de votre appareil (cache local). Cela signifie que vous pouvez y accéder et les consulter même sans connexion internet ! Vous pouvez les supprimer ou les partager.",
+      icon: <HistoryIcon className="text-blue-400" size={48} />
+    },
+    {
+      title: "Installation de l'application (PWA)",
+      content: "Pour profiter pleinement de JW Study Pro et l'utiliser hors ligne, installez-la comme une application web progressive (PWA). Un bouton 'Installer l'App' apparaîtra (généralement dans Chrome) vous permettant de l'ajouter à votre écran d'accueil.",
+      icon: <Download className="text-green-400" size={48} />
     }
   ];
 
   const currentStep = steps[step];
 
   return (
-    <div className="max-w-2xl mx-auto flex flex-col items-center justify-center min-h-[60vh] text-center space-y-10 animate-in fade-in zoom-in duration-500">
-      <div className="p-8 bg-zinc-900 border border-zinc-800 rounded-[3rem] shadow-2xl relative">
-        <div className="absolute -top-10 left-1/2 -translate-x-1/2 p-6 bg-zinc-950 border border-zinc-800 rounded-3xl shadow-xl">
+    <div className="max-w-3xl mx-auto flex flex-col items-center justify-center min-h-[60vh] text-center space-y-10 animate-in fade-in zoom-in duration-500 pb-20">
+      <div className="p-8 bg-white/5 border border-white/10 rounded-[3rem] shadow-2xl relative">
+        <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="absolute -top-10 left-1/2 -translate-x-1/2 p-6 rounded-3xl shadow-xl flex items-center justify-center">
           {currentStep.icon}
         </div>
         <div className="pt-10 space-y-6">
-          <h2 className="text-3xl font-black text-white">{currentStep.title}</h2>
-          <p className="text-zinc-400 text-lg leading-relaxed">{currentStep.content}</p>
+          <h2 className="text-3xl font-black text-white uppercase tracking-tight">{currentStep.title}</h2>
+          <p className="text-white/70 text-lg leading-relaxed font-serif">{currentStep.content}</p>
         </div>
       </div>
 
@@ -46,29 +96,30 @@ const Tutorial: React.FC = () => {
         <button 
           disabled={step === 0}
           onClick={() => setStep(s => s - 1)}
-          className={`p-4 rounded-full transition-all ${step === 0 ? 'text-zinc-700' : 'bg-zinc-800 text-white hover:bg-zinc-700 active:scale-90'}`}
+          className={`p-4 rounded-full transition-all ${step === 0 ? 'text-white/30' : 'bg-white/10 text-white hover:bg-white/20 active:scale-90'}`}
         >
           <ChevronLeft size={28} />
         </button>
 
         <div className="flex space-x-2">
           {steps.map((_, i) => (
-            <div key={i} className={`h-2 rounded-full transition-all ${i === step ? 'w-8 bg-blue-500' : 'w-2 bg-zinc-800'}`} />
+            <div key={i} className={`h-2 rounded-full transition-all ${i === step ? 'w-8 bg-[var(--btn-color)]' : 'w-2 bg-white/10'}`} />
           ))}
         </div>
 
         <button 
           disabled={step === steps.length - 1}
           onClick={() => setStep(s => s + 1)}
-          className={`p-4 rounded-full transition-all ${step === steps.length - 1 ? 'text-zinc-700' : 'bg-blue-600 text-white hover:bg-blue-500 active:scale-90 shadow-lg shadow-blue-600/30'}`}
+          style={{ backgroundColor: step === steps.length - 1 ? 'rgb(31 41 55)' : 'var(--btn-color)', color: 'var(--btn-text)' }}
+          className={`p-4 rounded-full transition-all ${step === steps.length - 1 ? 'opacity-50' : 'shadow-lg shadow-[var(--btn-color)]/30 hover:brightness-110 active:scale-90'}`}
         >
           <ChevronRight size={28} />
         </button>
       </div>
 
-      <div className="flex items-center space-x-2 text-zinc-500 text-sm italic">
+      <div className="flex items-center space-x-2 text-white/50 text-sm italic">
         <Lightbulb size={16} className="text-amber-500" />
-        <span>Astuce : Installez l'application via Chrome pour l'utiliser hors ligne.</span>
+        <span>Astuce : Un tutoriel complet est disponible ici pour maîtriser toutes les fonctionnalités.</span>
       </div>
     </div>
   );

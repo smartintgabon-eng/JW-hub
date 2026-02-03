@@ -1,4 +1,4 @@
-// Fix: Removed 'DELETE_FILE' from the beginning of the file.
+
 import React from 'react';
 import { 
   Settings as SettingsIcon, 
@@ -23,6 +23,20 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
     const newSettings = { ...settings, [key]: value };
     if (key === 'backgroundColor') newSettings.customHex = '';
     if (key === 'buttonColor') newSettings.customButtonHex = '';
+    setSettings(newSettings);
+    saveSettings(newSettings);
+  };
+
+  const handleCustomHexChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'background' | 'button') => {
+    const value = e.target.value;
+    const newSettings = { ...settings };
+    if (type === 'background') {
+      newSettings.customHex = value;
+      newSettings.backgroundColor = value; // Apply directly for live preview
+    } else {
+      newSettings.customButtonHex = value;
+      newSettings.buttonColor = value; // Apply directly for live preview
+    }
     setSettings(newSettings);
     saveSettings(newSettings);
   };
@@ -93,14 +107,16 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
           ))}
         </div>
         <div className="pt-4 border-t border-white/5">
-          <label className="text-[10px] font-bold uppercase opacity-40 block mb-2">Code couleur personnalisé</label>
+          <label className="text-[10px] font-bold uppercase opacity-40 block mb-2">Code couleur personnalisé (Hex)</label>
           <input
             type="text"
             value={settings.customHex}
-            onChange={(e) => updateSetting('customHex', e.target.value)}
+            onChange={(e) => handleCustomHexChange(e, 'background')}
             placeholder="Ex: #09090b"
             className="w-full bg-black/20 border border-white/10 rounded-xl py-3 px-4 font-mono text-sm focus:border-[var(--btn-color)] outline-none"
           />
+          <div className="w-full h-10 rounded-lg mt-2 border-2 border-white/10" style={{ backgroundColor: settings.customHex || settings.backgroundColor }} />
+          <p className="text-[10px] opacity-30 text-center font-bold italic mt-2">La prévisualisation en direct s'affichera ci-dessus.</p>
         </div>
       </section>
 
@@ -146,12 +162,13 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
           <input
             type="text"
             value={settings.customButtonHex}
-            onChange={(e) => updateSetting('customButtonHex', e.target.value)}
+            onChange={(e) => handleCustomHexChange(e, 'button')}
             placeholder="Ex: #4a70b5"
             className="flex-1 bg-black/20 border border-white/10 rounded-xl py-3 px-4 font-mono text-sm focus:border-[var(--btn-color)] outline-none"
           />
           <div className="w-12 h-12 rounded-xl shadow-lg border-2 border-white/10" style={{ backgroundColor: settings.customButtonHex || settings.buttonColor }} />
         </div>
+        <p className="text-[10px] opacity-30 text-center font-bold italic mt-2">La prévisualisation en direct s'affichera à droite.</p>
       </section>
 
       {/* ZONE DE DANGER */}

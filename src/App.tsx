@@ -1,4 +1,4 @@
-// Fix: Removed 'DELETE_FILE' from the beginning of the file.
+
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   BookOpen, 

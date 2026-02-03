@@ -1,4 +1,4 @@
-// Fix: Removed 'DELETE_FILE' from the beginning of the file.
+
 import React, { useState, useEffect } from 'react';
 import { 
   History as HistoryIcon, 
@@ -73,18 +73,65 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
     }
   };
 
-  const formatContentForExport = (content: string, type: 'WATCHTOWER' | 'MINISTRY', title: string, date: string): string => {
-    let formatted = `# ${title}\n\n`;
-    if (type === 'WATCHTOWER') {
-      formatted += `**Étude de la Tour de Garde - ${date}**\n\n`;
-    } else {
-      formatted += `**Cahier Vie et Ministère - ${date}**\n\n`;
+  // Helper pour formater le texte avec des balises fortes ou italiques
+  const formatTextRun = (text: string, defaultColor: string) => {
+    const children: TextRun[] = [];
+    const boldRegex = /\*\*(.*?)\*\*/g;
+    const italicRegex = /\*(.*?)\*/g; // Simple italic, might need refinement for nested formatting
+
+    let lastIndex = 0;
+    let match;
+
+    // Process bold first (priority)
+    const segments: { text: string, bold?: boolean, italic?: boolean }[] = [];
+    let tempLastIndex = 0;
+    while ((match = boldRegex.exec(text)) !== null) {
+        if (match.index > tempLastIndex) {
+            segments.push({ text: text.substring(tempLastIndex, match.index) });
+        }
+        segments.push({ text: match[1], bold: true });
+        tempLastIndex = boldRegex.lastIndex;
     }
-    formatted += content;
-    return formatted;
-  };
+    if (tempLastIndex < text.length) {
+        segments.push({ text: text.substring(tempLastIndex) });
+    }
+
+    // Now process italics on non-bold segments
+    const finalSegments: { text: string, bold?: boolean, italic?: boolean }[] = [];
+    for (const segment of segments) {
+        if (segment.bold) {
+            finalSegments.push(segment);
+            continue;
+        }
+        let innerTempLastIndex = 0;
+        let innerMatch;
+        while ((innerMatch = italicRegex.exec(segment.text)) !== null) {
+            if (innerMatch.index > innerTempLastIndex) {
+                finalSegments.push({ text: segment.text.substring(innerTempLastIndex, innerMatch.index) });
+            }
+            finalSegments.push({ text: innerMatch[1], italic: true });
+            innerTempLastIndex = italicRegex.lastIndex;
+        }
+        if (innerTempLastIndex < segment.text.length) {
+            finalSegments.push({ text: segment.text.substring(innerTempLastIndex) });
+        }
+    }
+
+    for (const segment of finalSegments) {
+        children.push(new TextRun({
+            text: segment.text,
+            bold: segment.bold,
+            italics: segment.italic,
+            color: defaultColor, // Keep default color for all, or adjust if needed
+        }));
+    }
+    return children;
+};
 
   const exportToDocx = async (study: GeneratedStudy) => {
+    const defaultTextColor = settings.backgroundColor === '#f4f4f5' || settings.backgroundColor === '#fef3c7' ? '000000' : 'FFFFFF'; // Black for light backgrounds, white for dark
+    const btnColor = settings.buttonColor.replace('#', '');
+
     const doc = new Document({
       sections: [{
         children: [
@@ -93,28 +140,40 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
             heading: HeadingLevel.TITLE,
             alignment: AlignmentType.CENTER,
             spacing: { after: 240 },
+            children: [new TextRun({ text: study.title, color: defaultTextColor })]
           }),
           new Paragraph({
             text: study.type === 'WATCHTOWER' ? `Étude de la Tour de Garde - ${study.date}` : `Cahier Vie et Ministère - ${study.date}`,
             alignment: AlignmentType.CENTER,
             spacing: { after: 360 },
             style: 'Strong',
+            children: [new TextRun({ text: study.type === 'WATCHTOWER' ? `Étude de la Tour de Garde - ${study.date}` : `Cahier Vie et Ministère - ${study.date}`, color: defaultTextColor })]
           }),
           ...study.content.split('\n').map(line => {
             const trimmed = line.trim();
             if (!trimmed) return new Paragraph({});
-            if (trimmed.startsWith('#')) return new Paragraph({ text: trimmed.substring(1).trim(), heading: HeadingLevel.HEADING_1, spacing: { before: 240, after: 120 } });
-            if (trimmed.startsWith('Thème:')) return new Paragraph({ text: trimmed, style: 'Intense Quote', spacing: { after: 240 } });
+
+            if (trimmed.startsWith('# ')) return new Paragraph({ text: trimmed.substring(2).trim(), heading: HeadingLevel.HEADING_1, spacing: { before: 240, after: 120 }, children: [new TextRun({ text: trimmed.substring(2).trim(), color: btnColor })] });
+            if (trimmed.startsWith('Thème:')) return new Paragraph({ text: trimmed, style: 'Intense Quote', spacing: { after: 240 }, children: formatTextRun(trimmed, defaultTextColor) });
+            
+            // Nouveau traitement pour les titres de section du Cahier
+            if (trimmed.match(/^(JOYAUX|PERLES|APPLIQUE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE) DE LA PAROLE DE DIEU|APPLIQUE-TOI AU MINISTÈRE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE/i)) {
+              return new Paragraph({
+                children: [new TextRun({ text: trimmed, bold: true, color: btnColor, size: 28 })],
+                spacing: { before: 480, after: 180 },
+              });
+            }
+            
             if (trimmed.includes('PARAGRAPHE')) {
                 return new Paragraph({
-                    children: [new TextRun({ text: trimmed, bold: true, color: settings.buttonColor.replace('#', '') })],
+                    children: [new TextRun({ text: trimmed, bold: true, color: btnColor })],
                     spacing: { before: 360, after: 120 },
                 });
             }
             if (trimmed.startsWith('VERSET')) {
               return new Paragraph({
-                children: [new TextRun({ text: trimmed, italics: true })],
-                border: { left: { color: settings.buttonColor.replace('#', ''), size: 24, style: 'single' } },
+                children: formatTextRun(trimmed, defaultTextColor),
+                border: { left: { color: btnColor, size: 24, style: 'single' } },
                 indent: { left: 360 },
                 spacing: { before: 120, after: 120 },
               });
@@ -123,20 +182,21 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
                 const [label, ...rest] = trimmed.split(':');
                 return new Paragraph({
                   children: [
-                    new TextRun({ text: `${label}: `, bold: true, color: settings.buttonColor.replace('#', ''), size: 20 }),
-                    new TextRun({ text: rest.join(':').trim(), size: 20 }),
+                    new TextRun({ text: `${label}: `, bold: true, color: btnColor, size: 20 }),
+                    ...formatTextRun(rest.join(':').trim(), defaultTextColor),
                   ],
                   spacing: { after: 60 },
                 });
             }
-            if (trimmed.startsWith('- Quelle leçon')) { // Nouvelle détection pour les questions d'application
+            // Questions d'application spécifiques
+            if (trimmed.startsWith('- Quelle leçon')) { 
               return new Paragraph({
-                children: [new TextRun({ text: trimmed, italics: true, size: 18 })],
+                children: formatTextRun(trimmed, defaultTextColor),
                 spacing: { before: 60, after: 60 },
                 indent: { left: 240 },
               });
             }
-            return new Paragraph({ text: trimmed, spacing: { after: 60 } });
+            return new Paragraph({ children: formatTextRun(trimmed, defaultTextColor), spacing: { after: 60 } });
           })
         ],
       }],
@@ -151,9 +211,13 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
     let y = 10;
     const margin = 10;
     const pageWidth = doc.internal.pageSize.getWidth();
+    const defaultTextColor = settings.backgroundColor === '#f4f4f5' || settings.backgroundColor === '#fef3c7' ? 0 : 255; // 0 for black, 255 for white
+    const btnColorRgb = doc.colorParse(settings.buttonColor || '#4a70b5');
+
 
     // Set font for better rendering of French characters
     doc.setFont('helvetica');
+    doc.setTextColor(defaultTextColor);
 
     // Title
     doc.setFontSize(24);
@@ -175,25 +239,35 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
       if (y > doc.internal.pageSize.getHeight() - margin) {
         doc.addPage();
         y = margin;
+        doc.setTextColor(defaultTextColor); // Reset color for new page
       }
 
-      if (trimmed.startsWith('#')) {
+      if (trimmed.startsWith('# ')) { // Adjusted for '# '
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
-        doc.text(trimmed.substring(1).trim(), margin, y);
+        doc.setTextColor(btnColorRgb.r, btnColorRgb.g, btnColorRgb.b);
+        doc.text(trimmed.substring(2).trim(), margin, y);
         y += 7;
+        doc.setTextColor(defaultTextColor);
       } else if (trimmed.startsWith('Thème:')) {
         doc.setFontSize(11);
         doc.setFont('helvetica', 'italic');
         doc.text(trimmed, margin, y);
         y += 7;
+      } else if (trimmed.match(/^(JOYAUX|PERLES|APPLIQUE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE) DE LA PAROLE DE DIEU|APPLIQUE-TOI AU MINISTÈRE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE/i)) {
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(btnColorRgb.r, btnColorRgb.g, btnColorRgb.b);
+        doc.text(trimmed, margin, y);
+        y += 7;
+        doc.setTextColor(defaultTextColor);
       } else if (trimmed.includes('PARAGRAPHE')) {
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(settings.buttonColor || '#4a70b5');
+        doc.setTextColor(btnColorRgb.r, btnColorRgb.g, btnColorRgb.b);
         doc.text(trimmed, margin, y);
         y += 7;
-        doc.setTextColor(0, 0, 0); // Reset color
+        doc.setTextColor(defaultTextColor); // Reset color
       } else if (trimmed.startsWith('VERSET')) {
         doc.setFontSize(11);
         doc.setFont('helvetica', 'italic');
@@ -204,9 +278,9 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
         const [label, ...rest] = trimmed.split(':');
-        doc.setTextColor(settings.buttonColor || '#4a70b5');
+        doc.setTextColor(btnColorRgb.r, btnColorRgb.g, btnColorRgb.b);
         doc.text(`${label}: `, margin, y);
-        doc.setTextColor(0, 0, 0); // Reset color
+        doc.setTextColor(defaultTextColor); // Reset color
         doc.setFont('helvetica', 'normal');
         const textLines = doc.splitTextToSize(rest.join(':').trim(), pageWidth - 2 * margin - doc.getStringUnitWidth(`${label}: `) * doc.getFontSize());
         doc.text(textLines, margin + doc.getStringUnitWidth(`${label}: `) * doc.getFontSize(), y, { align: 'left' });
@@ -234,7 +308,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
   if (selectedStudy) {
     return (
       <div className={`animate-in fade-in slide-in-from-right-4 duration-500 pb-24 ${readingMode ? 'fixed inset-0 z-[100] bg-[var(--bg-color)] overflow-y-auto p-0 md:p-0' : ''}`}>
-        <div className={`flex items-center justify-between mb-10 sticky top-0 py-4 z-20 bg-[var(--bg-color)] border-b border-white/5 ${readingMode ? 'max-w-4xl mx-auto px-6' : ''} print:hidden`}>
+        <div className={`flex items-center justify-between mb-10 sticky top-0 py-4 z-20 bg-[var(--bg-color)] border-b border-white/5 ${readingMode ? 'hidden' : ''} print:hidden`}>
           <button onClick={() => { setSelectedStudy(null); setReadingMode(false); }} className="flex items-center space-x-3 opacity-60 hover:opacity-100 transition-all group">
             <ChevronLeft size={24} className="group-hover:-translate-x-1 transition-transform" />
             <span className="text-xs font-black uppercase tracking-[0.2em]">Fermer</span>
@@ -274,7 +348,13 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
             {selectedStudy.content.split('\n').map((line, idx) => {
               const trimmed = line.trim();
               if (!trimmed) return null;
-              if (trimmed.startsWith('#')) return <h3 key={idx} className="text-3xl font-black pt-12 border-t border-white/10 mt-12 uppercase tracking-tight" style={{ color: 'var(--btn-color)' }}>{trimmed.substring(1).trim()}</h3>;
+              if (trimmed.startsWith('# ')) return <h3 key={idx} className="text-3xl font-black pt-12 border-t border-white/10 mt-12 uppercase tracking-tight" style={{ color: 'var(--btn-color)' }}>{trimmed.substring(2).trim()}</h3>;
+              
+              // Nouveau traitement pour les titres de section du Cahier
+              if (trimmed.match(/^(JOYAUX|PERLES|APPLIQUE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE) DE LA PAROLE DE DIEU|APPLIQUE-TOI AU MINISTÈRE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE/i)) {
+                return <h3 key={idx} className="text-3xl font-black pt-12 border-t border-white/10 mt-12 uppercase tracking-tight" style={{ color: 'var(--btn-color)' }}>{trimmed}</h3>;
+              }
+
               if (trimmed.includes('PARAGRAPHE')) {
                 return <h3 key={idx} className="text-3xl font-black pt-12 border-t border-white/10 mt-12 uppercase tracking-tight" style={{ color: 'var(--btn-color)' }}>{trimmed}</h3>;
               }
@@ -325,7 +405,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
               <div className="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button onClick={(e) => handleDelete(study.id, e)} className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg"><Trash2 size={18}/></button>
               </div>
-              <div className="text-[9px] font-black uppercase tracking-widest opacity-30 mb-4">{study.type} {study.part && `- ${study.part.toUpperCase()}`}</div>
+              <div className="text-[9px] font-black uppercase tracking-widest opacity-30 mb-4">{study.type} {study.part && `- ${study.part.toUpperCase().replace(/_/g, ' ')}`}</div>
               <h3 className="font-black text-2xl mb-6 line-clamp-2 leading-tight uppercase tracking-tight">{study.title}</h3>
               <div className="flex justify-between items-center mt-auto pt-6 border-t border-white/5">
                 <span className="text-[10px] font-bold opacity-30">{study.date}</span>

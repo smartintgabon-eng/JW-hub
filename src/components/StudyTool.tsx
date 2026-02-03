@@ -1,4 +1,4 @@
-// Fix: Removed 'DELETE_FILE' from the beginning of the file.
+
 import React, { useState, useEffect } from 'react';
 import { Search, Link as LinkIcon, Calendar, Loader2, Globe, Check, ShieldCheck, AlertTriangle, RefreshCw, Timer } from 'lucide-react';
 import { StudyPart, GeneratedStudy, AppSettings } from '../types'; 
@@ -11,12 +11,12 @@ interface Props {
 }
 
 const studyPartOptions: { value: StudyPart; label: string }[] = [
-  { value: 'tout', label: 'Tout l\'article' },
-  { value: 'perles', label: 'Perles Spirituelles' },
-  { value: 'joyaux', label: 'Joyaux de la Parole de Dieu' },
-  { value: 'ministere', label: 'Applique-toi au Ministère' },
+  { value: 'joyaux_parole_dieu', label: 'Joyaux de la Parole de Dieu' },
+  { value: 'perles_spirituelles', label: 'Perles Spirituelles' },
+  { value: 'applique_ministere', label: 'Applique-toi au Ministère' },
   { value: 'vie_chretienne', label: 'Vie Chrétienne' },
-  { value: 'etude_biblique', label: 'Étude Biblique de l\'Assemblée' },
+  { value: 'etude_biblique_assemblee', label: 'Étude Biblique de l\'Assemblée' },
+  { value: 'tout', label: 'Toutes les parties' },
 ];
 
 const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
@@ -51,6 +51,9 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
     setError(null);
     setLoadingStep('');
     setPreview(null);
+    setInput(''); // Clear input on reset
+    setSelectedPart('tout'); // Reset selected part
+    localStorage.removeItem(`draft_${type}`);
   };
 
   const handleGenerate = async (isRetry = false) => {
@@ -117,8 +120,8 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
           <h2 className="text-2xl font-black uppercase tracking-tight">{type === 'WATCHTOWER' ? 'Tour de Garde' : 'Cahier de Réunion'}</h2>
         </div>
         <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
-          <button onClick={() => { setMode('link'); setInput(''); setError(null); }} className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${mode === 'link' ? 'bg-white/10 shadow' : 'opacity-40'}`}>Lien direct</button>
-          <button onClick={() => { setMode('date'); setInput(''); setError(null); }} className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${mode === 'date' ? 'bg-white/10 shadow' : 'opacity-40'}`}>Recherche</button>
+          <button onClick={() => { setMode('link'); resetState(); }} className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${mode === 'link' ? 'bg-white/10 shadow' : 'opacity-40'}`}>Lien direct</button>
+          <button onClick={() => { setMode('date'); resetState(); }} className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${mode === 'date' ? 'bg-white/10 shadow' : 'opacity-40'}`}>Recherche</button>
         </div>
       </div>
 
@@ -142,8 +145,8 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
           </div>
         </div>
 
-        {type === 'MINISTRY' && (
-          <div className="space-y-3 pt-4 border-t border-white/5">
+        {type === 'MINISTRY' && preview && ( // Show part selection AFTER preview
+          <div className="space-y-3 pt-4 border-t border-white/5 animate-in fade-in duration-300">
             <label className="text-[10px] font-black uppercase opacity-40 ml-1 tracking-[0.2em]">
               Choisir une partie de l'étude (Cahier)
             </label>
@@ -192,24 +195,49 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
           </div>
         )}
 
-        <button
-          onClick={() => handleGenerate()}
-          disabled={loading || cooldown > 0 || !input.trim()}
-          style={{ backgroundColor: cooldown > 0 ? '#1f2937' : 'var(--btn-color)', color: 'var(--btn-text)' }}
-          className="w-full py-6 rounded-xl font-black uppercase tracking-widest flex flex-col items-center justify-center space-y-1 shadow-2xl active:scale-95 disabled:opacity-50 transition-all min-h-[100px]"
-        >
-          {loading ? (
-            <div className="flex flex-col items-center space-y-2">
-              <Loader2 className="animate-spin" size={28} />
-              <span className="text-[10px] opacity-70 font-bold tracking-widest uppercase">{loadingStep}</span>
+        {preview ? (
+            <div className="bg-white/5 border border-white/20 rounded-[2.5rem] p-10 animate-in zoom-in-95 duration-500 shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-2 h-full bg-[var(--btn-color)]" />
+                <div className="flex items-center space-x-3 mb-6 text-[var(--btn-color)]">
+                <Check size={24} className="stroke-[3]" />
+                <span className="text-xs font-black uppercase tracking-[0.3em]">Article Trouvé</span>
+                </div>
+                <h3 className="text-3xl font-black mb-3 uppercase tracking-tighter">{preview.title}</h3>
+                <p className="text-lg opacity-60 mb-8 font-serif italic">{preview.theme || "Prêt pour l'analyse"}</p>
+                
+                <div className="flex flex-col sm:flex-row gap-4">
+                    <button 
+                    onClick={() => handleGenerate(true)} 
+                    disabled={loading || cooldown > 0}
+                    style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
+                    className="flex-1 py-5 rounded-xl font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center space-x-2"
+                    >
+                    {loading ? <Loader2 className="animate-spin" size={18} /> : <ShieldCheck size={18} />}
+                    <span>Générer les réponses</span>
+                    </button>
+                    <button onClick={() => resetState()} className="flex-1 bg-white/5 border border-white/10 py-5 rounded-xl font-black text-sm uppercase tracking-widest">Recommencer la recherche</button>
+                </div>
             </div>
-          ) : (
-            <div className="flex items-center space-x-3">
-              <Search size={24} />
-              <span className="text-xl">Lancer l'étude</span>
-            </div>
-          )}
-        </button>
+        ) : (
+            <button
+                onClick={() => handleGenerate()}
+                disabled={loading || cooldown > 0 || !input.trim()}
+                style={{ backgroundColor: cooldown > 0 ? '#1f2937' : 'var(--btn-color)', color: 'var(--btn-text)' }}
+                className="w-full py-6 rounded-xl font-black uppercase tracking-widest flex flex-col items-center justify-center space-y-1 shadow-2xl active:scale-95 disabled:opacity-50 transition-all min-h-[100px]"
+            >
+                {loading ? (
+                    <div className="flex flex-col items-center space-y-2">
+                    <Loader2 className="animate-spin" size={28} />
+                    <span className="text-[10px] opacity-70 font-bold tracking-widest uppercase">{loadingStep}</span>
+                    </div>
+                ) : (
+                    <div className="flex items-center space-x-3">
+                    <Search size={24} />
+                    <span className="text-xl">Lancer l'étude</span>
+                    </div>
+                )}
+            </button>
+        )}
         
         {mode === 'date' && (
           <p className="text-[10px] text-center opacity-30 font-bold uppercase tracking-tighter">
@@ -217,31 +245,6 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
           </p>
         )}
       </div>
-
-      {preview && (
-        <div className="bg-white/5 border border-white/20 rounded-[2.5rem] p-10 animate-in zoom-in-95 duration-500 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-2 h-full bg-[var(--btn-color)]" />
-          <div className="flex items-center space-x-3 mb-6 text-[var(--btn-color)]">
-            <Check size={24} className="stroke-[3]" />
-            <span className="text-xs font-black uppercase tracking-[0.3em]">Article Trouvé</span>
-          </div>
-          <h3 className="text-3xl font-black mb-3 uppercase tracking-tighter">{preview.title}</h3>
-          <p className="text-lg opacity-60 mb-8 font-serif italic">{preview.theme || "Prêt pour l'analyse"}</p>
-          
-          <div className="flex flex-col sm:flex-row gap-4">
-            <button 
-              onClick={() => handleGenerate(true)} 
-              disabled={loading || cooldown > 0}
-              style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
-              className="flex-1 py-5 rounded-xl font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center space-x-2"
-            >
-              {loading ? <Loader2 className="animate-spin" size={18} /> : <ShieldCheck size={18} />}
-              <span>Générer les réponses</span>
-            </button>
-            <button onClick={() => setPreview(null)} className="flex-1 bg-white/5 border border-white/10 py-5 rounded-xl font-black text-sm uppercase tracking-widest">Annuler</button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

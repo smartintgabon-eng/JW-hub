@@ -1,4 +1,3 @@
-// Fix: Removed 'DELETE_FILE' from the beginning of the file.
 
 import { GeneratedStudy, AppSettings } from "./types"; 
 

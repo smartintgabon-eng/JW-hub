@@ -1,4 +1,4 @@
-// Fix: Removed 'DELETE_FILE' from the beginning of the file.
+
 export enum AppView {
   HOME = 'HOME',
   MINISTRY = 'MINISTRY',
@@ -9,11 +9,11 @@ export enum AppView {
 }
 
 export type StudyPart =
-  | 'perles' 
-  | 'joyaux' 
-  | 'ministere' 
+  | 'perles_spirituelles' 
+  | 'joyaux_parole_dieu' 
+  | 'applique_ministere' 
   | 'vie_chretienne' 
-  | 'etude_biblique' 
+  | 'etude_biblique_assemblee' 
   | 'tout';
 
 export interface GeneratedStudy {
