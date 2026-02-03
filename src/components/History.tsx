@@ -1,4 +1,4 @@
-
+// Fix: Removed 'DELETE_FILE' from the beginning of the file.
 import React, { useState, useEffect } from 'react';
 import { 
   History as HistoryIcon, 
@@ -103,7 +103,6 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
           ...study.content.split('\n').map(line => {
             const trimmed = line.trim();
             if (!trimmed) return new Paragraph({});
-            // Fix: Changed HeadingLevel.HEADING1 to HeadingLevel.HEADING_1
             if (trimmed.startsWith('#')) return new Paragraph({ text: trimmed.substring(1).trim(), heading: HeadingLevel.HEADING_1, spacing: { before: 240, after: 120 } });
             if (trimmed.startsWith('Thème:')) return new Paragraph({ text: trimmed, style: 'Intense Quote', spacing: { after: 240 } });
             if (trimmed.includes('PARAGRAPHE')) {
@@ -209,9 +208,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
         doc.text(`${label}: `, margin, y);
         doc.setTextColor(0, 0, 0); // Reset color
         doc.setFont('helvetica', 'normal');
-        // Fix: Changed doc.internal.getFontSize() to doc.getFontSize()
         const textLines = doc.splitTextToSize(rest.join(':').trim(), pageWidth - 2 * margin - doc.getStringUnitWidth(`${label}: `) * doc.getFontSize());
-        // Fix: Changed doc.internal.getFontSize() to doc.getFontSize()
         doc.text(textLines, margin + doc.getStringUnitWidth(`${label}: `) * doc.getFontSize(), y, { align: 'left' });
         y += (textLines.length * 5) + 3;
       } else if (trimmed.startsWith('- Quelle leçon')) {

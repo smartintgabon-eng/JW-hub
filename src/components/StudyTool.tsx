@@ -1,4 +1,4 @@
-
+// Fix: Removed 'DELETE_FILE' from the beginning of the file.
 import React, { useState, useEffect } from 'react';
 import { Search, Link as LinkIcon, Calendar, Loader2, Globe, Check, ShieldCheck, AlertTriangle, RefreshCw, Timer } from 'lucide-react';
 import { StudyPart, GeneratedStudy, AppSettings } from '../types'; 

@@ -1,4 +1,4 @@
-
+// Fix: Removed 'DELETE_FILE' from the beginning of the file.
 import { GoogleGenAI } from "@google/genai";
 import { StudyPart, AppSettings } from "../types"; 
 

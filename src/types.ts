@@ -1,4 +1,4 @@
-
+// Fix: Removed 'DELETE_FILE' from the beginning of the file.
 export enum AppView {
   HOME = 'HOME',
   MINISTRY = 'MINISTRY',

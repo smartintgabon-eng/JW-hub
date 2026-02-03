@@ -1,4 +1,4 @@
-
+// Fix: Removed 'DELETE_FILE' from the beginning of the file.
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
