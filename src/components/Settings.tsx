@@ -1,16 +1,17 @@
+
 import React from 'react';
-import {
-  Settings as SettingsIcon,
-  Palette,
-  Info,
-  MessageSquareText,
-  MousePointer2,
-  Trash2,
-  RotateCcw,
-  AlertTriangle
+import { 
+  Settings as SettingsIcon, 
+  Palette, 
+  Info, 
+  MessageSquareText, 
+  MousePointer2, 
+  Trash2, 
+  RotateCcw, 
+  AlertTriangle 
 } from 'lucide-react';
-import { AppSettings } from '../types';
-import { saveSettings, clearHistory, totalReset } from '../utils/storage';
+import { AppSettings } from '../types'; 
+import { saveSettings, clearHistory, totalReset } from '../utils/storage'; 
 
 interface Props {
   settings: AppSettings;
@@ -20,26 +21,33 @@ interface Props {
 const Settings: React.FC<Props> = ({ settings, setSettings }) => {
   const updateSetting = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
     const newSettings = { ...settings, [key]: value };
-    if (key === 'backgroundColor') newSettings.customHex = '';
-    if (key === 'buttonColor') newSettings.customButtonHex = '';
+    // Clear custom hex if a preset is chosen
+    if (key === 'backgroundColor' && value !== settings.customHex) newSettings.customHex = '';
+    if (key === 'buttonColor' && value !== settings.customButtonHex) newSettings.customButtonHex = '';
     setSettings(newSettings);
     saveSettings(newSettings);
   };
 
   const handleCustomHexChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'background' | 'button') => {
-    const value = e.target.value;
+    const value = e.target.value.trim();
     const newSettings = { ...settings };
+    
+    // Regex simple pour valider un hex valide (3 ou 6 caractères après #)
+    const isValidHex = /^#([0-9A-F]{3}){1,2}$/i.test(value);
+
     if (type === 'background') {
       newSettings.customHex = value;
-      // Appliquer la valeur directement pour la prévisualisation live
-      if (/^#([0-9A-F]{3}){1,2}$/i.test(value) || value === '') {
-        newSettings.backgroundColor = value === '' ? '#09090b' : value; // Fallback to default if empty
+      if (isValidHex) {
+        newSettings.backgroundColor = value;
+      } else if (value === '' || value === '#') { // Allow empty or just '#' to not break preview, fallback to default for actual setting
+        newSettings.backgroundColor = '#09090b'; 
       }
-    } else {
+    } else { // type === 'button'
       newSettings.customButtonHex = value;
-      // Appliquer la valeur directement pour la prévisualisation live
-      if (/^#([0-9A-F]{3}){1,2}$/i.test(value) || value === '') {
-        newSettings.buttonColor = value === '' ? '#4a70b5' : value; // Fallback to default if empty
+      if (isValidHex) {
+        newSettings.buttonColor = value;
+      } else if (value === '' || value === '#') { // Allow empty or just '#' to not break preview, fallback to default for actual setting
+        newSettings.buttonColor = '#4a70b5';
       }
     }
     setSettings(newSettings);
@@ -58,7 +66,7 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
     const confirm = window.confirm(
       "☢️ RÉINITIALISATION TOTALE\n\nCela va supprimer :\n- Tout l'historique\n- Tous vos réglages\n- Les fichiers mis en cache (PWA)\n\nL'application redeviendra comme neuve. Continuer ?"
     );
-
+    
     if (confirm) {
       await totalReset();
     }
@@ -182,17 +190,17 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
           <AlertTriangle size={18} />
           <h3 className="font-bold uppercase text-xs tracking-widest">Zone de danger</h3>
         </div>
-
+        
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <button
+          <button 
             onClick={handleClearHistory}
             className="flex items-center justify-center space-x-3 p-5 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 font-black uppercase text-[10px] tracking-[0.2em] hover:bg-red-500/20 transition-all active:scale-95"
           >
             <Trash2 size={18} />
             <span>Effacer Historique</span>
           </button>
-
-          <button
+          
+          <button 
             onClick={handleResetApp}
             className="flex items-center justify-center space-x-3 p-5 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-amber-400 font-black uppercase text-[10px] tracking-[0.2em] hover:bg-amber-500/20 transition-all active:scale-95"
           >

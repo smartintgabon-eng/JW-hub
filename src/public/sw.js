@@ -1,3 +1,4 @@
+
 const CACHE_NAME = 'jw-study-pro-cache-v5';
 const ASSETS = [
   '/',

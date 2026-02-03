@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { HelpCircle, ChevronRight, ChevronLeft, Lightbulb, Link as LinkIcon, Search, Save, Calendar, BookOpen, Settings as SettingsIcon, History as HistoryIcon, Download } from 'lucide-react';
 
@@ -92,7 +93,7 @@ const Tutorial: React.FC = () => {
       </div>
 
       <div className="flex items-center space-x-8">
-        <button
+        <button 
           disabled={step === 0}
           onClick={() => setStep(s => s - 1)}
           className={`p-4 rounded-full transition-all ${step === 0 ? 'text-white/30' : 'bg-white/10 text-white hover:bg-white/20 active:scale-90'}`}
@@ -106,7 +107,7 @@ const Tutorial: React.FC = () => {
           ))}
         </div>
 
-        <button
+        <button 
           disabled={step === steps.length - 1}
           onClick={() => setStep(s => s + 1)}
           style={{ backgroundColor: step === steps.length - 1 ? 'rgb(31 41 55)' : 'var(--btn-color)', color: 'var(--btn-text)' }}

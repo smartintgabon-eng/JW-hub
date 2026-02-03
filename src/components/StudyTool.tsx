@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { Search, Link as LinkIcon, Calendar, Loader2, Globe, Check, ShieldCheck, AlertTriangle, RefreshCw, Timer } from 'lucide-react';
-import { StudyPart, GeneratedStudy, AppSettings, studyPartOptions } from '../types';
-import { generateStudyContent } from '../services/geminiService';
+import { StudyPart, GeneratedStudy, AppSettings, studyPartOptions } from '../types'; 
+import { generateStudyContent } from '../services/geminiService'; 
 
 interface Props {
   type: 'WATCHTOWER' | 'MINISTRY';
@@ -47,23 +48,23 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
   };
 
   const handleGenerate = async (isRetry = false) => {
-    if (loading || cooldown > 0 || (!input.trim() && !preview)) return;
-
+    if (loading || cooldown > 0 || (!input.trim() && !preview)) return; 
+    
     setLoading(true);
     setError(null);
-
+    
     if (!preview) {
         setLoadingStep(mode === 'link' ? 'Analyse du lien...' : 'Recherche sur JW.ORG...');
     } else {
         setLoadingStep('Génération des réponses...');
     }
-
+    
     try {
-      const result = await generateStudyContent(type, input.trim(), selectedPart, settings);
-
-      if (!isRetry && !preview) {
+      const result = await generateStudyContent(type, input.trim(), selectedPart, settings); 
+      
+      if (!isRetry && !preview) { // First call, no retry, no preview yet: get preview
         setPreview({ title: result.title, theme: result.theme });
-      } else {
+      } else { // Subsequent call or retry, after preview is confirmed
         setLoadingStep('Enregistrement...');
         const newStudy: GeneratedStudy = {
           id: Date.now().toString(),
@@ -73,7 +74,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
           content: result.text,
           timestamp: Date.now(),
           url: input.startsWith('http') ? input.trim() : undefined,
-          part: type === 'MINISTRY' ? selectedPart : undefined
+          part: type === 'MINISTRY' ? selectedPart : undefined 
         };
         onGenerated(newStudy);
         setPreview(null);
@@ -83,10 +84,10 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
     } catch (err: any) {
       if (err.message === 'COOLDOWN_REQUIRED') {
         setError("Limite globale des requêtes Google atteinte. Les tentatives répétées prolongeront le délai de récupération. Veuillez patienter pour réessayer.");
-        setCooldown(90);
+        setCooldown(90); 
       } else if (err.message === 'SEARCH_QUOTA_EXCEEDED') {
         setError("Le service de recherche Google est temporairement saturé. Veuillez réessayer avec un 'Lien direct' ou patientez.");
-        setCooldown(60);
+        setCooldown(60); 
       } else if (err.message === 'INVALID_API_KEY') {
         setError("Clé API invalide. Vérifiez que votre clé est correcte et configurée dans votre projet Google Cloud (et Vercel si déployé).");
       } else if (err.message === 'BILLING_REQUIRED') {
@@ -128,7 +129,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
             <input
               type={mode === 'link' ? "text" : "text"}
               value={input}
-              disabled={cooldown > 0 || loading || preview !== null}
+              disabled={cooldown > 0 || loading || preview !== null} 
               onChange={(e) => handleInputChange(e.target.value)}
               placeholder={mode === 'link' ? "https://www.jw.org/..." : "Ex: 25 novembre 2025"}
               className={`w-full bg-black/40 border border-white/10 rounded-xl py-5 pl-14 pr-4 focus:border-[var(--btn-color)] outline-none transition-all font-medium ${cooldown > 0 || loading || preview !== null ? 'opacity-30 cursor-not-allowed' : ''}`}
@@ -146,13 +147,13 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
               <div className="space-y-2">
                  <p className="uppercase text-xs font-black tracking-widest">Alerte de Quota</p>
                  <p className="font-normal opacity-90 leading-relaxed">
-                   {cooldown > 0
+                   {cooldown > 0 
                     ? `Google limite l'utilisation gratuite. Veuillez patienter ${cooldown} secondes. Les tentatives répétées prolongent ce délai.`
                     : error}
                  </p>
               </div>
             </div>
-
+            
             {cooldown > 0 ? (
               <div className="flex items-center justify-center space-x-3 bg-red-500/20 py-4 rounded-xl border border-red-500/30">
                 <Timer className="animate-pulse" size={20} />
@@ -168,7 +169,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
 
         {preview ? (
             <>
-                {type === 'MINISTRY' && (
+                {type === 'MINISTRY' && ( // Show part selection AFTER preview
                 <div className="space-y-3 pt-4 border-t border-white/5 animate-in fade-in duration-300">
                     <label className="text-[10px] font-black uppercase opacity-40 ml-1 tracking-[0.2em]">
                     Choisir une partie de l'étude (Cahier)
@@ -198,12 +199,12 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
                     </div>
                     <h3 className="text-3xl font-black mb-3 uppercase tracking-tighter">{preview.title}</h3>
                     <p className="text-lg opacity-60 mb-8 font-serif italic">{preview.theme || "Prêt pour l'analyse"}</p>
-
+                    
                     <div className="flex flex-col sm:flex-row gap-4">
-                        <button
-                        onClick={() => handleGenerate(true)}
+                        <button 
+                        onClick={() => handleGenerate(true)} 
                         disabled={loading || cooldown > 0}
-                        style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }}
+                        style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
                         className="flex-1 py-5 rounded-xl font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center space-x-2"
                         >
                         {loading ? <Loader2 className="animate-spin" size={18} /> : <ShieldCheck size={18} />}
@@ -233,7 +234,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
                 )}
             </button>
         )}
-
+        
         {mode === 'date' && (
           <p className="text-[10px] text-center opacity-30 font-bold uppercase tracking-tighter">
             Note: La recherche par date utilise l'outil Google Search, qui est soumis à des quotas plus strictes.

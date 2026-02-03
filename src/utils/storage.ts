@@ -1,4 +1,5 @@
-import { GeneratedStudy, AppSettings } from "./types";
+
+import { GeneratedStudy, AppSettings } from "./types"; 
 
 const HISTORY_KEY = 'jw_study_history';
 const SETTINGS_KEY = 'jw_study_settings';
@@ -33,7 +34,7 @@ export const resetSettings = () => {
 };
 
 /**
- * Réinitialisation totale : supprime tout le stockage local,
+ * Réinitialisation totale : supprime tout le stockage local, 
  * vide tous les caches du navigateur et désenregistre les Service Workers.
  */
 export const totalReset = async () => {
@@ -75,7 +76,6 @@ export const getSettings = (): AppSettings => {
     buttonColor: '#4a70b5',
     customButtonHex: '',
     autoSave: true,
-    // Recommended default model for basic text tasks as per guidelines.
     modelName: 'gemini-3-flash-preview',
     answerPreferences: ''
   };

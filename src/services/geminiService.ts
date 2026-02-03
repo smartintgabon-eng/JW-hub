@@ -1,5 +1,6 @@
+
 import { GoogleGenAI } from "@google/genai";
-import { StudyPart, AppSettings } from "../types";
+import { StudyPart, AppSettings } from "../types"; 
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -31,41 +32,39 @@ export const generateStudyContent = async (
   settings: AppSettings,
   retryCount = 0
 ): Promise<{ text: string; title: string; theme?: string }> => {
-
+  
   const apiKey = process.env.API_KEY || "";
   if (!apiKey) throw new Error("Clé API absente. Vérifiez votre configuration.");
 
-  // Fix: Always use `const ai = new GoogleGenAI({apiKey: process.env.API_KEY});`
+  // Always use `const ai = new GoogleGenAI({apiKey: process.env.API_KEY});` as per guidelines.
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
+  
   const cleanedInput = cleanUrl(input);
   const isLink = cleanedInput.startsWith('http');
 
   let modelToUse: string;
-  let toolsConfig: any[] | undefined;
+  let toolsConfig: any[] | undefined; 
 
-  // Fix: Use 'gemini-3-flash-preview' for basic text tasks
-  modelToUse = 'gemini-3-flash-preview';
+  // Use 'gemini-3-flash-preview' for text tasks, as per guidelines.
+  modelToUse = 'gemini-3-flash-preview'; 
 
   if (isLink) {
-    // If it's a link, no need for googleSearch to "find" the article, just to analyze it.
-    toolsConfig = undefined;
+    toolsConfig = undefined; 
   } else {
-    // If it's a search by date/theme, we need googleSearch.
-    // Fix: Add tool configuration for Google Search grounding
-    toolsConfig = [{ googleSearch: {} }];
+    // Add tool configuration for Google Search grounding, as per guidelines.
+    toolsConfig = [{ googleSearch: {} }]; 
   }
 
   let systemInstruction = '';
-  let temperature = 0.2;
+  let temperature = 0.2; 
 
   if (type === 'WATCHTOWER') {
     systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'extraire et d'analyser l'article de la Tour de Garde à partir du ${isLink ? "lien" : "sujet/date"} "${input}", puis de le subdiviser de manière structurée et très détaillée.
     La réponse doit être **impérativement basée** et strictement fidèle aux publications officielles de jw.org et à la Bible Traduction du Monde Nouveau. Ne pas inventer d'informations. Priorise la clarté et la concision tout en étant exhaustif.
-    Structure: # [Titre de l'article] \n Thème: [Thème de l'article] \n PARAGRAPHE [N°]: Question, Verset (inclure le texte complet du verset entre parenthèses), Réponse (d'après le verset biblique et le paragraphe), Commentaire, Application.
+    Structure: # [Titre de l'article] \n Thème: [Thème de l'article] \n PARAGRAPHE [N°]: Question, Verset (inclure le texte complet du verset entre parenthèses), Réponse (d'après le verset biblique et le paragraphe), Commentaire, Application. 
     À la fin de l'article, inclure toutes les QUESTIONS DE RÉVISION: Question, Réponse (basées sur le contenu de l'article).
     Style: ${settings.answerPreferences || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé'}. Réponds en Markdown.`;
-    temperature = 0.1;
+    temperature = 0.1; 
   } else if (type === 'MINISTRY') {
     let partInstruction = '';
     switch (part) {
@@ -99,27 +98,27 @@ export const generateStudyContent = async (
 
     systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'extraire et d'analyser l'article du Cahier Vie et Ministère à partir du ${isLink ? "lien" : "sujet/date"} "${input}". ${partInstruction}
     La réponse doit être **impérativement basée** et strictement fidèle aux publications officielles de jw.org et à la Bible Traduction du Monde Nouveau, en utilisant une réflexion biblique approfondie. Ne pas inventer d'informations.
-    Structure: # [Titre de l'article] \n Thème: [Titre de l'article] \n Ensuite, pour chaque section du Cahier, suis le formatage spécifique demandé pour chaque partie.
+    Structure: # [Titre de l'article] \n Thème: [Thème de l'article] \n Ensuite, pour chaque section du Cahier, suis le formatage spécifique demandé pour chaque partie.
     Style: ${settings.answerPreferences || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé. Élabore avec des points pertinents.'}. Réponds en Markdown.`;
-    temperature = 0.2;
+    temperature = 0.2; 
   }
 
   try {
     const response = await ai.models.generateContent({
       model: modelToUse,
-      contents: isLink
-        ? `Lien d'article à traiter: ${cleanedInput}`
+      contents: isLink 
+        ? `Lien d'article à traiter: ${cleanedInput}` 
         : `Recherche et traite l'article pour: ${type} ${cleanedInput}`,
       config: {
         systemInstruction,
         temperature,
-        tools: toolsConfig,
+        tools: toolsConfig, 
       },
     });
 
-    // Fix: Correct way to extract text output from GenerateContentResponse
+    // Correct way to extract text output from GenerateContentResponse
     const text = response.text || "";
-
+    
     if (!text || text.length < 50 || text.toLowerCase().includes('désolé') || text.toLowerCase().includes('impossible de trouver')) {
       throw new Error("MODEL_PROCESSING_ERROR");
     }
@@ -132,10 +131,11 @@ export const generateStudyContent = async (
 
   } catch (error: any) {
     console.error("Gemini API Error:", error);
+    
+    const errorStr = JSON.stringify(error); 
+    const status = error.status || (error.response && error.response.status); 
 
-    const errorStr = JSON.stringify(error);
-    const status = error.status || (error.response && error.response.status);
-
+    // Specific API key/billing errors
     if (status === 401 || errorStr.includes('Unauthorized') || errorStr.includes('invalid API key')) {
         throw new Error("INVALID_API_KEY");
     }
@@ -145,7 +145,7 @@ export const generateStudyContent = async (
 
     const isRateLimit = errorStr.includes('429') || errorStr.includes('quota') || errorStr.includes('exhausted');
     const isSearchToolError = errorStr.includes('tool error') || errorStr.includes('Google Search');
-
+    
     if (isRateLimit) {
       if (retryCount < 2) {
         const wait = (retryCount + 1) * 20000;
@@ -163,11 +163,12 @@ export const generateStudyContent = async (
       }
       throw new Error("SEARCH_QUOTA_EXCEEDED");
     }
-
+    
     if (error.message === "MODEL_PROCESSING_ERROR") {
         throw new Error("L'IA n'a pas pu trouver ou analyser l'article. Essayez un lien direct ou une formulation différente.");
     }
 
+    // Erreur générique avec le statut si disponible, pour le diagnostic.
     throw new Error(`GENERIC_API_ERROR: ${status || 'unknown'}`);
   }
 };

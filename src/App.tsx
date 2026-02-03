@@ -1,24 +1,25 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  BookOpen,
-  Calendar,
-  Settings as SettingsIcon,
-  History as HistoryIcon,
-  HelpCircle,
+import { 
+  BookOpen, 
+  Calendar, 
+  Settings as SettingsIcon, 
+  History as HistoryIcon, 
+  HelpCircle, 
   Menu,
   X,
   Home as HomeIcon,
   WifiOff,
   Download
 } from 'lucide-react';
-import { AppView, GeneratedStudy, AppSettings } from './types';
-import { getSettings, getHistory, saveToHistory } from './utils/storage';
+import { AppView, GeneratedStudy, AppSettings } from './types'; 
+import { getSettings, getHistory, saveToHistory } from './utils/storage'; 
 
 // Sub-components
-import StudyTool from './components/StudyTool';
-import History from './components/History';
-import Settings from './components/Settings';
-import Tutorial from './components/Tutorial';
+import StudyTool from './components/StudyTool'; 
+import History from './components/History'; 
+import Settings from './components/Settings'; 
+import Tutorial from './components/Tutorial'; 
 
 const getContrastColor = (hex: string) => {
   if (!hex || hex.length < 6) return 'white';
@@ -43,6 +44,7 @@ const App: React.FC = () => {
       e.preventDefault();
       setDeferredPrompt(e);
     };
+    // Fix: Corrected event name from 'beforeInstallPrompt' to 'beforeinstallprompt'
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
     const handleStatus = () => setIsOnline(navigator.onLine);
@@ -65,7 +67,6 @@ const App: React.FC = () => {
     return () => {
       window.removeEventListener('online', handleStatus);
       window.removeEventListener('offline', handleStatus);
-      // Fix: Corrected event name from 'beforeInstallPrompt' to 'beforeinstallprompt'
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, [settings]);
@@ -112,7 +113,7 @@ const App: React.FC = () => {
   const NavItem = ({ icon: Icon, label, active, onClick }: any) => (
     <button
       onClick={onClick}
-      style={{
+      style={{ 
         backgroundColor: active ? 'var(--btn-color)' : 'transparent',
         color: active ? 'var(--btn-text)' : 'inherit'
       }}
@@ -169,7 +170,7 @@ const App: React.FC = () => {
         </nav>
 
         {deferredPrompt && (
-          <button
+          <button 
             onClick={handleInstallClick}
             className="mt-4 w-full bg-blue-600/20 border border-blue-600/30 text-blue-400 py-3 rounded-xl flex items-center justify-center space-x-2 text-xs font-bold uppercase tracking-widest hover:bg-blue-600/30 transition-all"
           >
@@ -184,12 +185,12 @@ const App: React.FC = () => {
         <div className="max-w-5xl mx-auto">
           {view === AppView.HOME && (
             <div className="flex flex-col items-center justify-center min-h-[70vh] text-center space-y-12 animate-in fade-in duration-700">
-               <div
-                 style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }}
+               <div 
+                 style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
                  className="w-24 h-24 text-4xl rounded-2xl flex items-center justify-center font-black shadow-2xl hover:scale-105 transition-transform cursor-pointer"
                  onClick={() => navigateTo(AppView.TUTORIAL)}
                >JW</div>
-
+               
                <div className="space-y-4">
                   <h1 className="text-5xl md:text-7xl font-black tracking-tight uppercase">Préparez-vous. <br/> <span className="opacity-20">Simplement.</span></h1>
                   <p className="text-lg opacity-50 max-w-xl mx-auto font-medium">L'outil indispensable pour approfondir votre étude biblique et vos réunions.</p>
@@ -219,7 +220,7 @@ const App: React.FC = () => {
             {view === AppView.MINISTRY && <StudyTool type="MINISTRY" onGenerated={handleStudyGenerated} settings={settings} />}
             {view === AppView.WATCHTOWER && <StudyTool type="WATCHTOWER" onGenerated={handleStudyGenerated} settings={settings} />}
             {view === AppView.HISTORY && <History history={history} setHistory={setHistory} settings={settings} />}
-            {view === AppView.SETTINGS && <Settings settings={settings} setSettings={setAppSettings} />}
+            {view === AppView.SETTINGS && <Settings settings={setAppSettings} />}
             {view === AppView.TUTORIAL && <Tutorial />}
           </div>
         </div>
