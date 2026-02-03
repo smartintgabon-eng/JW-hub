@@ -2,37 +2,50 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#4a70b5" />
+    <meta
+      name="description"
+      content="Assistant d'étude pour la Tour de Garde et le Cahier Vie et Ministère, utilisant la Bible Traduction du Monde Nouveau."
+    />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <!--
+      Le fichier manifest.json relie les fonctionnalités PWA.
+      Voir https://developers.google.com/web/fundamentals/web-app-manifest/
+    -->
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <!--
+      Notez l'utilisation de %PUBLIC_URL% dans les balises ci-dessus.
+      Il sera remplacé par l'URL du dossier `public` pendant la construction.
+      Seuls les fichiers à l'intérieur du dossier `public` peuvent être référencés depuis le HTML.
+
+      Contrairement à "/favicon.ico" ou "favicon.ico", "%PUBLIC_URL%/favicon.ico" fonctionnera
+      correctement avec le routage côté client et une URL publique non-racine.
+      Apprenez à configurer une URL publique non-racine en exécutant `npm run build`.
+    -->
     <title>JW Study - Assistant Spirituel</title>
-    
-    <!-- PWA & Mobile Optimization -->
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="JW Study">
-    <meta name="application-name" content="JW Study">
-    
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%234a70b5'/%3E%3Ctext x='50' y='64' font-family='sans-serif' font-weight='900' font-size='38' fill='white' text-anchor='middle'%3EJW%3C/text%3E%3C/svg%3E">
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#4a70b5">
+
+    <!-- Tailwind CSS CDN - Nécessaire si vous n'utilisez pas une configuration PostCSS -->
+    <script src="https://cdn.tailwindcss.com"></script> 
     
     <script>
+      // Polyfill pour process.env, nécessaire pour @google/genai dans certains environnements
       if (typeof window !== 'undefined') {
         window.process = window.process || { env: {} };
       }
     </script>
 
     <script>
-      // Enregistrement ultra-précis pour éviter les erreurs d'origine dans le bac à sable
+      // Enregistrement du Service Worker
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
+          // Utilisation de %PUBLIC_URL%/sw.js pour garantir le bon chemin après le build de react-scripts
+          navigator.serviceWorker.register('%PUBLIC_URL%/sw.js')
             .then(reg => console.log('SW prêt'))
             .catch(err => {
-              // On ignore silencieusement l'erreur d'origine dans l'aperçu car elle est attendue
+              // On ignore silencieusement l'erreur d'origine dans l'aperçu si elle est attendue
               if (!err.message.includes('origin')) {
                 console.warn('SW Status:', err.message);
               }
@@ -41,8 +54,6 @@
       }
     </script>
 
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%234a70b5'/%3E%3Ctext x='50' y='64' font-family='sans-serif' font-weight='900' font-size='38' fill='white' text-anchor='middle'%3EJW%3C/text%3E%3C/svg%3E">
-    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Lora:ital,wght@0,400..700;1,400..700&display=swap');
         
@@ -94,6 +105,17 @@
     </style>
 </head>
 <body class="selection:bg-blue-600/40">
+    <noscript>Vous devez activer JavaScript pour exécuter cette application.</noscript>
     <div id="root"></div>
+    <!--
+      Ce fichier HTML est un modèle.
+      Si vous l'ouvrez directement dans le navigateur, vous verrez une page vide.
+
+      Vous pouvez ajouter des polices web, des balises meta ou des analyses à ce fichier.
+      L'étape de build placera les scripts groupés dans la balise <body>.
+
+      Pour commencer le développement, exécutez `npm start` ou `yarn start`.
+      Pour créer un bundle de production, utilisez `npm run build` ou `yarn build`.
+    -->
 </body>
 </html>

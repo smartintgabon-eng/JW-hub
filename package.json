@@ -3,7 +3,6 @@
   "name": "jw-study-pro",
   "version": "1.0.0",
   "description": "Assistant d'étude pour la Tour de Garde et le Cahier Vie et Ministère.",
-  "main": "index.tsx",
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
@@ -20,8 +19,6 @@
     "react-dom": "^19.2.4"
   },
   "devDependencies": {
-    "@types/file-saver": "^2.0.7",
-    "@types/jspdf": "^2.0.0",
     "@types/node": "^20.0.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
