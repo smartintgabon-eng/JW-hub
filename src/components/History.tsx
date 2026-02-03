@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  History as HistoryIcon, 
-  Trash2, 
+import {
+  History as HistoryIcon,
+  Trash2,
   ChevronLeft,
   FileText,
   Printer,
@@ -13,12 +13,12 @@ import {
   FileSignature
 } from 'lucide-react';
 // Correct: Import studyPartOptions from types.ts
-import { GeneratedStudy, AppSettings, StudyPart, studyPartOptions } from '../types'; 
-import { deleteFromHistory, saveToHistory } from '../utils/storage'; 
-import { generateStudyContent } from '../services/geminiService'; 
+import { GeneratedStudy, AppSettings, StudyPart, studyPartOptions } from '../types';
+import { deleteFromHistory, saveToHistory } from '../utils/storage';
+import { generateStudyContent } from '../services/geminiService';
 
 // Importations pour la génération de documents
-import saveAs from 'file-saver'; 
+import saveAs from 'file-saver';
 import { Document, Paragraph, TextRun, Packer, HeadingLevel, AlignmentType } from 'docx';
 import jsPDF from 'jspdf';
 
@@ -77,7 +77,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
   const formatTextRun = (text: string, defaultColor: string) => {
     const children: TextRun[] = [];
     const boldRegex = /\*\*(.*?)\*\*/g;
-    const italicRegex = /\*(.*?)\*/g; 
+    const italicRegex = /\*(.*?)\*/g;
 
     let lastIndex = 0;
     let match;
@@ -122,7 +122,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
             text: segment.text,
             bold: segment.bold,
             italics: segment.italic,
-            color: defaultColor, 
+            color: defaultColor,
         }));
     }
     return children;
@@ -155,14 +155,14 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
 
             // Titres de section (ex: # PERLES SPIRITUELLES)
             if (trimmed.startsWith('# ')) {
-                return new Paragraph({ 
+                return new Paragraph({
                   children: [new TextRun({ text: trimmed.substring(2).trim(), bold: true, color: btnColor, size: 28 })],
                   spacing: { before: 480, after: 180 },
                 });
             }
             // Thème
             if (trimmed.startsWith('Thème:')) return new Paragraph({ text: trimmed, style: 'Intense Quote', spacing: { after: 240 }, children: formatTextRun(trimmed, defaultTextColor) });
-            
+
             // Titres de section détaillés pour le Cahier (par exemple, "JOYAUX DE LA PAROLE DE DIEU")
             if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE)/i)) {
               return new Paragraph({
@@ -170,7 +170,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
                 spacing: { before: 480, after: 180 },
               });
             }
-            
+
             // Paragraphes
             if (trimmed.includes('PARAGRAPHE')) {
                 return new Paragraph({
@@ -199,7 +199,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
                 });
             }
             // Questions d'application spécifiques
-            if (trimmed.startsWith('- Quelle leçon')) { 
+            if (trimmed.startsWith('- Quelle leçon')) {
               return new Paragraph({
                 children: formatTextRun(trimmed, defaultTextColor),
                 spacing: { before: 60, after: 60 },
@@ -367,7 +367,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
               const trimmed = line.trim();
               if (!trimmed) return null;
               if (trimmed.startsWith('# ')) return <h3 key={idx} className="text-3xl font-black pt-12 border-t border-white/10 mt-12 uppercase tracking-tight" style={{ color: 'var(--btn-color)' }}>{trimmed.substring(2).trim()}</h3>;
-              
+
               // Nouveau traitement pour les titres de section du Cahier
               if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE)/i)) {
                 return <h3 key={idx} className="text-3xl font-black pt-12 border-t border-white/10 mt-12 uppercase tracking-tight" style={{ color: 'var(--btn-color)' }}>{trimmed}</h3>;

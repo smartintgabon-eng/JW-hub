@@ -8,11 +8,11 @@ export enum AppView {
 }
 
 export type StudyPart =
-  | 'perles_spirituelles' 
-  | 'joyaux_parole_dieu' 
-  | 'applique_ministere' 
-  | 'vie_chretienne' 
-  | 'etude_biblique_assemblee' 
+  | 'perles_spirituelles'
+  | 'joyaux_parole_dieu'
+  | 'applique_ministere'
+  | 'vie_chretienne'
+  | 'etude_biblique_assemblee'
   | 'tout';
 
 // Moved from StudyTool.tsx to be shared with History.tsx
