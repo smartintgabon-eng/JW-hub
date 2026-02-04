@@ -1,4 +1,3 @@
-
 export enum AppView {
   HOME = 'HOME',
   MINISTRY = 'MINISTRY',
@@ -15,6 +14,8 @@ export type StudyPart =
   | 'vie_chretienne' 
   | 'etude_biblique_assemblee' 
   | 'tout';
+
+// studyPartOptions a été déplacé dans src/components/StudyTool.tsx pour être local à son utilisation.
 
 export interface GeneratedStudy {
   id: string;

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   History as HistoryIcon, 
@@ -13,9 +12,9 @@ import {
   Download,
   FileSignature
 } from 'lucide-react';
-import { GeneratedStudy, AppSettings, StudyPart, studyPartOptions } from '../types'; 
-import { deleteFromHistory, saveToHistory } from '../utils/storage'; 
-import { generateStudyContent } from '../services/geminiService'; 
+import { GeneratedStudy, AppSettings, StudyPart } from '../types'; 
+// Importation locale pour studyPartOptions pour éviter les cycles de dépendances avec types.ts si types.ts doit importer History
+import { studyPartOptions } from '../components/StudyTool'; // On importe de StudyTool maintenant
 
 // Importations pour la génération de documents
 import saveAs from 'file-saver'; 
@@ -385,51 +384,4 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
               }
               if (trimmed.startsWith('- Quelle leçon')) {
                 return <p key={idx} className="opacity-60 font-sans italic pt-4">{trimmed}</p>;
-              }
-              return <p key={idx} className="opacity-60 font-sans">{trimmed}</p>;
-            })}
-          </div>
-        </article>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
-      <div className="flex items-center space-x-4 mb-2">
-        <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="p-4 rounded-2xl shadow-xl">
-          <HistoryIcon size={28} />
-        </div>
-        <div>
-          <h2 className="text-3xl font-black tracking-tight uppercase">Historique</h2>
-          <p className="opacity-40 text-sm font-bold tracking-wide">Accès hors ligne à vos préparations.</p>
-        </div>
-      </div>
-
-      {history.length === 0 ? (
-        <div className="py-24 bg-white/5 border-2 border-dashed border-white/5 rounded-[3rem] text-center">
-          <FileText size={56} className="mx-auto opacity-10 mb-6" />
-          <p className="text-sm font-black opacity-20 uppercase tracking-[0.3em]">Aucune archive disponible</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {history.map((study) => (
-            <div key={study.id} onClick={() => setSelectedStudy(study)} className="bg-white/5 border border-white/10 rounded-3xl p-8 hover:bg-white/10 hover:border-white/20 transition-all cursor-pointer group relative overflow-hidden shadow-xl active:scale-[0.98]">
-              <div className="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={(e) => handleDelete(study.id, e)} className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg"><Trash2 size={18}/></button>
-              </div>
-              <div className="text-[9px] font-black uppercase tracking-widest opacity-30 mb-4">{study.type} {study.part && `- ${getPartLabel(study.part).toUpperCase()}`}</div>
-              <h3 className="font-black text-2xl mb-6 line-clamp-2 leading-tight uppercase tracking-tight">{study.title}</h3>
-              <div className="flex justify-between items-center mt-auto pt-6 border-t border-white/5">
-                <span className="text-[10px] font-bold opacity-30">{study.date}</span>
-                <span className="text-[10px] font-black uppercase text-[var(--btn-color)] group-hover:translate-x-1 transition-transform tracking-widest">Ouvrir →</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default History;
+              

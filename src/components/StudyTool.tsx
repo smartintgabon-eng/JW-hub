@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { Search, Link as LinkIcon, Calendar, Loader2, Globe, Check, ShieldCheck, AlertTriangle, RefreshCw, Timer } from 'lucide-react';
-import { StudyPart, GeneratedStudy, AppSettings, studyPartOptions } from '../types'; 
+import { StudyPart, GeneratedStudy, AppSettings } from '../types'; 
 import { generateStudyContent } from '../services/geminiService'; 
 
 interface Props {
@@ -9,6 +8,17 @@ interface Props {
   onGenerated: (study: GeneratedStudy) => void;
   settings: AppSettings;
 }
+
+// Définition de studyPartOptions ici pour éviter les conflits de types et la double définition.
+const studyPartOptions: { value: StudyPart; label: string }[] = [
+  { value: 'joyaux_parole_dieu', label: 'Joyaux de la Parole de Dieu' },
+  { value: 'perles_spirituelles', label: 'Perles Spirituelles' },
+  { value: 'applique_ministere', label: 'Applique-toi au Ministère' },
+  { value: 'vie_chretienne', label: 'Vie Chrétienne' },
+  { value: 'etude_biblique_assemblee', label: 'Étude Biblique de l\'Assemblée' },
+  { value: 'tout', label: 'Toutes les parties' },
+];
+
 
 const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
   const [mode, setMode] = useState<'link' | 'date'>('link');
@@ -167,7 +177,26 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
           </div>
         )}
 
-        {preview ? (
+        {!preview ? (
+            <button
+                onClick={() => handleGenerate()}
+                disabled={loading || cooldown > 0 || !input.trim()}
+                style={{ backgroundColor: cooldown > 0 ? '#1f2937' : 'var(--btn-color)', color: 'var(--btn-text)' }}
+                className="w-full py-6 rounded-xl font-black uppercase tracking-widest flex flex-col items-center justify-center space-y-1 shadow-2xl active:scale-95 disabled:opacity-50 transition-all min-h-[100px]"
+            >
+                {loading ? (
+                    <div className="flex flex-col items-center space-y-2">
+                    <Loader2 className="animate-spin" size={28} />
+                    <span className="text-[10px] opacity-70 font-bold tracking-widest uppercase">{loadingStep}</span>
+                    </div>
+                ) : (
+                    <div className="flex items-center space-x-3">
+                    <Search size={24} />
+                    <span className="text-xl">Lancer la recherche</span>
+                    </div>
+                )}
+            </button>
+        ) : (
             <>
                 {type === 'MINISTRY' && ( // Show part selection AFTER preview
                 <div className="space-y-3 pt-4 border-t border-white/5 animate-in fade-in duration-300">
@@ -191,7 +220,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
                     </div>
                 </div>
                 )}
-                <div className="bg-white/5 border border-white/20 rounded-[2.5rem] p-10 animate-in zoom-in-95 duration-500 shadow-2xl relative overflow-hidden">
+                <div className="bg-white/5 border border-white/20 rounded-[2.5rem] p-10 animate-in zoom-in-95 duration-500 shadow-2xl relative overflow-hidden mt-8">
                     <div className="absolute top-0 left-0 w-2 h-full bg-[var(--btn-color)]" />
                     <div className="flex items-center space-x-3 mb-6 text-[var(--btn-color)]">
                     <Check size={24} className="stroke-[3]" />
@@ -214,29 +243,10 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
                     </div>
                 </div>
             </>
-        ) : (
-            <button
-                onClick={() => handleGenerate()}
-                disabled={loading || cooldown > 0 || !input.trim()}
-                style={{ backgroundColor: cooldown > 0 ? '#1f2937' : 'var(--btn-color)', color: 'var(--btn-text)' }}
-                className="w-full py-6 rounded-xl font-black uppercase tracking-widest flex flex-col items-center justify-center space-y-1 shadow-2xl active:scale-95 disabled:opacity-50 transition-all min-h-[100px]"
-            >
-                {loading ? (
-                    <div className="flex flex-col items-center space-y-2">
-                    <Loader2 className="animate-spin" size={28} />
-                    <span className="text-[10px] opacity-70 font-bold tracking-widest uppercase">{loadingStep}</span>
-                    </div>
-                ) : (
-                    <div className="flex items-center space-x-3">
-                    <Search size={24} />
-                    <span className="text-xl">Lancer la recherche</span>
-                    </div>
-                )}
-            </button>
         )}
         
         {mode === 'date' && (
-          <p className="text-[10px] text-center opacity-30 font-bold uppercase tracking-tighter">
+          <p className="text-[10px] text-center opacity-30 font-bold uppercase tracking-tighter mt-8">
             Note: La recherche par date utilise l'outil Google Search, qui est soumis à des quotas plus strictes.
           </p>
         )}

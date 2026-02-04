@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   BookOpen, 
@@ -44,7 +43,6 @@ const App: React.FC = () => {
       e.preventDefault();
       setDeferredPrompt(e);
     };
-    // Fix: Corrected event name from 'beforeInstallPrompt' to 'beforeinstallprompt'
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
     const handleStatus = () => setIsOnline(navigator.onLine);
