@@ -22,8 +22,8 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
   const updateSetting = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
     const newSettings = { ...settings };
     // Clear custom hex if a preset is chosen
-    if (key === 'backgroundColor' && value !== settings.customHex) newSettings.customHex = '';
-    if (key === 'buttonColor' && value !== settings.customButtonHex) newSettings.customButtonHex = '';
+    if (key === 'backgroundColor' && value !== newSettings.customHex) newSettings.customHex = '';
+    if (key === 'buttonColor' && value !== newSettings.customButtonHex) newSettings.customButtonHex = '';
     
     // Update the actual setting
     (newSettings as any)[key] = value; 
