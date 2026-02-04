@@ -145,7 +145,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
           new Paragraph({
             alignment: AlignmentType.CENTER,
             spacing: { after: 360 },
-            children: [new TextRun({ text: study.type === 'WATCHTOWER' ? `Étude de la Tour de Garde - ${study.date}` : `Cahier Vie et Ministère - ${study.date}`, color: defaultTextColor, size: 24, italics: true })] // Adjust size for date/type
+            children: [new TextRun({ text: study.type === 'WATCHTOWER' ? `Étude de la Tour de Garde - ${study.date}` : `Cahier Vie et Ministère - ${getPartLabel(study.part)} - ${study.date}`, color: defaultTextColor, size: 24, italics: true })] // Adjust size for date/type
           }),
           ...study.content.split('\n').map(line => {
             const trimmed = line.trim();
@@ -236,7 +236,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
 
     // Type and Date
     doc.setFontSize(12);
-    doc.text(study.type === 'WATCHTOWER' ? `Étude de la Tour de Garde - ${study.date}` : `Cahier Vie et Ministère - ${study.date}`, pageWidth / 2, y + 5, { align: 'center' });
+    doc.text(study.type === 'WATCHTOWER' ? `Étude de la Tour de Garde - ${study.date}` : `Cahier Vie et Ministère - ${getPartLabel(study.part)} - ${study.date}`, pageWidth / 2, y + 5, { align: 'center' });
     y += 15;
 
     doc.setFontSize(11);
@@ -364,19 +364,23 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
             {selectedStudy.content.split('\n').map((line, idx) => {
               const trimmed = line.trim();
               if (!trimmed) return null;
-              if (trimmed.startsWith('# ')) return <h3 key={idx} className="text-3xl font-black pt-12 border-t border-white/10 mt-12 uppercase tracking-tight" style={{ color: 'var(--btn-color)' }}>{trimmed.substring(2).trim()}</h3>;
-              
-              // Nouveau traitement pour les titres de section du Cahier
-              if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE)/i)) {
-                return <h3 key={idx} className="text-3xl font-black pt-12 border-t border-white/10 mt-12 uppercase tracking-tight" style={{ color: 'var(--btn-color)' }}>{trimmed}</h3>;
+              // TITRES DE SECTION (ex: # PERLES SPIRITUELLES ou JOYAUX DE LA PAROLE DE DIEU)
+              if (trimmed.startsWith('# ') || trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE)/i)) {
+                return <h3 key={idx} className="text-3xl font-black pt-12 border-t border-white/10 mt-12 uppercase tracking-tight" style={{ color: 'var(--btn-color)' }}>{trimmed.replace(/^#\s*/, '').trim()}</h3>;
               }
-
+              // THÈME
+              if (trimmed.startsWith('Thème:')) {
+                return <p key={idx} className="text-lg opacity-60 mb-8 font-serif italic">{trimmed}</p>;
+              }
+              // PARAGRAPHES (pour les articles de la Tour de Garde)
               if (trimmed.includes('PARAGRAPHE')) {
-                return <h3 key={idx} className="text-3xl font-black pt-12 border-t border-white/10 mt-12 uppercase tracking-tight" style={{ color: 'var(--btn-color)' }}>{trimmed}</h3>;
+                return <h3 key={idx} className="text-2xl font-black pt-8 mt-8 uppercase tracking-tight" style={{ color: 'var(--btn-color)' }}>{trimmed}</h3>;
               }
+              // VERSETS BIBLIQUES
               if (trimmed.startsWith('VERSET')) {
                 return <div key={idx} className="p-8 bg-white/5 border-l-8 border-[var(--btn-color)] italic rounded-r-3xl my-8 print:border-black print:bg-gray-100">{trimmed}</div>;
               }
+              // QUESTIONS, RÉPONSES, COMMENTAIRES, APPLICATIONS
               if (trimmed.startsWith('QUESTION') || trimmed.startsWith('RÉPONSE') || trimmed.startsWith('COMMENTAIRE') || trimmed.startsWith('APPLICATION')) {
                 const [label, ...rest] = trimmed.split(':');
                 return (
@@ -386,9 +390,11 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
                   </div>
                 );
               }
+              // QUESTIONS D'APPLICATION SPÉCIFIQUES
               if (trimmed.startsWith('- Quelle leçon')) {
                 return <p key={idx} className="opacity-60 font-sans italic pt-4">{trimmed}</p>;
               }
+              // TEXTE NORMAL
               return <p key={idx} className="opacity-60 font-sans">{trimmed}</p>;
             })}
           </div>

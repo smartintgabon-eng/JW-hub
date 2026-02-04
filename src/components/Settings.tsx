@@ -20,10 +20,14 @@ interface Props {
 
 const Settings: React.FC<Props> = ({ settings, setSettings }) => {
   const updateSetting = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
-    const newSettings = { ...settings, [key]: value };
+    const newSettings = { ...settings };
     // Clear custom hex if a preset is chosen
     if (key === 'backgroundColor' && value !== settings.customHex) newSettings.customHex = '';
     if (key === 'buttonColor' && value !== settings.customButtonHex) newSettings.customButtonHex = '';
+    
+    // Update the actual setting
+    (newSettings as any)[key] = value; 
+
     setSettings(newSettings);
     saveSettings(newSettings);
   };
@@ -41,6 +45,10 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
         newSettings.backgroundColor = value;
       } else if (value === '' || value === '#') { // Allow empty or just '#' to not break preview, fallback to default for actual setting
         newSettings.backgroundColor = '#09090b'; 
+      } else {
+        // If invalid but not empty/hash, keep the current background color, don't break the UI
+        // This ensures the preview for custom hex stays, but the actual setting is not changed to invalid.
+        newSettings.backgroundColor = settings.backgroundColor; 
       }
     } else { // type === 'button'
       newSettings.customButtonHex = value;
@@ -48,6 +56,8 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
         newSettings.buttonColor = value;
       } else if (value === '' || value === '#') { // Allow empty or just '#' to not break preview, fallback to default for actual setting
         newSettings.buttonColor = '#4a70b5';
+      } else {
+        newSettings.buttonColor = settings.buttonColor;
       }
     }
     setSettings(newSettings);
