@@ -1,3 +1,4 @@
+
 export enum AppView {
   HOME = 'HOME',
   MINISTRY = 'MINISTRY',

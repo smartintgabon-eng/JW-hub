@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Search, Link as LinkIcon, Calendar, Loader2, Globe, Check, ShieldCheck, AlertTriangle, RefreshCw, Timer } from 'lucide-react';
 import { StudyPart, GeneratedStudy, AppSettings } from '../types'; 
@@ -10,7 +11,7 @@ interface Props {
 }
 
 // Définition de studyPartOptions ici pour éviter les conflits de types et la double définition.
-const studyPartOptions: { value: StudyPart; label: string }[] = [
+export const studyPartOptions: { value: StudyPart; label: string }[] = [
   { value: 'joyaux_parole_dieu', label: 'Joyaux de la Parole de Dieu' },
   { value: 'perles_spirituelles', label: 'Perles Spirituelles' },
   { value: 'applique_ministere', label: 'Applique-toi au Ministère' },
