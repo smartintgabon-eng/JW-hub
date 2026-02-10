@@ -34,11 +34,11 @@ export const generateStudyContent = async (
   isInitialSearchForPreview = false // Nouvelle prop pour une recherche initiale légère
 ): Promise<{ text: string; title: string; theme?: string }> => {
   
-  const apiKey = process.env.API_KEY || "";
+  const apiKey = process.env.REACT_APP_GEMINI_API_KEY || "";
   if (!apiKey) throw new Error("Clé API absente. Vérifiez votre configuration.");
 
-  // Always use `const ai = new GoogleGenAI({apiKey: process.env.API_KEY});` as per guidelines.
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // Always use `const ai = new GoogleGenAI({apiKey: process.env.REACT_APP_GEMINI_API_KEY});` as per guidelines.
+  const ai = new GoogleGenAI({ apiKey: process.env.REACT_APP_GEMINI_API_KEY });
   
   const cleanedInput = cleanUrl(input);
   const isLink = cleanedInput.startsWith('http');
