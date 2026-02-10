@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Search, Link as LinkIcon, Calendar, Loader2, Globe, Check, ShieldCheck, AlertTriangle, RefreshCw, Timer } from 'lucide-react';
 import { StudyPart, GeneratedStudy, AppSettings } from '../types'; 
@@ -27,7 +26,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
   const [selectedPart, setSelectedPart] = useState<StudyPart>('tout'); // État pour la partie d'étude
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState('');
-  const [preview, setPreview] = useState<{title: string, theme?: string} | null>(null);
+  const [preview, setPreview] = useState<{title: string, theme?: string, url?: string} | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
 
@@ -58,61 +57,78 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
     localStorage.removeItem(`draft_${type}`);
   };
 
-  const handleGenerate = async (isRetry = false) => {
-    if (loading || cooldown > 0 || (!input.trim() && !preview)) return; 
-    
+  const handleInitialSearch = async () => {
+    if (loading || cooldown > 0 || !input.trim()) return;
+
     setLoading(true);
     setError(null);
-    
-    if (!preview) {
-        setLoadingStep(mode === 'link' ? 'Analyse du lien...' : 'Recherche sur JW.ORG...');
-    } else {
-        setLoadingStep('Génération des réponses...');
-    }
-    
+    setLoadingStep(mode === 'link' ? 'Analyse du lien...' : 'Recherche sur JW.ORG...');
+
     try {
-      const result = await generateStudyContent(type, input.trim(), selectedPart, settings); 
-      
-      if (!isRetry && !preview) { // First call, no retry, no preview yet: get preview
-        setPreview({ title: result.title, theme: result.theme });
-      } else { // Subsequent call or retry, after preview is confirmed
-        setLoadingStep('Enregistrement...');
-        const newStudy: GeneratedStudy = {
-          id: Date.now().toString(),
-          type,
-          title: result.title,
-          date: new Date().toLocaleDateString('fr-FR'),
-          content: result.text,
-          timestamp: Date.now(),
-          url: input.startsWith('http') ? input.trim() : undefined,
-          part: type === 'MINISTRY' ? selectedPart : undefined 
-        };
-        onGenerated(newStudy);
-        setPreview(null);
-        setInput('');
-        localStorage.removeItem(`draft_${type}`);
-      }
+      // Uniquement pour obtenir le titre/thème pour l'aperçu, pas la génération complète
+      const result = await generateStudyContent(type, input.trim(), 'tout', settings, 0, true); 
+      setPreview({ title: result.title, theme: result.theme, url: input.trim().startsWith('http') ? input.trim() : undefined });
     } catch (err: any) {
-      if (err.message === 'COOLDOWN_REQUIRED') {
-        setError("Limite globale des requêtes Google atteinte. Les tentatives répétées prolongeront le délai de récupération. Veuillez patienter pour réessayer.");
-        setCooldown(90); 
-      } else if (err.message === 'SEARCH_QUOTA_EXCEEDED') {
-        setError("Le service de recherche Google est temporairement saturé. Veuillez réessayer avec un 'Lien direct' ou patientez.");
-        setCooldown(60); 
-      } else if (err.message === 'INVALID_API_KEY') {
-        setError("Clé API invalide. Vérifiez que votre clé est correcte et configurée dans votre projet Google Cloud (et Vercel si déployé).");
-      } else if (err.message === 'BILLING_REQUIRED') {
-        setError("La recherche nécessite une configuration de facturation active sur Google Cloud, même pour les usages gratuits. (ai.google.dev/gemini-api/docs/billing)");
-      } else if (err.message.startsWith('GENERIC_API_ERROR')) {
-        setError(`Une erreur de communication est survenue avec l'API Gemini (${err.message.split(': ')[1]}). Vérifiez votre connexion.`);
-      } else if (err.message === "MODEL_PROCESSING_ERROR") {
-          setError("L'IA n'a pas pu trouver ou analyser l'article. Essayez un lien direct ou une formulation différente.");
-      } else {
-        setError("Connexion interrompue ou erreur inconnue. Veuillez vérifier votre connexion ou réessayer dans quelques minutes.");
-      }
+      handleError(err);
     } finally {
       setLoading(false);
       setLoadingStep('');
+    }
+  };
+
+  const handleGenerateContent = async () => {
+    if (loading || cooldown > 0 || !preview) return;
+
+    setLoading(true);
+    setError(null);
+    setLoadingStep('Génération des réponses...');
+
+    try {
+      const result = await generateStudyContent(type, preview.url || input.trim(), selectedPart, settings); 
+      
+      setLoadingStep('Enregistrement...');
+      const newStudy: GeneratedStudy = {
+        id: Date.now().toString(),
+        type,
+        title: result.title,
+        date: new Date().toLocaleDateString('fr-FR'),
+        content: result.text,
+        timestamp: Date.now(),
+        url: preview.url, // Use the URL from the preview or the original input
+        part: type === 'MINISTRY' ? selectedPart : undefined 
+      };
+      onGenerated(newStudy);
+      setPreview(null);
+      setInput('');
+      localStorage.removeItem(`draft_${type}`);
+    } catch (err: any) {
+      handleError(err);
+    } finally {
+      setLoading(false);
+      setLoadingStep('');
+    }
+  };
+
+  const handleError = (err: any) => {
+    const errorStr = JSON.stringify(err);
+    const status = err.status || (err.response && err.response.status);
+
+    if (err.message === 'COOLDOWN_REQUIRED') {
+      setError("Limite globale des requêtes Google atteinte. Les tentatives répétées prolongeront le délai de récupération. Veuillez patienter pour réessayer.");
+      setCooldown(90); 
+    } else if (err.message === 'SEARCH_QUOTA_EXCEEDED') {
+      setError("Le service de recherche Google est temporairement saturé. Veuillez réessayer avec un 'Lien direct' ou patientez.");
+      setCooldown(60); 
+    } else if (err.message === 'INVALID_API_KEY') {
+      setError("Clé API invalide. Vérifiez que votre clé est correcte et configurée dans votre projet Google Cloud (et Vercel si déployé).");
+    } else if (err.message === 'BILLING_REQUIRED') {
+      setError("La recherche nécessite une configuration de facturation active sur Google Cloud, même pour les usages gratuits. (ai.google.dev/gemini-api/docs/billing)");
+    } else if (err.message.startsWith('GENERIC_API_ERROR')) {
+      setError(`Une erreur de communication est survenue avec l'API Gemini (${err.message.split(': ')[1]}). Vérifiez votre connexion.`);
+    } else if (err.message === "MODEL_PROCESSING_ERROR") {
+        setError("L'IA n'a pas pu trouver ou analyser l'article. Essayez un lien direct ou une formulation différente.");
+    } else {
+      setError("Connexion interrompue ou erreur inconnue. Veuillez vérifier votre connexion ou réessayer dans quelques minutes.");
     }
   };
 
@@ -180,7 +196,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
 
         {!preview ? (
             <button
-                onClick={() => handleGenerate()}
+                onClick={() => handleInitialSearch()}
                 disabled={loading || cooldown > 0 || !input.trim()}
                 style={{ backgroundColor: cooldown > 0 ? '#1f2937' : 'var(--btn-color)', color: 'var(--btn-text)' }}
                 className="w-full py-6 rounded-xl font-black uppercase tracking-widest flex flex-col items-center justify-center space-y-1 shadow-2xl active:scale-95 disabled:opacity-50 transition-all min-h-[100px]"
@@ -199,28 +215,6 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
             </button>
         ) : (
             <>
-                {type === 'MINISTRY' && ( // Show part selection AFTER preview
-                <div className="space-y-3 pt-4 border-t border-white/5 animate-in fade-in duration-300">
-                    <label className="text-[10px] font-black uppercase opacity-40 ml-1 tracking-[0.2em]">
-                    Choisir une partie de l'étude (Cahier)
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {studyPartOptions.map(option => (
-                        <button
-                        key={option.value}
-                        onClick={() => setSelectedPart(option.value)}
-                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                            selectedPart === option.value
-                            ? 'bg-[var(--btn-color)] text-[var(--btn-text)] shadow'
-                            : 'bg-white/5 opacity-60 hover:opacity-100'
-                        }`}
-                        >
-                        {option.label}
-                        </button>
-                    ))}
-                    </div>
-                </div>
-                )}
                 <div className="bg-white/5 border border-white/20 rounded-[2.5rem] p-10 animate-in zoom-in-95 duration-500 shadow-2xl relative overflow-hidden mt-8">
                     <div className="absolute top-0 left-0 w-2 h-full bg-[var(--btn-color)]" />
                     <div className="flex items-center space-x-3 mb-6 text-[var(--btn-color)]">
@@ -230,9 +224,32 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
                     <h3 className="text-3xl font-black mb-3 uppercase tracking-tighter">{preview.title}</h3>
                     <p className="text-lg opacity-60 mb-8 font-serif italic">{preview.theme || "Prêt pour l'analyse"}</p>
                     
-                    <div className="flex flex-col sm:flex-row gap-4">
+                    {type === 'MINISTRY' && ( // Show part selection AFTER preview
+                      <div className="space-y-3 pt-4 border-t border-white/5 animate-in fade-in duration-300">
+                          <label className="text-[10px] font-black uppercase opacity-40 ml-1 tracking-[0.2em]">
+                          Choisir une partie de l'étude (Cahier)
+                          </label>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {studyPartOptions.map(option => (
+                              <button
+                              key={option.value}
+                              onClick={() => setSelectedPart(option.value)}
+                              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                                  selectedPart === option.value
+                                  ? 'bg-[var(--btn-color)] text-[var(--btn-text)] shadow'
+                                  : 'bg-white/5 opacity-60 hover:opacity-100'
+                              }`}
+                              >
+                              {option.label}
+                              </button>
+                          ))}
+                          </div>
+                      </div>
+                    )}
+
+                    <div className="flex flex-col sm:flex-row gap-4 mt-8">
                         <button 
-                        onClick={() => handleGenerate(true)} 
+                        onClick={() => handleGenerateContent()} 
                         disabled={loading || cooldown > 0}
                         style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
                         className="flex-1 py-5 rounded-xl font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center space-x-2"

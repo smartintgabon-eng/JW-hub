@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Settings as SettingsIcon, 
@@ -43,18 +42,17 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
       newSettings.customHex = value;
       if (isValidHex) {
         newSettings.backgroundColor = value;
-      } else if (value === '' || value === '#') { // Allow empty or just '#' to not break preview, fallback to default for actual setting
+      } else if (value === '' || value === '#') { // Allow empty or just '#' to fallback to default
         newSettings.backgroundColor = '#09090b'; 
       } else {
-        // If invalid but not empty/hash, keep the current background color, don't break the UI
-        // This ensures the preview for custom hex stays, but the actual setting is not changed to invalid.
+        // If invalid but not empty/hash, keep the current actual background color, don't break the UI
         newSettings.backgroundColor = settings.backgroundColor; 
       }
     } else { // type === 'button'
       newSettings.customButtonHex = value;
       if (isValidHex) {
         newSettings.buttonColor = value;
-      } else if (value === '' || value === '#') { // Allow empty or just '#' to not break preview, fallback to default for actual setting
+      } else if (value === '' || value === '#') { // Allow empty or just '#' to fallback to default
         newSettings.buttonColor = '#4a70b5';
       } else {
         newSettings.buttonColor = settings.buttonColor;
@@ -196,7 +194,7 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
 
       {/* ZONE DE DANGER */}
       <section className="bg-red-500/5 border border-red-500/10 rounded-3xl p-8 space-y-6 shadow-xl">
-        <div className="flex items-center space-x-2 text-red-400 opacity-70">
+        <div className="flex items-center space-x-2 text-red-400 opacity-70 mb-4">
           <AlertTriangle size={18} />
           <h3 className="font-bold uppercase text-xs tracking-widest">Zone de danger</h3>
         </div>
@@ -218,7 +216,7 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
             <span>Réinitialisation Totale</span>
           </button>
         </div>
-        <p className="text-[10px] opacity-30 text-center font-bold italic">Attention : La réinitialisation totale efface TOUT et vide le cache de l'appareil.</p>
+        <p className="text-[10px] opacity-30 text-center font-bold italic mt-4">Attention : La réinitialisation totale efface TOUT et vide le cache de l'appareil.</p>
       </section>
     </div>
   );

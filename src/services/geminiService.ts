@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { StudyPart, AppSettings } from "../types"; 
 
@@ -30,7 +29,8 @@ export const generateStudyContent = async (
   input: string,
   part: StudyPart = 'tout', // Ajout de la partie d'étude
   settings: AppSettings,
-  retryCount = 0
+  retryCount = 0,
+  isInitialSearchForPreview = false // Nouvelle prop pour une recherche initiale légère
 ): Promise<{ text: string; title: string; theme?: string }> => {
   
   const apiKey = process.env.API_KEY || "";
@@ -68,17 +68,16 @@ export const generateStudyContent = async (
   } else if (type === 'MINISTRY') {
     let partInstruction = '';
     switch (part) {
-      case 'perles_spirituelles':
-        partInstruction = `Concentre-toi uniquement sur la section "Perles Spirituelles" de l'article.
-        Structure: Pour chaque perle spirituelle, commence par "VERSET : [Verset biblique complet entre parenthèses]", puis pose la "QUESTION : [Question]", donne la "RÉPONSE : [Réponse détaillée basée sur la publication de référence]", un "COMMENTAIRE : [Point d'approfondissement]", et une "APPLICATION : [Comment appliquer personnellement]".
-        À la fin de cette section, inclure les questions d'application suivantes : ${getApplicationQuestions()}`;
-        break;
       case 'joyaux_parole_dieu':
         partInstruction = `Concentre-toi uniquement sur la section "Joyaux de la Parole de Dieu". Fournis une proposition d'exposé détaillée pour le discours principal, incluant un thème clair, des "POINTS PRINCIPAUX :" avec des références bibliques (avec le texte complet du verset entre parenthèses) et des références aux publications officielles de jw.org. L'exposé doit être pratique et encourageant.
         À la fin de cette section, inclure les questions d'application suivantes : ${getApplicationQuestions()}`;
         break;
+      case 'perles_spirituelles':
+        partInstruction = `Concentre-toi uniquement sur la section "Perles Spirituelles" de l'article. Pour chaque perle spirituelle, commence par "VERSET : [Verset biblique complet entre parenthèses]", puis pose la "QUESTION : [Question]", donne la "RÉPONSE : [Réponse détaillée basée sur la publication de référence]", un "COMMENTAIRE : [Point d'approfondissement]", et une "APPLICATION : [Comment appliquer personnellement]". Inclure aussi une deuxième question sur les leçons à tirer de la lecture biblique de la semaine.
+        À la fin de cette section, inclure les questions d'application suivantes : ${getApplicationQuestions()}`;
+        break;
       case 'applique_ministere':
-        partInstruction = `Concentre-toi uniquement sur la section "Applique-toi au Ministère". Liste tous les exposés proposés dans le programme de la semaine. Pour chaque exposé, fournis une proposition d'introduction, des "POINTS À DÉVELOPPER :" avec des références bibliques complètes (avec le texte complet du verset entre parenthèses) et des publications de jw.org, et une "CONCLUSION :".
+        partInstruction = `Concentre-toi uniquement sur la section "Applique-toi au Ministère". Liste tous les exposés proposés dans le programme de la semaine. Pour chaque exposé, fournis une proposition d'introduction, des "POINTS À DÉVELOPPER :" avec des références bibliques complètes (avec le texte complet du verset entre parenthèses) et des publications de jw.org, et une "CONCLUSION :". L'utilisateur veut traiter de TOUS les exposés du programme.
         À la fin de chaque proposition d'exposé, inclure les questions d'application suivantes : ${getApplicationQuestions()}`;
         break;
       case 'vie_chretienne':
@@ -86,8 +85,8 @@ export const generateStudyContent = async (
         À la fin de cette section, inclure les questions d'application suivantes : ${getApplicationQuestions()}`;
         break;
       case 'etude_biblique_assemblee':
-        partInstruction = `Concentre-toi uniquement sur la section "Étude Biblique de l'Assemblée" (étude de livre ou brochure). Fournis les "RÉPONSES :" aux questions de l'étude de manière concise et biblique, en te basant sur le texte de la publication en référence.
-        À la fin de cette section, inclure les questions d'application suivantes : ${getApplicationQuestions()}`;
+        partInstruction = `Concentre-toi uniquement sur la section "Étude Biblique de l'Assemblée" (étude de livre ou brochure). Fournis les "RÉPONSES :" aux questions de l'étude de manière concise et biblique, en te basant sur le texte de la publication en référence. Après avoir répondu à chaque question de l'étude, pose et réponds aux questions d'application suivantes : ${getApplicationQuestions()}
+        `;
         break;
       case 'tout':
       default:
@@ -103,12 +102,16 @@ export const generateStudyContent = async (
     temperature = 0.2; 
   }
 
+  // Si c'est une recherche initiale pour l'aperçu, on utilise un prompt plus court et moins exigeant.
+  if (isInitialSearchForPreview) {
+    systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'identifier le titre et le thème principal de l'article lié à "${input}" (qu'il soit un lien ou un sujet/date de Tour de Garde ou Cahier Vie et Ministère).
+    Réponds uniquement avec le format suivant: # [Titre de l'article] \n Thème: [Thème de l'article]. Ne fournis aucun autre détail ou contenu de l'article.`;
+  }
+
   try {
     const response = await ai.models.generateContent({
       model: modelToUse,
-      contents: isLink 
-        ? `Lien d'article à traiter: ${cleanedInput}` 
-        : `Recherche et traite l'article pour: ${type} ${cleanedInput}`,
+      contents: `Traiter l'article pour: ${type} ${input}`,
       config: {
         systemInstruction,
         temperature,
@@ -150,7 +153,7 @@ export const generateStudyContent = async (
       if (retryCount < 2) {
         const wait = (retryCount + 1) * 20000;
         await sleep(wait);
-        return generateStudyContent(type, input, part, settings, retryCount + 1);
+        return generateStudyContent(type, input, part, settings, retryCount + 1, isInitialSearchForPreview);
       }
       throw new Error("COOLDOWN_REQUIRED");
     }
@@ -159,7 +162,7 @@ export const generateStudyContent = async (
       if (retryCount < 1 && !isLink) {
          const wait = 15000;
          await sleep(wait);
-         return generateStudyContent(type, input, part, settings, retryCount + 1);
+         return generateStudyContent(type, input, part, settings, retryCount + 1, isInitialSearchForPreview);
       }
       throw new Error("SEARCH_QUOTA_EXCEEDED");
     }

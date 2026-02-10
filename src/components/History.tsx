@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   History as HistoryIcon, 
@@ -132,7 +131,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
 
   const exportToDocx = async (study: GeneratedStudy) => {
     const defaultTextColor = (settings.backgroundColor === '#f4f4f5' || settings.backgroundColor === '#fef3c7') ? '000000' : 'FFFFFF'; // Black for light backgrounds, white for dark
-    const btnColor = settings.buttonColor.replace('#', '');
+    const btnColor = (settings.customButtonHex || settings.buttonColor).replace('#', '');
 
     const doc = new Document({
       sections: [{
@@ -185,7 +184,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
                 spacing: { before: 120, after: 120 },
               });
             }
-            // Questions, Réponses, Commentaires, Applications
+            // Questions, Réponses, Commentaire, Applications (avec des points pour les applications spécifiques)
             if (trimmed.startsWith('QUESTION') || trimmed.startsWith('RÉPONSE') || trimmed.startsWith('COMMENTAIRE') || trimmed.startsWith('APPLICATION')) {
                 const [label, ...rest] = trimmed.split(':');
                 return new Paragraph({
@@ -220,10 +219,9 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
     let y = 10;
     const margin = 10;
     const pageWidth = doc.internal.pageSize.getWidth();
-    const defaultTextColor = (settings.backgroundColor === '#f4f4f5' || settings.backgroundColor === '#fef3c7') ? 0 : 255; // 0 for black, 255 for white
-    // Fix: jsPDF's setTextColor can directly accept hex strings,
-    // so no need for colorParse or splitting into RGB components manually.
-    const btnColor = settings.buttonColor || '#4a70b5';
+    // Default text color based on background settings
+    const defaultTextColor = (settings.backgroundColor === '#f4f4f5' || settings.backgroundColor === '#fef3c7') ? '#000000' : '#FFFFFF'; 
+    const btnColor = settings.customButtonHex || settings.buttonColor || '#4a70b5';
 
     // Set font for better rendering of French characters
     doc.setFont('helvetica');
@@ -250,6 +248,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
         doc.addPage();
         y = margin;
         doc.setTextColor(defaultTextColor); // Reset color for new page
+        doc.setFont('helvetica', 'normal'); // Reset font style
       }
 
       if (trimmed.startsWith('# ')) { // Titres de section
@@ -259,11 +258,13 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
         doc.text(trimmed.substring(2).trim(), margin, y);
         y += 7;
         doc.setTextColor(defaultTextColor);
+        doc.setFont('helvetica', 'normal');
       } else if (trimmed.startsWith('Thème:')) { // Thème
         doc.setFontSize(11);
         doc.setFont('helvetica', 'italic');
         doc.text(trimmed, margin, y);
         y += 7;
+        doc.setFont('helvetica', 'normal');
       } else if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE)/i)) {
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
@@ -271,6 +272,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
         doc.text(trimmed, margin, y);
         y += 7;
         doc.setTextColor(defaultTextColor);
+        doc.setFont('helvetica', 'normal');
       } else if (trimmed.includes('PARAGRAPHE')) { // Paragraphes
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
@@ -278,12 +280,14 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
         doc.text(trimmed, margin, y);
         y += 7;
         doc.setTextColor(defaultTextColor); // Reset color
+        doc.setFont('helvetica', 'normal');
       } else if (trimmed.startsWith('VERSET')) { // Versets bibliques
         doc.setFontSize(11);
         doc.setFont('helvetica', 'italic');
         const textLines = doc.splitTextToSize(trimmed, pageWidth - 2 * margin - 10);
         doc.text(textLines, margin + 5, y); // Small indent for verses
         y += (textLines.length * 5) + 3;
+        doc.setFont('helvetica', 'normal');
       } else if (trimmed.startsWith('QUESTION') || trimmed.startsWith('RÉPONSE') || trimmed.startsWith('COMMENTAIRE') || trimmed.startsWith('APPLICATION')) {
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
@@ -301,6 +305,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
         const textLines = doc.splitTextToSize(trimmed, pageWidth - 2 * margin - 10);
         doc.text(textLines, margin + 5, y);
         y += (textLines.length * 5) + 2;
+        doc.setFont('helvetica', 'normal');
       }
       else { // Texte normal
         doc.setFontSize(11);

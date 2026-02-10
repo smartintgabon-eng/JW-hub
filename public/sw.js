@@ -1,8 +1,10 @@
-
 const CACHE_NAME = 'jw-study-pro-cache-v5';
 const ASSETS = [
   './',
-  './index.html' 
+  './index.html', // Cette entrée sera gérée par le process de build de react-scripts
+  './logo192.png', // Ajout pour PWA
+  './logo512.png', // Ajout pour PWA
+  './favicon.ico' // Ajout pour le favicon
 ];
 
 self.addEventListener('install', (event) => {
@@ -22,6 +24,7 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Ignore les requêtes vers l'API Gemini pour éviter de les mettre en cache
   if (event.request.url.includes('generativelanguage.googleapis.com')) return;
   
   event.respondWith(

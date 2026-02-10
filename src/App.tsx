@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   BookOpen, 
@@ -10,7 +9,8 @@ import {
   X,
   Home as HomeIcon,
   WifiOff,
-  Download
+  Download,
+  Lightbulb
 } from 'lucide-react';
 import { AppView, GeneratedStudy, AppSettings } from './types'; 
 import { getSettings, getHistory, saveToHistory } from './utils/storage'; 
@@ -211,6 +211,21 @@ const App: React.FC = () => {
                     <h3 className="font-bold text-2xl mb-2 uppercase tracking-tight">Tour de Garde</h3>
                     <p className="text-sm opacity-40 font-medium">Réponses et commentaires paragraphe par paragraphe.</p>
                   </button>
+               </div>
+               
+               <div className="mt-12 text-center max-w-2xl mx-auto space-y-4 pt-12 border-t border-white/5">
+                <Lightbulb size={32} className="mx-auto text-amber-500 mb-4" />
+                <h3 className="text-xl font-bold uppercase tracking-tight">Découvrez toutes les fonctionnalités</h3>
+                <p className="text-sm opacity-60 font-medium">
+                  Le tutoriel complet vous guidera à travers chaque aspect de JW Study Pro, des recherches d'articles aux options de personnalisation.
+                </p>
+                <button 
+                  onClick={() => navigateTo(AppView.TUTORIAL)}
+                  style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
+                  className="mt-6 px-8 py-4 rounded-xl font-black uppercase text-sm tracking-widest shadow-lg hover:brightness-110 transition-all active:scale-95"
+                >
+                  Accéder au Tutoriel
+                </button>
                </div>
             </div>
           )}

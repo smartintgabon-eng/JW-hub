@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#4a70b5" />
     <meta
       name="description"
@@ -32,6 +31,7 @@
     
     <script>
       // Polyfill pour process.env, nécessaire pour @google/genai dans certains environnements
+      // Doit être défini avant tout autre script qui pourrait en avoir besoin.
       if (typeof window !== 'undefined') {
         window.process = window.process || { env: {} };
       }
@@ -93,7 +93,8 @@
 
         /* Styles pour le mode lecture */
         body.reading-mode-active #root > div > aside,
-        body.reading-mode-active #root > div > header {
+        body.reading-mode-active #root > div > header,
+        body.reading-mode-active #root > div > main > div:not(article) { /* Masquer tout SAUF l'article en mode lecture */
             display: none !important;
         }
         body.reading-mode-active #root > div > main {

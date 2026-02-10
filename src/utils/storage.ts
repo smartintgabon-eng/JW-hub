@@ -1,83 +1,102 @@
+// src/utils/storage.ts
 
-import { GeneratedStudy, AppSettings } from "./types"; 
+import { AppSettings, GeneratedStudy, AppView } from '../types';
 
-const HISTORY_KEY = 'jw_study_history';
-const SETTINGS_KEY = 'jw_study_settings';
+const SETTINGS_KEY = 'jw_study_pro_settings';
+const HISTORY_KEY = 'jw_study_pro_history';
 
-export const saveToHistory = (study: GeneratedStudy) => {
-  const history = getHistory();
-  const newHistory = [study, ...history].slice(0, 50);
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
-};
-
-export const getHistory = (): GeneratedStudy[] => {
-  const data = localStorage.getItem(HISTORY_KEY);
-  return data ? JSON.parse(data) : [];
-};
-
-export const deleteFromHistory = (id: string) => {
-  const history = getHistory();
-  const newHistory = history.filter(h => h.id !== id);
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
-};
-
-export const clearHistory = () => {
-  localStorage.removeItem(HISTORY_KEY);
-};
-
-export const saveSettings = (settings: AppSettings) => {
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-};
-
-export const resetSettings = () => {
-  localStorage.removeItem(SETTINGS_KEY);
-};
-
-/**
- * Réinitialisation totale : supprime tout le stockage local, 
- * vide tous les caches du navigateur et désenregistre les Service Workers.
- */
-export const totalReset = async () => {
-  // 1. Nettoyage du stockage synchrone
-  localStorage.clear();
-  sessionStorage.clear();
-
-  // 2. Nettoyage du Cache API (fichiers mis en cache par le Service Worker)
-  if ('caches' in window) {
-    try {
-      const keys = await caches.keys();
-      await Promise.all(keys.map(key => caches.delete(key)));
-      console.log('Caches supprimés.');
-    } catch (e) {
-      console.error('Erreur lors de la suppression des caches:', e);
-    }
-  }
-
-  // 3. Désenregistrement du Service Worker
-  if ('serviceWorker' in navigator) {
-    try {
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(registrations.map(reg => reg.unregister()));
-      console.log('Service Workers désenregistrés.');
-    } catch (e) {
-      console.error('Erreur lors du désenregistrement du SW:', e);
-    }
-  }
-
-  // 4. Rechargement forcé de la page pour repartir de zéro
-  window.location.reload();
+// Default settings
+const defaultSettings: AppSettings = {
+  backgroundColor: '#09090b',
+  customHex: '',
+  buttonColor: '#4a70b5',
+  customButtonHex: '',
+  autoSave: true, // Assuming default is true
+  modelName: 'gemini-3-flash-preview', // Default model name
+  answerPreferences: 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.',
 };
 
 export const getSettings = (): AppSettings => {
-  const data = localStorage.getItem(SETTINGS_KEY);
-  const defaultSettings: AppSettings = {
-    backgroundColor: '#09090b',
-    customHex: '',
-    buttonColor: '#4a70b5',
-    customButtonHex: '',
-    autoSave: true,
-    modelName: 'gemini-3-flash-preview',
-    answerPreferences: ''
-  };
-  return data ? { ...defaultSettings, ...JSON.parse(data) } : defaultSettings;
+  try {
+    const savedSettings = localStorage.getItem(SETTINGS_KEY);
+    return savedSettings ? { ...defaultSettings, ...JSON.parse(savedSettings) } : defaultSettings;
+  } catch (error) {
+    console.error("Error getting settings from localStorage:", error);
+    return defaultSettings;
+  }
+};
+
+export const saveSettings = (settings: AppSettings) => {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  } catch (error) {
+    console.error("Error saving settings to localStorage:", error);
+  }
+};
+
+export const getHistory = (): GeneratedStudy[] => {
+  try {
+    const savedHistory = localStorage.getItem(HISTORY_KEY);
+    return savedHistory ? JSON.parse(savedHistory) : [];
+  } catch (error) {
+    console.error("Error getting history from localStorage:", error);
+    return [];
+  }
+};
+
+export const saveToHistory = (study: GeneratedStudy) => {
+  try {
+    const history = getHistory();
+    // Check if the study already exists and update it, otherwise add new
+    const existingIndex = history.findIndex(s => s.id === study.id);
+    if (existingIndex > -1) {
+      history[existingIndex] = study;
+    } else {
+      history.unshift(study); // Add new study to the beginning
+    }
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  } catch (error) {
+    console.error("Error saving to history in localStorage:", error);
+  }
+};
+
+export const deleteFromHistory = (id: string) => {
+  try {
+    let history = getHistory();
+    history = history.filter(study => study.id !== id);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  } catch (error) {
+    console.error("Error deleting from history in localStorage:", error);
+  }
+};
+
+export const clearHistory = () => {
+  try {
+    localStorage.removeItem(HISTORY_KEY);
+  } catch (error) {
+    console.error("Error clearing history from localStorage:", error);
+  }
+};
+
+export const totalReset = async () => {
+  try {
+    localStorage.clear();
+    // Clear service worker caches if supported
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(key => caches.delete(key)));
+    }
+    // Unregister service worker
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const registration of registrations) {
+        await registration.unregister();
+      }
+    }
+    alert("Application réinitialisée avec succès ! La page va maintenant se recharger.");
+    window.location.reload();
+  } catch (error) {
+    console.error("Error during total reset:", error);
+    alert("Erreur lors de la réinitialisation totale. Veuillez réessayer.");
+  }
 };
