@@ -13,7 +13,7 @@ import {
   FileSignature
 } from 'lucide-react';
 import { GeneratedStudy, AppSettings, StudyPart } from '../types'; 
-// Importation locale pour studyPartOptions pour éviter les cycles de dépendances avec types.ts si types.ts doit importer History
+// Importation locale pour studyPartOptions pour éviter les conflits de dépendances avec types.ts si types.ts doit importer History
 import { studyPartOptions } from './StudyTool'; // On importe de StudyTool maintenant
 import { deleteFromHistory, saveToHistory } from '../utils/storage'; 
 import { generateStudyContent } from '../services/geminiService'; 

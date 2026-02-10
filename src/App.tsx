@@ -66,7 +66,7 @@ const App: React.FC = () => {
     return () => {
       window.removeEventListener('online', handleStatus);
       window.removeEventListener('offline', handleStatus);
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('beforeInstallPrompt', handleBeforeInstallPrompt); // Corrected event listener name
     };
   }, [settings]);
 
