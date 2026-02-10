@@ -21,19 +21,38 @@ export const studyPartOptions: { value: StudyPart; label: string }[] = [
 
 
 const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
-  const [mode, setMode] = useState<'link' | 'date'>('link');
-  const [input, setInput] = useState('');
-  const [selectedPart, setSelectedPart] = useState<StudyPart>('tout'); // État pour la partie d'étude
+  const [mode, setMode] = useState<'link' | 'date'>(() => {
+    // Restaurer le mode depuis localStorage
+    return localStorage.getItem(`study_mode_${type}`) as 'link' | 'date' || 'link';
+  });
+  const [input, setInput] = useState(() => {
+    // Restaurer l'input depuis localStorage au chargement initial
+    return localStorage.getItem(`draft_${type}_${mode}`) || '';
+  });
+  const [selectedPart, setSelectedPart] = useState<StudyPart>(() => {
+    return localStorage.getItem(`selected_part_${type}`) as StudyPart || 'tout';
+  });
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState('');
   const [preview, setPreview] = useState<{title: string, theme?: string, url?: string} | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
 
+  // Charger l'input du brouillon à partir du localStorage quand le type ou le mode change
   useEffect(() => {
-    const saved = localStorage.getItem(`draft_${type}`);
-    if (saved) setInput(saved);
-  }, [type]);
+    setInput(localStorage.getItem(`draft_${type}_${mode}`) || '');
+    localStorage.setItem(`study_mode_${type}`, mode);
+  }, [type, mode]);
+
+  // Sauvegarder l'input du brouillon dans le localStorage à chaque modification
+  useEffect(() => {
+    localStorage.setItem(`draft_${type}_${mode}`, input);
+  }, [input, type, mode]);
+
+  // Sauvegarder la partie sélectionnée
+  useEffect(() => {
+    localStorage.setItem(`selected_part_${type}`, selectedPart);
+  }, [selectedPart, type]);
 
   useEffect(() => {
     if (cooldown > 0) {
@@ -44,17 +63,18 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
 
   const handleInputChange = (val: string) => {
     setInput(val);
-    localStorage.setItem(`draft_${type}`, val);
   };
 
-  const resetState = () => {
+  const resetState = (clearInput: boolean = true) => {
     setLoading(false);
     setError(null);
     setLoadingStep('');
     setPreview(null);
-    setInput(''); // Clear input on reset
-    setSelectedPart('tout'); // Reset selected part
-    localStorage.removeItem(`draft_${type}`);
+    if (clearInput) {
+      setInput('');
+      localStorage.removeItem(`draft_${type}_${mode}`);
+    }
+    // selectedPart is not reset here as it's part of the user's preference for MINISTRY
   };
 
   const handleInitialSearch = async () => {
@@ -98,9 +118,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
         part: type === 'MINISTRY' ? selectedPart : undefined 
       };
       onGenerated(newStudy);
-      setPreview(null);
-      setInput('');
-      localStorage.removeItem(`draft_${type}`);
+      resetState(true); // Clear input after successful generation
     } catch (err: any) {
       handleError(err);
     } finally {
@@ -142,8 +160,8 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
           <h2 className="text-2xl font-black uppercase tracking-tight">{type === 'WATCHTOWER' ? 'Tour de Garde' : 'Cahier de Réunion'}</h2>
         </div>
         <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
-          <button onClick={() => { setMode('link'); resetState(); }} className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${mode === 'link' ? 'bg-white/10 shadow' : 'opacity-40'}`}>Lien direct</button>
-          <button onClick={() => { setMode('date'); resetState(); }} className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${mode === 'date' ? 'bg-white/10 shadow' : 'opacity-40'}`}>Recherche</button>
+          <button onClick={() => { setMode('link'); resetState(false); }} className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${mode === 'link' ? 'bg-white/10 shadow' : 'opacity-40'}`}>Lien direct</button>
+          <button onClick={() => { setMode('date'); resetState(false); }} className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${mode === 'date' ? 'bg-white/10 shadow' : 'opacity-40'}`}>Recherche par date/thème</button>
         </div>
       </div>
 
@@ -158,7 +176,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
               value={input}
               disabled={cooldown > 0 || loading || preview !== null} 
               onChange={(e) => handleInputChange(e.target.value)}
-              placeholder={mode === 'link' ? "https://www.jw.org/..." : "Ex: 25 novembre 2025"}
+              placeholder={mode === 'link' ? "https://www.jw.org/..." : "Ex: 25 novembre 2025 ou 'Soyez courageux !'"}
               className={`w-full bg-black/40 border border-white/10 rounded-xl py-5 pl-14 pr-4 focus:border-[var(--btn-color)] outline-none transition-all font-medium ${cooldown > 0 || loading || preview !== null ? 'opacity-30 cursor-not-allowed' : ''}`}
             />
             <div className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30">
@@ -187,7 +205,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
                 <span className="font-mono text-xl">00:{cooldown < 10 ? `0${cooldown}` : cooldown}</span>
               </div>
             ) : (
-              <button onClick={() => resetState()} className="w-full text-[10px] font-black uppercase tracking-widest bg-white/10 py-3 rounded-xl hover:bg-white/20 transition-all">
+              <button onClick={() => resetState(true)} className="w-full text-[10px] font-black uppercase tracking-widest bg-white/10 py-3 rounded-xl hover:bg-white/20 transition-all">
                 Réessayer
               </button>
             )}
@@ -257,7 +275,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
                         {loading ? <Loader2 className="animate-spin" size={18} /> : <ShieldCheck size={18} />}
                         <span>Générer les réponses</span>
                         </button>
-                        <button onClick={() => resetState()} className="flex-1 bg-white/5 border border-white/10 py-5 rounded-xl font-black text-sm uppercase tracking-widest">Recommencer la recherche</button>
+                        <button onClick={() => resetState(true)} className="flex-1 bg-white/5 border border-white/10 py-5 rounded-xl font-black text-sm uppercase tracking-widest">Recommencer la recherche</button>
                     </div>
                 </div>
             </>

@@ -33,22 +33,22 @@ const Tutorial: React.FC = () => {
     },
     {
       title: "Détail : Joyaux de la Parole de Dieu",
-      content: "Cette option vous fournira une proposition d'exposé basée sur les versets et les publications de référence. Idéal pour préparer votre intervention.",
+      content: "Cette option vous fournira une proposition d'exposé détaillée basée sur les versets et les publications de référence. Idéal pour préparer votre intervention lors de cette partie de la réunion.",
       icon: <Lightbulb className="text-purple-500" size={48} />
     },
     {
       title: "Détail : Perles Spirituelles",
-      content: "Obtenez des réponses concises aux questions, avec les versets clés et les références de publication, ainsi que des leçons pratiques à tirer de la lecture biblique de la semaine.",
+      content: "Obtenez des réponses concises aux questions, avec les versets clés et les références de publication, ainsi que des leçons pratiques à tirer de la lecture biblique de la semaine pour votre vie et votre ministère.",
       icon: <Lightbulb className="text-yellow-500" size={48} />
     },
     {
       title: "Détail : Applique-toi au Ministère",
-      content: "L'IA vous présentera les différents exposés possibles pour la semaine. Vous pourrez en choisir un ou plusieurs pour générer des propositions complètes (visite initiale, nouvelle visite, cours biblique).",
+      content: "L'IA vous présentera les différents exposés possibles pour la semaine (visite initiale, nouvelle visite, cours biblique, etc.). Vous pourrez en choisir un ou plusieurs pour générer des propositions complètes d'introduction, de points à développer et de conclusion.",
       icon: <Lightbulb className="text-teal-500" size={48} />
     },
     {
       title: "Détail : Vie Chrétienne",
-      content: "Cette section, souvent accompagnée d'une vidéo ou d'un article, vous fournira des réponses aux questions et des points de discussion pertinents, basés sur l'analyse du contenu par l'IA.",
+      content: "Cette section, souvent accompagnée d'une vidéo ou d'un article, vous fournira des réponses aux questions et des points de discussion pertinents, basés sur l'analyse du contenu par l'IA. Elle inclura aussi des applications personnelles.",
       icon: <Lightbulb className="text-pink-500" size={48} />
     },
     {
@@ -58,22 +58,22 @@ const Tutorial: React.FC = () => {
     },
     {
       title: "Options après génération : Export & Régénération",
-      content: "Une fois les réponses générées, vous pourrez les lire directement sur le site, les télécharger au format DOCX ou PDF, ou même les régénérer si vous souhaitez une autre perspective. En mode lecture, seul le contenu s'affiche, sans distractions.",
+      content: "Une fois les réponses générées, vous pourrez les lire directement sur le site (avec un mode lecture immersif qui masque les distractions), les télécharger au format DOCX ou PDF, ou même les régénérer si vous souhaitez une autre perspective ou des détails supplémentaires.",
       icon: <Save className="text-gray-400" size={48} />
     },
     {
       title: "Personnalisation de l'Apparence",
-      content: "Dans les 'Paramètres', vous pouvez changer la couleur de fond et des boutons de l'application. Choisissez parmi nos propositions ou entrez un code hexadécimal personnalisé pour une expérience visuelle unique.",
+      content: "Dans les 'Paramètres', vous pouvez changer la couleur de fond et des boutons de l'application. Choisissez parmi nos propositions ou entrez un code hexadécimal personnalisé pour une expérience visuelle unique avec prévisualisation en direct.",
       icon: <SettingsIcon className="text-gray-200" size={48} />
     },
     {
       title: "Historique & Utilisation hors ligne",
-      content: "Toutes vos études générées sont automatiquement sauvegardées dans l'onglet 'Historique' de votre appareil (cache local). Cela signifie que vous pouvez y accéder et les consulter même sans connexion internet ! Vous pouvez les supprimer ou les partager.",
+      content: "Toutes vos études générées sont automatiquement sauvegardées dans l'onglet 'Historique' de votre appareil (cache local). Cela signifie que vous pouvez y accéder et les consulter même sans connexion internet ! Vous pouvez les supprimer ou les partager à tout moment.",
       icon: <HistoryIcon className="text-blue-400" size={48} />
     },
     {
       title: "Installation de l'application (PWA)",
-      content: "Pour profiter pleinement de JW Study Pro et l'utiliser hors ligne, installez-la comme une application web progressive (PWA). Un bouton 'Installer l'App' apparaîtra (généralement dans Chrome) vous permettant de l'ajouter à votre écran d'accueil.",
+      content: "Pour profiter pleinement de JW Study Pro et l'utiliser hors ligne, installez-la comme une application web progressive (PWA). Un bouton 'Installer l'App' apparaîtra (généralement dans Chrome) vous permettant de l'ajouter à votre écran d'accueil pour un accès rapide.",
       icon: <Download className="text-green-400" size={48} />
     }
   ];

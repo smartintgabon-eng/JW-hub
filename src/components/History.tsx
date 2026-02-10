@@ -161,7 +161,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
             if (trimmed.startsWith('Thème:')) return new Paragraph({ text: trimmed, style: 'Intense Quote', spacing: { after: 240 }, children: formatTextRun(trimmed, defaultTextColor) });
             
             // Titres de section détaillés pour le Cahier (par exemple, "JOYAUX DE LA PAROLE DE DIEU")
-            if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE)/i)) {
+            if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION)/i)) {
               return new Paragraph({
                 children: [new TextRun({ text: trimmed, bold: true, color: btnColor, size: 28 })],
                 spacing: { before: 480, after: 180 },
@@ -185,7 +185,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
               });
             }
             // Questions, Réponses, Commentaire, Applications (avec des points pour les applications spécifiques)
-            if (trimmed.startsWith('QUESTION') || trimmed.startsWith('RÉPONSE') || trimmed.startsWith('COMMENTAIRE') || trimmed.startsWith('APPLICATION')) {
+            if (trimmed.startsWith('QUESTION') || trimmed.startsWith('RÉPONSE') || trimmed.startsWith('COMMENTAIRE') || trimmed.startsWith('APPLICATION') || trimmed.startsWith('INTRODUCTION') || trimmed.startsWith('POINTS À DÉVELOPPER') || trimmed.startsWith('CONCLUSION') || trimmed.startsWith('POINTS PRINCIPAUX')) {
                 const [label, ...rest] = trimmed.split(':');
                 return new Paragraph({
                   children: [
@@ -265,7 +265,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
         doc.text(trimmed, margin, y);
         y += 7;
         doc.setFont('helvetica', 'normal');
-      } else if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE)/i)) {
+      } else if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION)/i)) {
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(btnColor);
@@ -288,7 +288,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
         doc.text(textLines, margin + 5, y); // Small indent for verses
         y += (textLines.length * 5) + 3;
         doc.setFont('helvetica', 'normal');
-      } else if (trimmed.startsWith('QUESTION') || trimmed.startsWith('RÉPONSE') || trimmed.startsWith('COMMENTAIRE') || trimmed.startsWith('APPLICATION')) {
+      } else if (trimmed.startsWith('QUESTION') || trimmed.startsWith('RÉPONSE') || trimmed.startsWith('COMMENTAIRE') || trimmed.startsWith('APPLICATION') || trimmed.startsWith('INTRODUCTION') || trimmed.startsWith('POINTS À DÉVELOPPER') || trimmed.startsWith('CONCLUSION') || trimmed.startsWith('POINTS PRINCIPAUX')) {
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
         const [label, ...rest] = trimmed.split(':');
@@ -370,7 +370,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
               const trimmed = line.trim();
               if (!trimmed) return null;
               // TITRES DE SECTION (ex: # PERLES SPIRITUELLES ou JOYAUX DE LA PAROLE DE DIEU)
-              if (trimmed.startsWith('# ') || trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE)/i)) {
+              if (trimmed.startsWith('# ') || trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION)/i)) {
                 return <h3 key={idx} className="text-3xl font-black pt-12 border-t border-white/10 mt-12 uppercase tracking-tight" style={{ color: 'var(--btn-color)' }}>{trimmed.replace(/^#\s*/, '').trim()}</h3>;
               }
               // THÈME
@@ -386,7 +386,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
                 return <div key={idx} className="p-8 bg-white/5 border-l-8 border-[var(--btn-color)] italic rounded-r-3xl my-8 print:border-black print:bg-gray-100">{trimmed}</div>;
               }
               // QUESTIONS, RÉPONSES, COMMENTAIRES, APPLICATIONS
-              if (trimmed.startsWith('QUESTION') || trimmed.startsWith('RÉPONSE') || trimmed.startsWith('COMMENTAIRE') || trimmed.startsWith('APPLICATION')) {
+              if (trimmed.startsWith('QUESTION') || trimmed.startsWith('RÉPONSE') || trimmed.startsWith('COMMENTAIRE') || trimmed.startsWith('APPLICATION') || trimmed.startsWith('INTRODUCTION') || trimmed.startsWith('POINTS À DÉVELOPPER') || trimmed.startsWith('CONCLUSION') || trimmed.startsWith('POINTS PRINCIPAUX')) {
                 const [label, ...rest] = trimmed.split(':');
                 return (
                   <div key={idx} className="space-y-2">

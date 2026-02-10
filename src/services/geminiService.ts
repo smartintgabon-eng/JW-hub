@@ -1,7 +1,8 @@
 import { GoogleGenAI } from "@google/genai";
 import { StudyPart, AppSettings } from "../types"; 
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+// Fix: setTimeout expects a function as its first argument
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve as TimerHandler, ms));
 
 const cleanUrl = (url: string): string => {
   try {
@@ -61,43 +62,97 @@ export const generateStudyContent = async (
   if (type === 'WATCHTOWER') {
     systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'extraire et d'analyser l'article de la Tour de Garde à partir du ${isLink ? "lien" : "sujet/date"} "${input}", puis de le subdiviser de manière structurée et très détaillée.
     La réponse doit être **impérativement basée** et strictement fidèle aux publications officielles de jw.org et à la Bible Traduction du Monde Nouveau. Ne pas inventer d'informations. Priorise la clarté et la concision tout en étant exhaustif.
-    Structure: # [Titre de l'article] \n Thème: [Thème de l'article] \n PARAGRAPHE [N°]: Question, Verset (inclure le texte complet du verset entre parenthèses), Réponse (d'après le verset biblique et le paragraphe), Commentaire, Application. 
-    À la fin de l'article, inclure toutes les QUESTIONS DE RÉVISION: Question, Réponse (basées sur le contenu de l'article).
+    Structure: 
+    # [Titre de l'article] 
+    Thème: [Thème de l'article] 
+    
+    PARAGRAPHE [N°]: 
+    QUESTION: [Question du paragraphe]
+    VERSET: (Inclure le texte complet du verset biblique entre parenthèses)
+    RÉPONSE: (D'après le verset biblique et le paragraphe, inclure des détails et des explications)
+    COMMENTAIRE: (Un point d'approfondissement ou une idée supplémentaire pertinente)
+    APPLICATION: (Comment appliquer personnellement cette information)
+    
+    Répéter ce format pour chaque paragraphe.
+    
+    À la fin de l'article, inclure toutes les QUESTIONS DE RÉVISION:
+    QUESTION: [Question de révision]
+    RÉPONSE: [Réponse détaillée basée sur le contenu de l'article]
+    
     Style: ${settings.answerPreferences || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé'}. Réponds en Markdown.`;
     temperature = 0.1; 
   } else if (type === 'MINISTRY') {
     let partInstruction = '';
     switch (part) {
       case 'joyaux_parole_dieu':
-        partInstruction = `Concentre-toi uniquement sur la section "Joyaux de la Parole de Dieu". Fournis une proposition d'exposé détaillée pour le discours principal, incluant un thème clair, des "POINTS PRINCIPAUX :" avec des références bibliques (avec le texte complet du verset entre parenthèses) et des références aux publications officielles de jw.org. L'exposé doit être pratique et encourageant.
-        À la fin de cette section, inclure les questions d'application suivantes : ${getApplicationQuestions()}`;
+        partInstruction = `**JOYAUX DE LA PAROLE DE DIEU**
+        Fournis une proposition d'exposé détaillée pour le discours principal de cette section. L'exposé doit inclure:
+        Thème: [Thème clair pour l'exposé]
+        INTRODUCTION: [Une introduction engageante]
+        POINTS PRINCIPAUX:
+        - [Point 1 avec des références bibliques complètes (avec le texte complet du verset entre parenthèses) et des références aux publications officielles de jw.org. Développe ce point.]
+        - [Point 2 avec des références bibliques complètes (avec le texte complet du verset entre parenthèses) et des références aux publications officielles de jw.org. Développe ce point.]
+        CONCLUSION: [Une conclusion pratique et encourageante]
+        `;
         break;
       case 'perles_spirituelles':
-        partInstruction = `Concentre-toi uniquement sur la section "Perles Spirituelles" de l'article. Pour chaque perle spirituelle, commence par "VERSET : [Verset biblique complet entre parenthèses]", puis pose la "QUESTION : [Question]", donne la "RÉPONSE : [Réponse détaillée basée sur la publication de référence]", un "COMMENTAIRE : [Point d'approfondissement]", et une "APPLICATION : [Comment appliquer personnellement]". Inclure aussi une deuxième question sur les leçons à tirer de la lecture biblique de la semaine.
-        À la fin de cette section, inclure les questions d'application suivantes : ${getApplicationQuestions()}`;
+        partInstruction = `**PERLES SPIRITUELLES**
+        Pour chaque perle spirituelle, suis le format suivant:
+        VERSET: (Verset biblique complet entre parenthèses lié à la perle)
+        QUESTION: [La première question de la perle spirituelle]
+        RÉPONSE: [Réponse détaillée basée sur la publication de référence]
+        COMMENTAIRE: [Point d'approfondissement ou idée supplémentaire]
+        APPLICATION: [Comment appliquer personnellement cette perle]
+        QUESTION: [La deuxième question sur les leçons à tirer de la lecture biblique de la semaine]
+        RÉPONSE: [Réponse détaillée sur les leçons personnelles, pour la prédication, etc.]
+        `;
         break;
       case 'applique_ministere':
-        partInstruction = `Concentre-toi uniquement sur la section "Applique-toi au Ministère". Liste tous les exposés proposés dans le programme de la semaine. Pour chaque exposé, fournis une proposition d'introduction, des "POINTS À DÉVELOPPER :" avec des références bibliques complètes (avec le texte complet du verset entre parenthèses) et des publications de jw.org, et une "CONCLUSION :". L'utilisateur veut traiter de TOUS les exposés du programme.
-        À la fin de chaque proposition d'exposé, inclure les questions d'application suivantes : ${getApplicationQuestions()}`;
+        partInstruction = `**APPLIQUE-TOI AU MINISTÈRE**
+        Liste tous les exposés proposés dans le programme de la semaine. Pour CHAQUE exposé, fournis une proposition détaillée:
+        [Nom de l'exposé - Ex: Visite initiale]
+        INTRODUCTION: [Une introduction adaptée]
+        POINTS À DÉVELOPPER:
+        - [Point 1 avec des références bibliques complètes (avec le texte complet du verset entre parenthèses) et des références aux publications jw.org. Développe ce point.]
+        - [Point 2 avec des références bibliques complètes (avec le texte complet du verset entre parenthèses) et des références aux publications jw.org. Développe ce point.]
+        CONCLUSION: [Une conclusion claire et encourageante]
+        `;
         break;
       case 'vie_chretienne':
-        partInstruction = `Concentre-toi uniquement sur la section "Vie Chrétienne". Analyse le texte de l'article (ignorer les mentions de vidéo si le contenu n'est pas vidéo et se concentrer sur l'écrit) et les questions associées. Fournis des "RÉPONSES :" détaillées aux questions et des "POINTS DE DISCUSSION :" pratiques, basés sur les principes bibliques et les publications de jw.org.
-        À la fin de cette section, inclure les questions d'application suivantes : ${getApplicationQuestions()}`;
+        partInstruction = `**VIE CHRÉTIENNE**
+        Analyse le texte de l'article (priorise le texte si une vidéo est mentionnée mais non analysable directement). Fournis des "RÉPONSES :" détaillées aux questions de discussion et des "POINTS DE DISCUSSION :" pratiques, basés sur les principes bibliques et les publications de jw.org.
+        `;
         break;
       case 'etude_biblique_assemblee':
-        partInstruction = `Concentre-toi uniquement sur la section "Étude Biblique de l'Assemblée" (étude de livre ou brochure). Fournis les "RÉPONSES :" aux questions de l'étude de manière concise et biblique, en te basant sur le texte de la publication en référence. Après avoir répondu à chaque question de l'étude, pose et réponds aux questions d'application suivantes : ${getApplicationQuestions()}
+        partInstruction = `**ÉTUDE BIBLIQUE DE L'ASSEMBLÉE**
+        Fournis les "RÉPONSES :" détaillées aux questions de l'étude (livre ou brochure), en te basant sur le texte de la publication en référence.
         `;
         break;
       case 'tout':
       default:
-        partInstruction = `Fournis des réponses et exemples d'exposés détaillés pour **Toutes les parties** du Cahier : "Joyaux de la Parole de Dieu", "Perles Spirituelles", "Applique-toi au Ministère", "Vie Chrétienne" et "Étude Biblique de l'Assemblée". Pour chaque section, suis le formatage spécifique demandé pour chaque partie.
-        À la fin de CHAQUE leçon/section, ajoute ces questions d'application: ${getApplicationQuestions()}`;
+        partInstruction = `Fournis des réponses et exemples d'exposés détaillés pour **Toutes les parties** du Cahier, dans l'ordre suivant:
+        - Joyaux de la Parole de Dieu
+        - Perles Spirituelles
+        - Applique-toi au Ministère
+        - Vie Chrétienne
+        - Étude Biblique de l'Assemblée
+        
+        Pour chaque section, suis le formatage spécifique et détaillé demandé pour cette partie.
+        `;
         break;
     }
 
-    systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'extraire et d'analyser l'article du Cahier Vie et Ministère à partir du ${isLink ? "lien" : "sujet/date"} "${input}". ${partInstruction}
+    systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'extraire et d'analyser l'article du Cahier Vie et Ministère à partir du ${isLink ? "lien" : "sujet/date"} "${input}".
     La réponse doit être **impérativement basée** et strictement fidèle aux publications officielles de jw.org et à la Bible Traduction du Monde Nouveau, en utilisant une réflexion biblique approfondie. Ne pas inventer d'informations.
-    Structure: # [Titre de l'article] \n Thème: [Thème de l'article] \n Ensuite, pour chaque section du Cahier, suis le formatage spécifique demandé pour chaque partie.
+    Structure: 
+    # [Titre de l'article du Cahier] 
+    Thème: [Thème général de la semaine] 
+    
+    ${partInstruction}
+    
+    Ajoute ces questions d'application **à la fin de CHAQUE leçon/section** (Joyaux, Perles, Applique-toi, Vie Chrétienne, Étude Biblique de l'Assemblée, même si "tout" est choisi) :
+    ${getApplicationQuestions()}
+    
     Style: ${settings.answerPreferences || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé. Élabore avec des points pertinents.'}. Réponds en Markdown.`;
     temperature = 0.2; 
   }

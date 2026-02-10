@@ -34,6 +34,7 @@ export const saveSettings = (settings: AppSettings) => {
   }
 };
 
+// Fix: Removed duplicate 'const' keyword
 export const getHistory = (): GeneratedStudy[] => {
   try {
     const savedHistory = localStorage.getItem(HISTORY_KEY);

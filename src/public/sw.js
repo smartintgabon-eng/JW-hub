@@ -2,9 +2,9 @@ const CACHE_NAME = 'jw-study-pro-cache-v5';
 const ASSETS = [
   '/',
   '/index.html', // Cette entrée sera gérée par le process de build de react-scripts
-  '%PUBLIC_URL%/logo192.png', // Ajout pour PWA
-  '%PUBLIC_URL%/logo512.png', // Ajout pour PWA
-  '%PUBLIC_URL%/favicon.ico' // Ajout pour le favicon
+  '/logo192.png', // Ajout pour PWA
+  '/logo512.png', // Ajout pour PWA
+  '/favicon.ico' // Ajout pour le favicon
 ];
 
 self.addEventListener('install', (event) => {
