@@ -10,7 +10,9 @@ import {
   Home as HomeIcon,
   WifiOff,
   Download,
-  Lightbulb
+  Lightbulb,
+  BellRing,
+  Loader2 // Import Loader2
 } from 'lucide-react';
 import { AppView, GeneratedStudy, AppSettings } from './types'; 
 import { getSettings, getHistory, saveToHistory } from './utils/storage'; 
@@ -20,6 +22,7 @@ import StudyTool from './components/StudyTool';
 import History from './components/History'; 
 import Settings from './components/Settings'; 
 import Tutorial from './components/Tutorial'; 
+import Updates from './components/Updates'; // Import the new Updates component
 
 const getContrastColor = (hex: string) => {
   if (!hex || hex.length < 6) return 'white';
@@ -38,6 +41,7 @@ const App: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isReadingModeActive, setIsReadingModeActive] = useState(false); // État pour le mode lecture global
+  const [globalLoadingMessage, setGlobalLoadingMessage] = useState<string | null>(null); // Message de chargement global
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
@@ -66,7 +70,7 @@ const App: React.FC = () => {
     return () => {
       window.removeEventListener('online', handleStatus);
       window.removeEventListener('offline', handleStatus);
-      window.removeEventListener('beforeInstallPrompt', handleBeforeInstallPrompt); // Corrected event listener name
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, [settings]);
 
@@ -106,6 +110,7 @@ const App: React.FC = () => {
   const handleStudyGenerated = (study: GeneratedStudy) => {
     saveToHistory(study);
     setHistory(getHistory());
+    setGlobalLoadingMessage(null); // Clear loading message
     navigateTo(AppView.HISTORY);
   };
 
@@ -127,6 +132,17 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row font-sans">
+      {/* Global Loading Overlay */}
+      {globalLoadingMessage && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center z-[1000] text-white p-6 text-center animate-in fade-in duration-300">
+          <div className="p-8 bg-white/10 border border-white/20 rounded-3xl shadow-2xl flex flex-col items-center space-y-4">
+            <Loader2 size={48} className="animate-spin text-[var(--btn-color)]" />
+            <p className="text-xl font-bold uppercase tracking-wide">{globalLoadingMessage}</p>
+            <p className="text-sm opacity-70 italic">Veuillez ne rien toucher et attendre. Vous serez redirigé automatiquement.</p>
+          </div>
+        </div>
+      )}
+
       {!isOnline && (
         <div className="fixed top-0 inset-x-0 bg-amber-500 text-black text-[10px] font-bold py-1 text-center z-[100] flex items-center justify-center space-x-2">
           <WifiOff size={12} />
@@ -164,6 +180,7 @@ const App: React.FC = () => {
           <NavItem icon={Calendar} label="Cahier" active={view === AppView.MINISTRY} onClick={() => navigateTo(AppView.MINISTRY)} />
           <NavItem icon={BookOpen} label="Tour de Garde" active={view === AppView.WATCHTOWER} onClick={() => navigateTo(AppView.WATCHTOWER)} />
           <NavItem icon={HistoryIcon} label="Historique" active={view === AppView.HISTORY} onClick={() => navigateTo(AppView.HISTORY)} />
+          <NavItem icon={BellRing} label="Mises à jour" active={view === AppView.UPDATES} onClick={() => navigateTo(AppView.UPDATES)} />
           <NavItem icon={HelpCircle} label="Tutoriel" active={view === AppView.TUTORIAL} onClick={() => navigateTo(AppView.TUTORIAL)} />
           <NavItem icon={SettingsIcon} label="Paramètres" active={view === AppView.SETTINGS} onClick={() => navigateTo(AppView.SETTINGS)} />
         </nav>
@@ -231,11 +248,12 @@ const App: React.FC = () => {
           )}
 
           <div style={{ color: 'var(--text-color)' }}>
-            {view === AppView.MINISTRY && <StudyTool type="MINISTRY" onGenerated={handleStudyGenerated} settings={settings} />}
-            {view === AppView.WATCHTOWER && <StudyTool type="WATCHTOWER" onGenerated={handleStudyGenerated} settings={settings} />}
+            {view === AppView.MINISTRY && <StudyTool type="MINISTRY" onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
+            {view === AppView.WATCHTOWER && <StudyTool type="WATCHTOWER" onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
             {view === AppView.HISTORY && <History history={history} setHistory={setHistory} settings={settings} />}
             {view === AppView.SETTINGS && <Settings setSettings={setAppSettings} settings={settings} />}
             {view === AppView.TUTORIAL && <Tutorial />}
+            {view === AppView.UPDATES && <Updates />}
           </div>
         </div>
       </main>

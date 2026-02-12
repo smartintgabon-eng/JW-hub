@@ -5,7 +5,8 @@ export enum AppView {
   WATCHTOWER = 'WATCHTOWER',
   TUTORIAL = 'TUTORIAL',
   SETTINGS = 'SETTINGS',
-  HISTORY = 'HISTORY'
+  HISTORY = 'HISTORY',
+  UPDATES = 'UPDATES' // New view for updates
 }
 
 export type StudyPart =

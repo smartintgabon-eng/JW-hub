@@ -65,7 +65,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
       saveToHistory(updatedStudy); // Met à jour l'historique
       setHistory(prev => prev.map(h => h.id === study.id ? updatedStudy : h));
       setSelectedStudy(updatedStudy); // Met à jour l'étude affichée
-      alert("Étude complétée avec succès !");
+      alert("Étude régénérée avec succès !");
     } catch (err) {
       console.error("Erreur lors de la régénération:", err);
       alert("Erreur lors de la régénération. Vérifiez votre connexion ou les quotas API.");
@@ -151,41 +151,43 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
             if (!trimmed) return new Paragraph({});
 
             // Titres de section (ex: # PERLES SPIRITUELLES)
-            if (trimmed.startsWith('# ')) {
+            if (trimmed.startsWith('# ') || trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION|Points principaux|INTRODUCTION|CONCLUSION|VERSET|QUESTION|RÉPONSE|COMMENTAIRE|APPLICATION)/i)) {
+              if (trimmed.includes('PARAGRAPHE')) { // Specific handling for PARAGRAPHE as a main header
+                return new Paragraph({ 
+                  children: [new TextRun({ text: trimmed, bold: true, color: btnColor, size: 28 })],
+                  spacing: { before: 480, after: 180 },
+                });
+              } else if (trimmed.startsWith('# ')) { // General H1 from Markdown
                 return new Paragraph({ 
                   children: [new TextRun({ text: trimmed.substring(2).trim(), bold: true, color: btnColor, size: 28 })],
                   spacing: { before: 480, after: 180 },
                 });
-            }
-            // Thème
-            if (trimmed.startsWith('Thème:')) return new Paragraph({ text: trimmed, style: 'Intense Quote', spacing: { after: 240 }, children: formatTextRun(trimmed, defaultTextColor) });
-            
-            // Titres de section détaillés pour le Cahier (par exemple, "JOYAUX DE LA PAROLE DE DIEU")
-            if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION)/i)) {
-              return new Paragraph({
-                children: [new TextRun({ text: trimmed, bold: true, color: btnColor, size: 28 })],
-                spacing: { before: 480, after: 180 },
-              });
-            }
-            
-            // Paragraphes
-            if (trimmed.includes('PARAGRAPHE')) {
-                return new Paragraph({
-                    children: [new TextRun({ text: trimmed, bold: true, color: btnColor })],
-                    spacing: { before: 360, after: 120 },
+              } else if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION)/i)) {
+                return new Paragraph({ // Specific section headers
+                  children: [new TextRun({ text: trimmed, bold: true, color: btnColor, size: 28 })],
+                  spacing: { before: 480, after: 180 },
                 });
-            }
-            // Versets bibliques
-            if (trimmed.startsWith('VERSET')) {
-              return new Paragraph({
-                children: formatTextRun(trimmed, defaultTextColor),
-                border: { left: { color: btnColor, size: 24, style: 'single' } },
-                indent: { left: 360 },
-                spacing: { before: 120, after: 120 },
-              });
-            }
-            // Questions, Réponses, Commentaire, Applications (avec des points pour les applications spécifiques)
-            if (trimmed.startsWith('QUESTION') || trimmed.startsWith('RÉPONSE') || trimmed.startsWith('COMMENTAIRE') || trimmed.startsWith('APPLICATION') || trimmed.startsWith('INTRODUCTION') || trimmed.startsWith('POINTS À DÉVELOPPER') || trimmed.startsWith('CONCLUSION') || trimmed.startsWith('POINTS PRINCIPAUX')) {
+              } else if (trimmed.startsWith('Thème:')) { // Theme
+                const [label, ...rest] = trimmed.split(':');
+                return new Paragraph({ 
+                  children: [
+                    new TextRun({ text: `${label}: `, bold: true, color: btnColor }),
+                    ...formatTextRun(rest.join(':').trim(), defaultTextColor),
+                  ], 
+                  spacing: { after: 240 },
+                });
+              } else if (trimmed.startsWith('VERSET')) { // Verse
+                const [label, ...rest] = trimmed.split(':');
+                return new Paragraph({
+                  children: [
+                    new TextRun({ text: `${label}: `, bold: true, color: btnColor }),
+                    ...formatTextRun(rest.join(':').trim(), defaultTextColor),
+                  ],
+                  border: { left: { color: btnColor, size: 24, style: 'single' } },
+                  indent: { left: 360 },
+                  spacing: { before: 120, after: 120 },
+                });
+              } else if (trimmed.startsWith('QUESTION') || trimmed.startsWith('RÉPONSE') || trimmed.startsWith('COMMENTAIRE') || trimmed.startsWith('APPLICATION') || trimmed.startsWith('INTRODUCTION') || trimmed.startsWith('POINTS À DÉVELOPPER') || trimmed.startsWith('CONCLUSION') || trimmed.startsWith('POINTS PRINCIPAUX')) {
                 const [label, ...rest] = trimmed.split(':');
                 return new Paragraph({
                   children: [
@@ -195,6 +197,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
                   spacing: { after: 60 },
                 });
             }
+            }
             // Questions d'application spécifiques
             if (trimmed.startsWith('- Quelle leçon')) { 
               return new Paragraph({
@@ -203,7 +206,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
                 indent: { left: 240 },
               });
             }
-            // Texte normal
+            // Texte normal (incluant les lignes de liste ou autres non capturées ci-dessus)
             return new Paragraph({ children: formatTextRun(trimmed, defaultTextColor), spacing: { after: 60 } });
           })
         ],

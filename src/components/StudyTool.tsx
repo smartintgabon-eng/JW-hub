@@ -7,6 +7,7 @@ interface Props {
   type: 'WATCHTOWER' | 'MINISTRY';
   onGenerated: (study: GeneratedStudy) => void;
   settings: AppSettings;
+  setGlobalLoadingMessage: (message: string | null) => void; // Add global loading message setter
 }
 
 // Définition de studyPartOptions ici pour éviter les conflits de types et la double définition.
@@ -20,7 +21,7 @@ export const studyPartOptions: { value: StudyPart; label: string }[] = [
 ];
 
 
-const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
+const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoadingMessage }) => {
   const [mode, setMode] = useState<'link' | 'date'>(() => {
     // Restaurer le mode depuis localStorage
     return localStorage.getItem(`study_mode_${type}`) as 'link' | 'date' || 'link';
@@ -33,7 +34,6 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
     return localStorage.getItem(`selected_part_${type}`) as StudyPart || 'tout';
   });
   const [loading, setLoading] = useState(false);
-  const [loadingStep, setLoadingStep] = useState('');
   const [preview, setPreview] = useState<{title: string, theme?: string, url?: string} | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
@@ -68,8 +68,8 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
   const resetState = (clearInput: boolean = true) => {
     setLoading(false);
     setError(null);
-    setLoadingStep('');
     setPreview(null);
+    setGlobalLoadingMessage(null); // Clear loading message on reset
     if (clearInput) {
       setInput('');
       localStorage.removeItem(`draft_${type}_${mode}`);
@@ -81,8 +81,8 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
     if (loading || cooldown > 0 || !input.trim()) return;
 
     setLoading(true);
+    setGlobalLoadingMessage(mode === 'link' ? 'Analyse du lien...' : 'Recherche de l\'article...');
     setError(null);
-    setLoadingStep(mode === 'link' ? 'Analyse du lien...' : 'Recherche sur JW.ORG...');
 
     try {
       // Uniquement pour obtenir le titre/thème pour l'aperçu, pas la génération complète
@@ -92,7 +92,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
       handleError(err);
     } finally {
       setLoading(false);
-      setLoadingStep('');
+      setGlobalLoadingMessage(null); // Clear loading message
     }
   };
 
@@ -100,13 +100,13 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
     if (loading || cooldown > 0 || !preview) return;
 
     setLoading(true);
+    setGlobalLoadingMessage('Génération des réponses en cours...');
     setError(null);
-    setLoadingStep('Génération des réponses...');
 
     try {
       const result = await generateStudyContent(type, preview.url || input.trim(), selectedPart, settings); 
       
-      setLoadingStep('Enregistrement...');
+      setGlobalLoadingMessage('Enregistrement de l\'étude et redirection...');
       const newStudy: GeneratedStudy = {
         id: Date.now().toString(),
         type,
@@ -117,19 +117,22 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
         url: preview.url, // Use the URL from the preview or the original input
         part: type === 'MINISTRY' ? selectedPart : undefined 
       };
-      onGenerated(newStudy);
+      onGenerated(newStudy); // This will also navigate to history and clear loading message
       resetState(true); // Clear input after successful generation
     } catch (err: any) {
       handleError(err);
     } finally {
       setLoading(false);
-      setLoadingStep('');
+      // Global loading message is cleared by onGenerated on success.
+      // If error occurs, it's cleared by handleError
     }
   };
 
   const handleError = (err: any) => {
     const errorStr = JSON.stringify(err);
     const status = err.status || (err.response && err.response.status);
+
+    setGlobalLoadingMessage(null); // Always clear global loading on error
 
     if (err.message === 'COOLDOWN_REQUIRED') {
       setError("Limite globale des requêtes Google atteinte. Les tentatives répétées prolongeront le délai de récupération. Veuillez patienter pour réessayer.");
@@ -222,7 +225,9 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
                 {loading ? (
                     <div className="flex flex-col items-center space-y-2">
                     <Loader2 className="animate-spin" size={28} />
-                    <span className="text-[10px] opacity-70 font-bold tracking-widest uppercase">{loadingStep}</span>
+                    <span className="text-[10px] opacity-70 font-bold tracking-widest uppercase">{
+                      mode === 'link' ? 'Analyse du lien...' : 'Recherche de l\'article...'
+                    }</span>
                     </div>
                 ) : (
                     <div className="flex items-center space-x-3">
@@ -272,7 +277,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings }) => {
                         style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
                         className="flex-1 py-5 rounded-xl font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center space-x-2"
                         >
-                        {loading ? <Loader2 className="animate-spin" size={18} /> : <ShieldCheck size={18} />}
+                        {loading ? <Loader2 size={18} className="animate-spin" /> : <ShieldCheck size={18} />}
                         <span>Générer les réponses</span>
                         </button>
                         <button onClick={() => resetState(true)} className="flex-1 bg-white/5 border border-white/10 py-5 rounded-xl font-black text-sm uppercase tracking-widest">Recommencer la recherche</button>

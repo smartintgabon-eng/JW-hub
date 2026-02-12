@@ -37,31 +37,32 @@ export const generateStudyContent = async (
   const apiKey = process.env.REACT_APP_GEMINI_API_KEY || "";
   if (!apiKey) throw new Error("Clé API absente. Vérifiez votre configuration.");
 
-  // Always use `const ai = new GoogleGenAI({apiKey: process.env.REACT_APP_GEMINI_API_KEY});` as per guidelines.
   const ai = new GoogleGenAI({ apiKey: process.env.REACT_APP_GEMINI_API_KEY });
   
   const cleanedInput = cleanUrl(input);
   const isLink = cleanedInput.startsWith('http');
 
-  let modelToUse: string;
+  let modelToUse: string = 'gemini-3-flash-preview'; 
   let toolsConfig: any[] | undefined; 
-
-  // Use 'gemini-3-flash-preview' for text tasks, as per guidelines.
-  modelToUse = 'gemini-3-flash-preview'; 
-
-  if (isLink) {
-    toolsConfig = undefined; 
-  } else {
-    // Add tool configuration for Google Search grounding, as per guidelines.
-    toolsConfig = [{ googleSearch: {} }]; 
-  }
-
   let systemInstruction = '';
   let temperature = 0.2; 
+  let groundingInstruction = ''; // Declare groundingInstruction in a higher scope
+
+  // Determine grounding instruction and tools config based on whether the input is a link or a search query
+  if (!isLink) {
+    toolsConfig = [{ googleSearch: {} }]; 
+    groundingInstruction = `Vous avez effectué une recherche pour l'article "${input}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés pour extraire et analyser l'article. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations, indiquez-le.`;
+  } else {
+    toolsConfig = undefined; // No need for googleSearch for a direct link
+    groundingInstruction = `Le contenu de l'article se trouve à l'URL suivante : "${input}". Vous devez agir comme si vous aviez lu l'intégralité de cette page web, y compris les références bibliques et les sous-liens. Extrayez toutes les informations pertinentes directement de ce contenu.`;
+  }
 
   if (type === 'WATCHTOWER') {
-    systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'extraire et d'analyser l'article de la Tour de Garde à partir du ${isLink ? "lien" : "sujet/date"} "${input}", puis de le subdiviser de manière structurée et très détaillée.
-    La réponse doit être **impérativement basée** et strictement fidèle aux publications officielles de jw.org et à la Bible Traduction du Monde Nouveau. Ne pas inventer d'informations. Priorise la clarté et la concision tout en étant exhaustif.
+    systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'analyser l'article de la Tour de Garde.
+    ${groundingInstruction}
+    
+    Subdivisez l'article de manière structurée et très détaillée. La réponse doit être **impérativement basée** et strictement fidèle aux publications officielles de jw.org et à la Bible Traduction du Monde Nouveau. Ne pas inventer d'informations. Priorise la clarté et la concision tout en étant exhaustif.
+    
     Structure: 
     # [Titre de l'article] 
     Thème: [Thème de l'article] 
@@ -69,89 +70,101 @@ export const generateStudyContent = async (
     PARAGRAPHE [N°]: 
     QUESTION: [Question du paragraphe]
     VERSET: (Inclure le texte complet du verset biblique entre parenthèses)
-    RÉPONSE: (D'après le verset biblique et le paragraphe, inclure des détails et des explications)
-    COMMENTAIRE: (Un point d'approfondissement ou une idée supplémentaire pertinente)
-    APPLICATION: (Comment appliquer personnellement cette information)
+    RÉPONSE: (D'après le verset biblique et le paragraphe, inclure des détails et des explications en vous basant *directement* sur le contenu de l'article/page web ou des snippets de recherche.)
+    COMMENTAIRE: (Un point d'approfondissement ou une idée supplémentaire pertinente tirée de l'article.)
+    APPLICATION: (Comment appliquer personnellement cette information, en vous basant *directement* sur le contenu de l'article/page web ou des snippets de recherche.)
     
     Répéter ce format pour chaque paragraphe.
     
     À la fin de l'article, inclure toutes les QUESTIONS DE RÉVISION:
     QUESTION: [Question de révision]
-    RÉPONSE: [Réponse détaillée basée sur le contenu de l'article]
+    RÉPONSE: [Réponse détaillée basée sur le contenu de l'article/page web ou des snippets de recherche]
     
     Style: ${settings.answerPreferences || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé'}. Réponds en Markdown.`;
     temperature = 0.1; 
   } else if (type === 'MINISTRY') {
     let partInstruction = '';
+    // groundingInstruction is now correctly defined for MINISTRY type
+    
+
     switch (part) {
       case 'joyaux_parole_dieu':
         partInstruction = `**JOYAUX DE LA PAROLE DE DIEU**
-        Fournis une proposition d'exposé détaillée pour le discours principal de cette section. L'exposé doit inclure:
-        Thème: [Thème clair pour l'exposé]
-        INTRODUCTION: [Une introduction engageante]
+        Fournis une proposition d'exposé détaillée pour le discours principal de cette section, en te basant sur le contenu de l'article. L'exposé doit inclure:
+        Thème: [Thème clair pour l'exposé, basé sur l'article]
+        INTRODUCTION: [Une introduction engageante basée sur l'article]
         POINTS PRINCIPAUX:
-        - [Point 1 avec des références bibliques complètes (avec le texte complet du verset entre parenthèses) et des références aux publications officielles de jw.org. Développe ce point.]
-        - [Point 2 avec des références bibliques complètes (avec le texte complet du verset entre parenthèses) et des références aux publications officielles de jw.org. Développe ce point.]
-        CONCLUSION: [Une conclusion pratique et encourageante]
+        - [Point 1 avec des références bibliques complètes (inclure le texte complet du verset biblique entre parenthèses) et des références aux publications officielles de jw.org (ex: wXX XX/X p.XX §X). Développe ce point en t'appuyant sur l'article.]
+        - [Point 2 avec des références bibliques complètes (inclure le texte complet du verset biblique entre parenthèses) et des références aux publications officielles de jw.org (ex: wXX XX/X p.XX §X). Développe ce point en t'appuyant sur l'article.]
+        CONCLUSION: [Une conclusion pratique et encourageante basée sur l'article]
         `;
         break;
       case 'perles_spirituelles':
         partInstruction = `**PERLES SPIRITUELLES**
-        Pour chaque perle spirituelle, suis le format suivant:
+        Pour chaque perle spirituelle, en te basant sur le contenu de l'article et de ses références, suis le format suivant:
         VERSET: (Verset biblique complet entre parenthèses lié à la perle)
-        QUESTION: [La première question de la perle spirituelle]
-        RÉPONSE: [Réponse détaillée basée sur la publication de référence]
-        COMMENTAIRE: [Point d'approfondissement ou idée supplémentaire]
-        APPLICATION: [Comment appliquer personnellement cette perle]
-        QUESTION: [La deuxième question sur les leçons à tirer de la lecture biblique de la semaine]
-        RÉPONSE: [Réponse détaillée sur les leçons personnelles, pour la prédication, etc.]
+        QUESTION: [La première question de la perle spirituelle, textuellement de l'article]
+        RÉPONSE: [Réponse détaillée basée sur la publication de référence ou l'article lui-même]
+        COMMENTAIRE: [Point d'approfondissement ou idée supplémentaire tirée de l'article]
+        APPLICATION: [Comment appliquer personnellement cette perle tirée de l'article]
+        QUESTION: [La deuxième question sur les leçons à tirer de la lecture biblique de la semaine, textuellement de l'article]
+        RÉPONSE: [Réponse détaillée sur les leçons personnelles, pour la prédication, etc., tirée de l'article]
         `;
         break;
       case 'applique_ministere':
         partInstruction = `**APPLIQUE-TOI AU MINISTÈRE**
-        Liste tous les exposés proposés dans le programme de la semaine. Pour CHAQUE exposé, fournis une proposition détaillée:
+        En te basant sur le contenu de l'article, liste tous les exposés proposés dans le programme de la semaine. Pour CHAQUE exposé, fournis une proposition détaillée:
         [Nom de l'exposé - Ex: Visite initiale]
-        INTRODUCTION: [Une introduction adaptée]
+        INTRODUCTION: [Une introduction adaptée, basée sur l'article]
         POINTS À DÉVELOPPER:
-        - [Point 1 avec des références bibliques complètes (avec le texte complet du verset entre parenthèses) et des références aux publications jw.org. Développe ce point.]
-        - [Point 2 avec des références bibliques complètes (avec le texte complet du verset entre parenthèses) et des références aux publications jw.org. Développe ce point.]
-        CONCLUSION: [Une conclusion claire et encourageante]
+        - [Point 1 avec des références bibliques complètes (inclure le texte complet du verset biblique entre parenthèses) et des références aux publications jw.org. Développe ce point en t'appuyant sur l'article.]
+        - [Point 2 avec des références bibliques complètes (inclure le texte complet du verset biblique entre parenthèses) et des références aux publications jw.org. Développe ce point en t'appuyant sur l'article.]
+        CONCLUSION: [Une conclusion claire et encourageante, basée sur l'article]
         `;
         break;
       case 'vie_chretienne':
         partInstruction = `**VIE CHRÉTIENNE**
-        Analyse le texte de l'article (priorise le texte si une vidéo est mentionnée mais non analysable directement). Fournis des "RÉPONSES :" détaillées aux questions de discussion et des "POINTS DE DISCUSSION :" pratiques, basés sur les principes bibliques et les publications de jw.org.
+        En te basant sur le contenu de l'article (et en simulant l'analyse d'une vidéo si elle est mentionnée dans le texte), fournis des "RÉPONSES :" détaillées aux questions de discussion et des "POINTS DE DISCUSSION :" pratiques. Ces réponses et points doivent être basés sur les principes bibliques et les publications de jw.org mentionnées dans l'article.
         `;
         break;
       case 'etude_biblique_assemblee':
         partInstruction = `**ÉTUDE BIBLIQUE DE L'ASSEMBLÉE**
-        Fournis les "RÉPONSES :" détaillées aux questions de l'étude (livre ou brochure), en te basant sur le texte de la publication en référence.
+        En te basant sur le contenu de l'article (et les références de livre/brochure), fournis les "RÉPONSES :" détaillées aux questions de l'étude.
         `;
+        // Ajoute les questions d'application SEULEMENT pour cette partie
+        partInstruction += `\n\n${getApplicationQuestions()}`;
         break;
       case 'tout':
       default:
-        partInstruction = `Fournis des réponses et exemples d'exposés détaillés pour **Toutes les parties** du Cahier, dans l'ordre suivant:
-        - Joyaux de la Parole de Dieu
-        - Perles Spirituelles
-        - Applique-toi au Ministère
-        - Vie Chrétienne
-        - Étude Biblique de l'Assemblée
+        partInstruction = `Fournis des réponses et exemples d'exposés détaillés pour **Toutes les parties** du Cahier, dans l'ordre suivant, en te basant sur le contenu de l'article principal et de ses références:
         
-        Pour chaque section, suis le formatage spécifique et détaillé demandé pour cette partie.
+        **JOYAUX DE LA PAROLE DE DIEU**
+        (Suit le format détaillé des Joyaux de la Parole de Dieu, y compris Thème, Introduction, Points principaux avec références bibliques complètes et Conclusion.)
+        
+        **PERLES SPIRITUELLES**
+        (Suit le format détaillé des Perles Spirituelles, y compris Verset, Q1, R1, Commentaire, Application, Q2, R2.)
+        
+        **APPLIQUE-TOI AU MINISTÈRE**
+        (Suit le format détaillé de Applique-toi au Ministère, listant tous les exposés avec Introduction, Points à développer et Conclusion pour chacun.)
+        
+        **VIE CHRÉTIENNE**
+        (Suit le format détaillé de Vie Chrétienne, incluant Réponses aux questions et Points de discussion.)
+        
+        **ÉTUDE BIBLIQUE DE L'ASSEMBLÉE**
+        (Suit le format détaillé de l'Étude Biblique de l'Assemblée, incluant les Réponses aux questions de l'étude.)
+        ${getApplicationQuestions()}
         `;
         break;
     }
 
-    systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'extraire et d'analyser l'article du Cahier Vie et Ministère à partir du ${isLink ? "lien" : "sujet/date"} "${input}".
-    La réponse doit être **impérativement basée** et strictement fidèle aux publications officielles de jw.org et à la Bible Traduction du Monde Nouveau, en utilisant une réflexion biblique approfondie. Ne pas inventer d'informations.
+    systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'analyser l'article du Cahier Vie et Ministère.
+    ${groundingInstruction}
+    
     Structure: 
     # [Titre de l'article du Cahier] 
     Thème: [Thème général de la semaine] 
     
     ${partInstruction}
-    
-    Ajoute ces questions d'application **à la fin de CHAQUE leçon/section** (Joyaux, Perles, Applique-toi, Vie Chrétienne, Étude Biblique de l'Assemblée, même si "tout" est choisi) :
-    ${getApplicationQuestions()}
     
     Style: ${settings.answerPreferences || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé. Élabore avec des points pertinents.'}. Réponds en Markdown.`;
     temperature = 0.2; 
@@ -160,13 +173,18 @@ export const generateStudyContent = async (
   // Si c'est une recherche initiale pour l'aperçu, on utilise un prompt plus court et moins exigeant.
   if (isInitialSearchForPreview) {
     systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'identifier le titre et le thème principal de l'article lié à "${input}" (qu'il soit un lien ou un sujet/date de Tour de Garde ou Cahier Vie et Ministère).
+    ${groundingInstruction}
     Réponds uniquement avec le format suivant: # [Titre de l'article] \n Thème: [Thème de l'article]. Ne fournis aucun autre détail ou contenu de l'article.`;
   }
 
   try {
+    // Si c'est un lien direct, le contenu est "l'URL" pour le modèle, même si nous ne le scrapons pas.
+    // L'instruction système est ce qui le "grounde".
+    const modelContent = isLink ? `Analyser le contenu de l'article à l'URL : ${cleanedInput}` : `Rechercher et analyser l'article pour le sujet/la date : ${input}`;
+
     const response = await ai.models.generateContent({
       model: modelToUse,
-      contents: `Traiter l'article pour: ${type} ${input}`,
+      contents: modelContent,
       config: {
         systemInstruction,
         temperature,
@@ -174,10 +192,9 @@ export const generateStudyContent = async (
       },
     });
 
-    // Correct way to extract text output from GenerateContentResponse
     const text = response.text || "";
     
-    if (!text || text.length < 50 || text.toLowerCase().includes('désolé') || text.toLowerCase().includes('impossible de trouver')) {
+    if (!text || text.length < 50 || text.toLowerCase().includes('désolé') || text.toLowerCase().includes('impossible de trouver') || text.toLowerCase().includes('ne peut pas accéder à des sites web externes')) {
       throw new Error("MODEL_PROCESSING_ERROR");
     }
 
@@ -202,7 +219,7 @@ export const generateStudyContent = async (
     }
 
     const isRateLimit = errorStr.includes('429') || errorStr.includes('quota') || errorStr.includes('exhausted');
-    const isSearchToolError = errorStr.includes('tool error') || errorStr.includes('Google Search');
+    const isSearchToolError = errorStr.includes('tool error') || errorStr.includes('Google Search') || errorStr.includes('not found');
     
     if (isRateLimit) {
       if (retryCount < 2) {
@@ -214,7 +231,7 @@ export const generateStudyContent = async (
     }
 
     if (isSearchToolError) {
-      if (retryCount < 1 && !isLink) {
+      if (retryCount < 1 && !isLink) { // Réessayer une fois si c'est une recherche par date/thème
          const wait = 15000;
          await sleep(wait);
          return generateStudyContent(type, input, part, settings, retryCount + 1, isInitialSearchForPreview);

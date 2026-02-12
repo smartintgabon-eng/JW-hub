@@ -1,4 +1,5 @@
 {
   "name": "JW Study Assistant",
-  "description": "Assistant d'étude pour la Tour de Garde et le Cahier Vie et Ministère, utilisant la Bible Traduction du Monde Nouveau."
+  "description": "Assistant d'étude pour la Tour de Garde et le Cahier Vie et Ministère, utilisant la Bible Traduction du Monde Nouveau.",
+  "requestFramePermissions": []
 }

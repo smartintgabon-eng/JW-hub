@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { HelpCircle, ChevronRight, ChevronLeft, Lightbulb, Link as LinkIcon, Search, Save, Calendar, BookOpen, Settings as SettingsIcon, History as HistoryIcon, Download } from 'lucide-react';
+import { HelpCircle, ChevronRight, ChevronLeft, Lightbulb, Link as LinkIcon, Search, Save, Calendar, BookOpen, Settings as SettingsIcon, History as HistoryIcon, Download, BellRing } from 'lucide-react';
 
 const Tutorial: React.FC = () => {
   const [step, setStep] = useState(0);
@@ -13,17 +13,17 @@ const Tutorial: React.FC = () => {
     },
     {
       title: "Navigation simple et rapide",
-      content: "Utilisez le menu latéral pour passer de l'Accueil aux sections 'Cahier Vie et Ministère' ou 'Tour de Garde', consulter votre 'Historique', accéder au 'Tutoriel' ou ajuster les 'Paramètres' de l'application. Sur mobile, le menu se trouve en haut à droite.",
+      content: "Utilisez le menu latéral pour passer de l'Accueil aux sections 'Cahier Vie et Ministère' ou 'Tour de Garde', consulter votre 'Historique', accéder aux 'Mises à jour', au 'Tutoriel' ou ajuster les 'Paramètres' de l'application. Sur mobile, le menu se trouve en haut à droite.",
       icon: <Lightbulb className="text-cyan-500" size={48} />
     },
     {
       title: "Préparation de la Tour de Garde",
-      content: "Dans l'onglet 'Tour de Garde', vous pouvez coller le lien direct de l'article de jw.org ou rechercher l'article par sa date ou son thème. L'IA analysera le texte et vous fournira des questions, des versets clés (avec leur texte complet), des réponses, des commentaires et des applications, ainsi que les questions de révision.",
+      content: "Dans l'onglet 'Tour de Garde', vous pouvez coller le lien direct de l'article de jw.org ou rechercher l'article par sa date ou son thème. L'IA analysera le texte et vous fournira des questions, des versets clés (avec leur texte complet), des réponses, des commentaires et des applications, ainsi que les questions de révision. L'IA s'efforcera de 'lire' l'article pour des réponses précises.",
       icon: <BookOpen className="text-emerald-500" size={48} />
     },
     {
       title: "Préparation du Cahier Vie et Ministère : Lien ou Recherche",
-      content: "Comme pour la Tour de Garde, vous pouvez entrer un lien direct vers l'article du Cahier de la semaine ou effectuer une recherche par date ou thème pour trouver le bon article sur jw.org.",
+      content: "Comme pour la Tour de Garde, vous pouvez entrer un lien direct vers l'article du Cahier de la semaine ou effectuer une recherche par date ou thème pour trouver le bon article sur jw.org. L'IA tentera d'analyser le contenu des articles trouvés.",
       icon: <LinkIcon className="text-orange-500" size={48} />
     },
     {
@@ -33,17 +33,17 @@ const Tutorial: React.FC = () => {
     },
     {
       title: "Détail : Joyaux de la Parole de Dieu",
-      content: "Cette option vous fournira une proposition d'exposé détaillée basée sur les versets et les publications de référence. Idéal pour préparer votre intervention lors de cette partie de la réunion.",
+      content: "Cette option vous fournira une proposition d'exposé détaillée basée sur les versets et les publications de référence. L'IA générera un thème, une introduction, des points principaux développés avec des références bibliques et une conclusion.",
       icon: <Lightbulb className="text-purple-500" size={48} />
     },
     {
       title: "Détail : Perles Spirituelles",
-      content: "Obtenez des réponses concises aux questions, avec les versets clés et les références de publication, ainsi que des leçons pratiques à tirer de la lecture biblique de la semaine pour votre vie et votre ministère.",
+      content: "Obtenez des réponses concises aux questions, avec les versets clés (texte complet), des références de publication, un commentaire d'approfondissement, une application personnelle et une réponse sur les leçons tirées de la lecture biblique.",
       icon: <Lightbulb className="text-yellow-500" size={48} />
     },
     {
       title: "Détail : Applique-toi au Ministère",
-      content: "L'IA vous présentera les différents exposés possibles pour la semaine (visite initiale, nouvelle visite, cours biblique, etc.). Vous pourrez en choisir un ou plusieurs pour générer des propositions complètes d'introduction, de points à développer et de conclusion.",
+      content: "L'IA vous présentera les différents exposés possibles pour la semaine et générera des propositions complètes d'introduction, de points à développer et de conclusion pour chacun. Vous pourrez ainsi choisir celui qui vous convient le mieux.",
       icon: <Lightbulb className="text-teal-500" size={48} />
     },
     {
@@ -53,13 +53,18 @@ const Tutorial: React.FC = () => {
     },
     {
       title: "Détail : Étude Biblique de l'Assemblée",
-      content: "Similaire à la Tour de Garde, l'IA répondra aux questions de l'étude (livre/brochure) et ajoutera des questions d'application pour vous aider à réfléchir sur les leçons personnelles, pour la prédication, la famille, l'assemblée, et sur Jéhovah/Jésus.",
+      content: "L'IA répondra aux questions de l'étude (livre/brochure) et, spécifiquement pour cette section, ajoutera des questions d'application pour vous aider à réfléchir sur les leçons personnelles, pour la prédication, la famille, l'assemblée, et sur Jéhovah/Jésus.",
       icon: <Lightbulb className="text-lime-500" size={48} />
     },
     {
       title: "Options après génération : Export & Régénération",
-      content: "Une fois les réponses générées, vous pourrez les lire directement sur le site (avec un mode lecture immersif qui masque les distractions), les télécharger au format DOCX ou PDF, ou même les régénérer si vous souhaitez une autre perspective ou des détails supplémentaires.",
+      content: "Une fois les réponses générées, vous pourrez les lire directement sur le site (avec un mode lecture immersif qui masque les distractions), les télécharger au format DOCX ou PDF (avec un formatage amélioré), ou même les régénérer si vous souhaitez une autre perspective ou des détails supplémentaires.",
       icon: <Save className="text-gray-400" size={48} />
+    },
+    {
+      title: "Mises à jour de l'application",
+      content: "Consultez le nouvel onglet 'Mises à jour' pour rester informé des dernières fonctionnalités, améliorations et corrections apportées à JW Study Pro. Chaque mise à jour est détaillée pour vous aider à en tirer le meilleur parti.",
+      icon: <BellRing className="text-indigo-400" size={48} />
     },
     {
       title: "Personnalisation de l'Apparence",
