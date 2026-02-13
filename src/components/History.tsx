@@ -151,32 +151,32 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
             if (!trimmed) return new Paragraph({});
 
             // Titres de section (ex: # PERLES SPIRITUELLES)
-            if (trimmed.startsWith('# ') || trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION|Points principaux|INTRODUCTION|CONCLUSION|VERSET|QUESTION|RÉPONSE|COMMENTAIRE|APPLICATION)/i)) {
-              if (trimmed.includes('PARAGRAPHE')) { // Specific handling for PARAGRAPHE as a main header
+            if (trimmed.startsWith('# ') || trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION)/i)) { // Main Section Headers
                 return new Paragraph({ 
-                  children: [new TextRun({ text: trimmed, bold: true, color: btnColor, size: 28 })],
+                  children: [new TextRun({ text: trimmed.replace(/^#\s*/, '').trim(), bold: true, color: btnColor, size: 32 })],
                   spacing: { before: 480, after: 180 },
                 });
-              } else if (trimmed.startsWith('# ')) { // General H1 from Markdown
-                return new Paragraph({ 
-                  children: [new TextRun({ text: trimmed.substring(2).trim(), bold: true, color: btnColor, size: 28 })],
-                  spacing: { before: 480, after: 180 },
-                });
-              } else if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION)/i)) {
-                return new Paragraph({ // Specific section headers
-                  children: [new TextRun({ text: trimmed, bold: true, color: btnColor, size: 28 })],
-                  spacing: { before: 480, after: 180 },
-                });
-              } else if (trimmed.startsWith('Thème:')) { // Theme
+            }
+            // Thème
+            if (trimmed.startsWith('Thème:')) {
                 const [label, ...rest] = trimmed.split(':');
                 return new Paragraph({ 
                   children: [
-                    new TextRun({ text: `${label}: `, bold: true, color: btnColor }),
+                    new TextRun({ text: `${label}: `, bold: true, color: btnColor, size: 24 }),
                     ...formatTextRun(rest.join(':').trim(), defaultTextColor),
                   ], 
                   spacing: { after: 240 },
                 });
-              } else if (trimmed.startsWith('VERSET')) { // Verse
+            }
+            // PARAGRAPHE (pour les articles de la Tour de Garde)
+            if (trimmed.includes('PARAGRAPHE')) {
+                return new Paragraph({ 
+                  children: [new TextRun({ text: trimmed, bold: true, color: btnColor, size: 28 })],
+                  spacing: { before: 360, after: 120 },
+                });
+            }
+            // VERSETS BIBLIQUES
+            if (trimmed.startsWith('VERSET:')) {
                 const [label, ...rest] = trimmed.split(':');
                 return new Paragraph({
                   children: [
@@ -187,7 +187,9 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
                   indent: { left: 360 },
                   spacing: { before: 120, after: 120 },
                 });
-              } else if (trimmed.startsWith('QUESTION') || trimmed.startsWith('RÉPONSE') || trimmed.startsWith('COMMENTAIRE') || trimmed.startsWith('APPLICATION') || trimmed.startsWith('INTRODUCTION') || trimmed.startsWith('POINTS À DÉVELOPPER') || trimmed.startsWith('CONCLUSION') || trimmed.startsWith('POINTS PRINCIPAUX')) {
+            }
+            // QUESTIONS, RÉPONSES, COMMENTAIRES, APPLICATIONS, INTRODUCTION, POINTS À DÉVELOPPER, CONCLUSION, POINTS PRINCIPAUX
+            if (trimmed.startsWith('QUESTION:') || trimmed.startsWith('RÉPONSE:') || trimmed.startsWith('COMMENTAIRE:') || trimmed.startsWith('APPLICATION:') || trimmed.startsWith('INTRODUCTION:') || trimmed.startsWith('POINTS À DÉVELOPPER:') || trimmed.startsWith('CONCLUSION:') || trimmed.startsWith('POINTS PRINCIPAUX:')) {
                 const [label, ...rest] = trimmed.split(':');
                 return new Paragraph({
                   children: [
@@ -197,8 +199,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
                   spacing: { after: 60 },
                 });
             }
-            }
-            // Questions d'application spécifiques
+            // Questions d'application spécifiques (listes)
             if (trimmed.startsWith('- Quelle leçon')) { 
               return new Paragraph({
                 children: formatTextRun(trimmed, defaultTextColor),
@@ -254,7 +255,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
         doc.setFont('helvetica', 'normal'); // Reset font style
       }
 
-      if (trimmed.startsWith('# ')) { // Titres de section
+      if (trimmed.startsWith('# ')) { // Titres de section principaux
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(btnColor);
@@ -268,7 +269,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
         doc.text(trimmed, margin, y);
         y += 7;
         doc.setFont('helvetica', 'normal');
-      } else if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION)/i)) {
+      } else if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION)/i)) { // Section headers for Ministry
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(btnColor);
@@ -276,7 +277,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
         y += 7;
         doc.setTextColor(defaultTextColor);
         doc.setFont('helvetica', 'normal');
-      } else if (trimmed.includes('PARAGRAPHE')) { // Paragraphes
+      } else if (trimmed.includes('PARAGRAPHE')) { // Paragraphes for Watchtower
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(btnColor);
@@ -284,14 +285,14 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
         y += 7;
         doc.setTextColor(defaultTextColor); // Reset color
         doc.setFont('helvetica', 'normal');
-      } else if (trimmed.startsWith('VERSET')) { // Versets bibliques
+      } else if (trimmed.startsWith('VERSET:')) { // Versets bibliques
         doc.setFontSize(11);
         doc.setFont('helvetica', 'italic');
         const textLines = doc.splitTextToSize(trimmed, pageWidth - 2 * margin - 10);
         doc.text(textLines, margin + 5, y); // Small indent for verses
         y += (textLines.length * 5) + 3;
         doc.setFont('helvetica', 'normal');
-      } else if (trimmed.startsWith('QUESTION') || trimmed.startsWith('RÉPONSE') || trimmed.startsWith('COMMENTAIRE') || trimmed.startsWith('APPLICATION') || trimmed.startsWith('INTRODUCTION') || trimmed.startsWith('POINTS À DÉVELOPPER') || trimmed.startsWith('CONCLUSION') || trimmed.startsWith('POINTS PRINCIPAUX')) {
+      } else if (trimmed.startsWith('QUESTION:') || trimmed.startsWith('RÉPONSE:') || trimmed.startsWith('COMMENTAIRE:') || trimmed.startsWith('APPLICATION:') || trimmed.startsWith('INTRODUCTION:') || trimmed.startsWith('POINTS À DÉVELOPPER:') || trimmed.startsWith('CONCLUSION:') || trimmed.startsWith('POINTS PRINCIPAUX:')) { // Labeled content
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
         const [label, ...rest] = trimmed.split(':');
@@ -385,11 +386,11 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
                 return <h3 key={idx} className="text-2xl font-black pt-8 mt-8 uppercase tracking-tight" style={{ color: 'var(--btn-color)' }}>{trimmed}</h3>;
               }
               // VERSETS BIBLIQUES
-              if (trimmed.startsWith('VERSET')) {
+              if (trimmed.startsWith('VERSET:')) {
                 return <div key={idx} className="p-8 bg-white/5 border-l-8 border-[var(--btn-color)] italic rounded-r-3xl my-8 print:border-black print:bg-gray-100">{trimmed}</div>;
               }
               // QUESTIONS, RÉPONSES, COMMENTAIRES, APPLICATIONS
-              if (trimmed.startsWith('QUESTION') || trimmed.startsWith('RÉPONSE') || trimmed.startsWith('COMMENTAIRE') || trimmed.startsWith('APPLICATION') || trimmed.startsWith('INTRODUCTION') || trimmed.startsWith('POINTS À DÉVELOPPER') || trimmed.startsWith('CONCLUSION') || trimmed.startsWith('POINTS PRINCIPAUX')) {
+              if (trimmed.startsWith('QUESTION:') || trimmed.startsWith('RÉPONSE:') || trimmed.startsWith('COMMENTAIRE:') || trimmed.startsWith('APPLICATION:') || trimmed.startsWith('INTRODUCTION:') || trimmed.startsWith('POINTS À DÉVELOPPER:') || trimmed.startsWith('CONCLUSION:') || trimmed.startsWith('POINTS PRINCIPAUX:')) {
                 const [label, ...rest] = trimmed.split(':');
                 return (
                   <div key={idx} className="space-y-2">

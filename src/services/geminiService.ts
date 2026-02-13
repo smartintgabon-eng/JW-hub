@@ -51,10 +51,10 @@ export const generateStudyContent = async (
   // Determine grounding instruction and tools config based on whether the input is a link or a search query
   if (!isLink) {
     toolsConfig = [{ googleSearch: {} }]; 
-    groundingInstruction = `Vous avez effectué une recherche pour l'article "${input}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés pour extraire et analyser l'article. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations, indiquez-le.`;
+    groundingInstruction = `Vous avez effectué une recherche pour l'article "${input}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés pour extraire et analyser l'article. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations ou si les résultats sont ambigus, indiquez-le clairement.`;
   } else {
     toolsConfig = undefined; // No need for googleSearch for a direct link
-    groundingInstruction = `Le contenu de l'article se trouve à l'URL suivante : "${input}". Vous devez agir comme si vous aviez lu l'intégralité de cette page web, y compris les références bibliques et les sous-liens. Extrayez toutes les informations pertinentes directement de ce contenu.`;
+    groundingInstruction = `Le contenu de l'article se trouve à l'URL suivante : "${input}". Vous devez agir comme si vous aviez lu l'intégralité de cette page web, y compris les références bibliques et les sous-liens. Extrayez toutes les informations pertinentes directement de ce contenu. Soyez très fidèle à toutes les informations trouvées et n'inventez rien.`;
   }
 
   if (type === 'WATCHTOWER') {
