@@ -1,6 +1,6 @@
 // src/utils/storage.ts
 
-import { AppSettings, GeneratedStudy, AppView, HistoryCategory } from '../types';
+import { AppSettings, GeneratedStudy, AppView, HistoryCategory } from './types';
 
 const SETTINGS_KEY = 'jw_study_pro_settings';
 const HISTORY_KEY = 'jw_study_pro_history';
@@ -12,7 +12,7 @@ const defaultSettings: AppSettings = {
   buttonColor: '#4a70b5',
   customButtonHex: '',
   autoSave: true, // Assuming default is true
-  modelName: 'gemini-3-flash-preview', // Default model name
+  modelName: 'gemini-2.5-flash', // Default model name changed to 2.5 flash
   answerPreferences: 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.',
 };
 
@@ -51,6 +51,10 @@ export const getHistory = (): GeneratedStudy[] => {
         } else {
           study.category = 'cahier_vie_et_ministere'; // Default fallback
         }
+      }
+      // Ensure type is PREDICATION for preachingType to be valid for old data
+      if (study.preachingType && study.type !== 'PREDICATION') {
+        study.type = 'PREDICATION';
       }
       return study;
     });

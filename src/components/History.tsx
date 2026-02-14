@@ -16,7 +16,7 @@ import { GeneratedStudy, AppSettings, StudyPart } from '../types';
 // Importation locale pour studyPartOptions pour éviter les conflits de dépendances avec types.ts si types.ts doit importer History
 import { studyPartOptions } from './StudyTool'; // On importe de StudyTool maintenant
 import { deleteFromHistory, saveToHistory } from '../utils/storage'; 
-import { generateStudyContent } from '../services/geminiService'; 
+import { callGenerateContentApi } from '../services/apiService'; // Utilisez le nouveau service API
 
 // Importations pour la génération de documents
 import saveAs from 'file-saver'; 
@@ -60,15 +60,15 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
     setIsRegenerating(true);
     try {
       // Pour la régénération, on utilise le type et l'input original, et la partie si elle était définie
-      const result = await generateStudyContent(study.type, study.url || study.title, study.part || 'tout', settings, 0, false, study.preachingType);
+      const result = await callGenerateContentApi(study.type, study.url || study.title, study.part || 'tout', settings, false, study.preachingType);
       const updatedStudy = { ...study, content: result.text, timestamp: Date.now() };
       saveToHistory(updatedStudy); // Met à jour l'historique
       setHistory(prev => prev.map(h => h.id === study.id ? updatedStudy : h));
       setSelectedStudy(updatedStudy); // Met à jour l'étude affichée
       alert("Étude régénérée avec succès !");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erreur lors de la régénération:", err);
-      alert("Erreur lors de la régénération. Vérifiez votre connexion ou les quotas API.");
+      alert(`Erreur lors de la régénération: ${err.message}. Vérifiez votre connexion ou les quotas API.`);
     } finally {
       setIsRegenerating(false);
     }
@@ -202,14 +202,12 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
             // Questions d'application spécifiques (listes)
             if (trimmed.startsWith('- Quelle leçon')) { 
               return new Paragraph({
-                // Fix: Changed 'defaultColor' to 'defaultTextColor'
                 children: formatTextRun(trimmed, defaultTextColor),
                 spacing: { before: 60, after: 60 },
                 indent: { left: 240 },
               });
             }
             // Texte normal (incluant les lignes de liste ou autres non capturées ci-dessus)
-            // Fix: Changed 'defaultColor' to 'defaultTextColor'
             return new Paragraph({ children: formatTextRun(trimmed, defaultTextColor), spacing: { after: 60 } });
           })
         ],

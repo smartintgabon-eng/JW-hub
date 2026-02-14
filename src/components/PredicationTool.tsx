@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Megaphone, Loader2, Check, AlertTriangle, Timer, BookOpen, Search, Link as LinkIcon, Handshake, CornerRightDown, ChevronRight, ChevronLeft } from 'lucide-react';
 import { AppSettings, GeneratedStudy, PredicationType } from '../types';
-import { generateStudyContent } from '../services/geminiService';
+import { callGenerateContentApi } from '../services/apiService'; // Utilisez le nouveau service API
 
 interface Props {
   onGenerated: (study: GeneratedStudy) => void;
@@ -82,7 +82,7 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
     setError(null);
 
     try {
-      const result = await generateStudyContent('PREDICATION', inputDetails, 'tout', settings, 0, false, preachingType);
+      const result = await callGenerateContentApi('PREDICATION', inputDetails, 'tout', settings, false, preachingType);
 
       setGlobalLoadingMessage('Enregistrement de la préparation et redirection...');
       const newStudy: GeneratedStudy = {
@@ -94,7 +94,6 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
         timestamp: Date.now(),
         url: pepPublicationLink || nvStudyLink || cbPublicationLink, // Use appropriate link
         preachingType: preachingType,
-        // Fix: Added the 'category' property to satisfy the GeneratedStudy interface.
         category: `predication_${preachingType}`
       };
       onGenerated(newStudy);
@@ -107,27 +106,19 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
   };
 
   const handleError = (err: any) => {
-    const errorStr = JSON.stringify(err);
-    const status = err.status || (err.response && err.response.status);
-
-    setGlobalLoadingMessage(null);
-
-    if (err.message === 'COOLDOWN_REQUIRED') {
-      setError("Limite globale des requêtes Google atteinte. Veuillez patienter.");
-      setCooldown(90);
-    } else if (err.message === 'SEARCH_QUOTA_EXCEEDED') {
-      setError("Le service de recherche Google est temporairement saturé. Veuillez réessayer plus tard.");
-      setCooldown(60);
-    } else if (err.message === 'INVALID_API_KEY') {
-      setError("Clé API invalide. Vérifiez votre configuration.");
-    } else if (err.message === 'BILLING_REQUIRED') {
-      setError("La recherche nécessite une configuration de facturation active sur Google Cloud.");
-    } else if (err.message.startsWith('GENERIC_API_ERROR')) {
-      setError(`Une erreur de communication est survenue avec l'API Gemini (${err.message.split(': ')[1]}).`);
-    } else if (err.message === "MODEL_PROCESSING_ERROR") {
-      setError("L'IA n'a pas pu générer la préparation. Essayez avec une autre formulation ou un lien différent.");
-    } else {
-      setError("Connexion interrompue ou erreur inconnue. Veuillez vérifier votre connexion ou réessayer.");
+    // La réponse de l'API contient déjà des messages d'erreur formatés
+    setGlobalLoadingMessage(null); // Always clear global loading on error
+    setError(err.message || "Une erreur inconnue est survenue.");
+    
+    // Si l'erreur vient du cooldown, mettez à jour le compteur
+    if (err.message && err.message.includes('patienter')) {
+      // Extraire le nombre de secondes si le message contient "Veuillez patienter Xs"
+      const match = err.message.match(/patienter (\d+)s/);
+      if (match && match[1]) {
+        setCooldown(parseInt(match[1]));
+      } else {
+        setCooldown(90); // Fallback si le format n'est pas celui attendu
+      }
     }
   };
 
@@ -204,7 +195,6 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
                   </div>
                 </div>
               )}
-              {/* Fix: Added ChevronRight import at the top of the file */}
               <button onClick={() => setPepStep(2)} disabled={!pepPublicationLink.trim() || !pepTopic.trim()}
                 style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }}
                 className="w-full py-5 rounded-xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center space-x-2">
@@ -215,7 +205,6 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
 
           {pepStep === 2 && (
             <div className="space-y-6 animate-in fade-in duration-300">
-              {/* Fix: Added ChevronLeft import at the top of the file */}
               <button onClick={() => setPepStep(1)} className="flex items-center space-x-2 opacity-60 hover:opacity-100 mb-6">
                 <ChevronLeft size={20} /> <span className="text-sm">Retour</span>
               </button>

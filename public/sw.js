@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jw-study-pro-cache-v6'; // Incrément de la version du cache
+const CACHE_NAME = 'jw-study-pro-cache-v7'; // Incrément de la version du cache
 const ASSETS = [
   './',
   './index.html',
@@ -27,8 +27,8 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   // Ignore les requêtes vers l'API Gemini pour éviter de les mettre en cache
-  if (event.request.url.includes('generativelanguage.googleapis.com')) return;
-  
+  if (event.request.url.includes('generativelanguage.googleapis.com') || event.request.url.includes('/api/generate-content')) return; // Also ignore our API route
+
   event.respondWith(
     caches.match(event.request).then((cached) => {
       return cached || fetch(event.request).then((response) => {

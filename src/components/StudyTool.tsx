@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Link as LinkIcon, Calendar, Loader2, Globe, Check, ShieldCheck, AlertTriangle, RefreshCw, Timer } from 'lucide-react';
 import { StudyPart, GeneratedStudy, AppSettings } from '../types'; 
-import { generateStudyContent } from '../services/geminiService'; 
+import { callGenerateContentApi } from '../services/apiService'; // Utilisez le nouveau service API
 
 interface Props {
   type: 'WATCHTOWER' | 'MINISTRY';
@@ -86,7 +86,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
 
     try {
       // Uniquement pour obtenir le titre/thème pour l'aperçu, pas la génération complète
-      const result = await generateStudyContent(type, input.trim(), 'tout', settings, 0, true, undefined); 
+      const result = await callGenerateContentApi(type, input.trim(), 'tout', settings, true, undefined); 
       setPreview({ title: result.title, theme: result.theme, url: input.trim().startsWith('http') ? input.trim() : undefined });
     } catch (err: any) {
       handleError(err);
@@ -104,7 +104,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
     setError(null);
 
     try {
-      const result = await generateStudyContent(type, preview.url || input.trim(), selectedPart, settings, 0, false, undefined); 
+      const result = await callGenerateContentApi(type, preview.url || input.trim(), selectedPart, settings, false, undefined); 
       
       setGlobalLoadingMessage('Enregistrement de l\'étude et redirection...');
       const newStudy: GeneratedStudy = {
@@ -130,27 +130,19 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
   };
 
   const handleError = (err: any) => {
-    const errorStr = JSON.stringify(err);
-    const status = err.status || (err.response && err.response.status);
-
+    // La réponse de l'API contient déjà des messages d'erreur formatés
     setGlobalLoadingMessage(null); // Always clear global loading on error
-
-    if (err.message === 'COOLDOWN_REQUIRED') {
-      setError("Limite globale des requêtes Google atteinte. Les tentatives répétées prolongeront le délai de récupération. Veuillez patienter pour réessayer.");
-      setCooldown(90); 
-    } else if (err.message === 'SEARCH_QUOTA_EXCEEDED') {
-      setError("Le service de recherche Google est temporairement saturé. Veuillez réessayer avec un 'Lien direct' ou patientez.");
-      setCooldown(60); 
-    } else if (err.message === 'INVALID_API_KEY') {
-      setError("Clé API invalide. Vérifiez que votre clé est correcte et configurée dans votre projet Google Cloud (et Vercel si déployé).");
-    } else if (err.message === 'BILLING_REQUIRED') {
-      setError("La recherche nécessite une configuration de facturation active sur Google Cloud, même pour les usages gratuits. (ai.google.dev/gemini-api/docs/billing)");
-    } else if (err.message.startsWith('GENERIC_API_ERROR')) {
-      setError(`Une erreur de communication est survenue avec l'API Gemini (${err.message.split(': ')[1]}). Vérifiez votre connexion.`);
-    } else if (err.message === "MODEL_PROCESSING_ERROR") {
-        setError("L'IA n'a pas pu trouver ou analyser l'article. Essayez un lien direct ou une formulation différente.");
-    } else {
-      setError("Connexion interrompue ou erreur inconnue. Veuillez vérifier votre connexion ou réessayer dans quelques minutes.");
+    setError(err.message || "Une erreur inconnue est survenue.");
+    
+    // Si l'erreur vient du cooldown, mettez à jour le compteur
+    if (err.message && err.message.includes('patienter')) {
+      // Extraire le nombre de secondes si le message contient "Veuillez patienter Xs"
+      const match = err.message.match(/patienter (\d+)s/);
+      if (match && match[1]) {
+        setCooldown(parseInt(match[1]));
+      } else {
+        setCooldown(90); // Fallback si le format n'est pas celui attendu
+      }
     }
   };
 

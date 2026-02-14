@@ -58,12 +58,12 @@ const Tutorial: React.FC = () => {
     },
     {
       title: "Nouvel Onglet : Prédication",
-      content: "Préparez vos présentations de prédication (porte-en-porte, nouvelles visites, cours bibliques) avec l'aide de l'IA. Vous pourrez spécifier les publications, les sujets, les questions laissées en suspens, ou votre progression dans un cours pour générer des entrées en matière, des manières de faire et des versets pertinents. Les préférences des réponses de vos paramètres s'appliqueront aussi à cette section.",
+      content: "Préparez vos présentations de prédication (porte-en-porte, nouvelles visites, cours bibliques) avec l'aide de l'IA. Vous pourrez spécifier les publications, les sujets, les questions laissées en suspens, ou votre progression dans un cours pour générer des entrées en matière, des manières de faire et des versets pertinents. Les préférences des réponses de vos paramètres s'appliqueront aussi à cette section. Les études sont catégorisées dans l'historique.",
       icon: <Megaphone className="text-purple-400" size={48} />
     },
     {
       title: "Options après génération : Export & Régénération",
-      content: "Une fois les réponses générées, vous pourrez les lire directement sur le site (avec un mode lecture immersif qui masque les distractions), les télécharger au format DOCX ou PDF (avec un formatage amélioré), ou même les régénérer si vous souhaitez une autre perspective ou des détails supplémentaires. Les études sont catégorisées dans l'historique.",
+      content: "Une fois les réponses générées, vous pourrez les lire directement sur le site (avec un mode lecture immersif qui masque les distractions), les télécharger au format DOCX ou PDF (avec un formatage amélioré), ou même les régénérer si vous souhaitez une autre perspective ou des détails supplémentaires.",
       icon: <Save className="text-gray-400" size={48} />
     },
     {
