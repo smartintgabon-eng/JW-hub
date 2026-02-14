@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { HelpCircle, ChevronRight, ChevronLeft, Lightbulb, Link as LinkIcon, Search, Save, Calendar, BookOpen, Settings as SettingsIcon, History as HistoryIcon, Download, BellRing, Megaphone, Server } from 'lucide-react';
+import { HelpCircle, ChevronRight, ChevronLeft, Lightbulb, Link as LinkIcon, Search, Save, Calendar, BookOpen, Settings as SettingsIcon, History as HistoryIcon, Download, BellRing, Megaphone, Server, AlertTriangle } from 'lucide-react';
 
 const Tutorial: React.FC = () => {
   const [step, setStep] = useState(0);
@@ -87,9 +87,14 @@ const Tutorial: React.FC = () => {
       icon: <HistoryIcon className="text-blue-400" size={48} />
     },
     {
-      title: "Installation de l'application (PWA)",
-      content: "Pour profiter pleinement de JW Study Pro et l'utiliser hors ligne, installez-la comme une application web progressive (PWA). Un bouton 'Installer l'App' apparaîtra (généralement dans Chrome) vous permettant de l'ajouter à votre écran d'accueil pour un accès rapide. L'expérience visuelle hors ligne est désormais identique à l'expérience en ligne. **En cas de problème après une mise à jour, pensez à désinstaller la PWA, vider le cache du navigateur, puis la réinstaller.**",
+      title: "Installation de l'application (PWA) & Dépannage",
+      content: "Pour profiter pleinement de JW Study Pro et l'utiliser hors ligne, installez-la comme une application web progressive (PWA). Un bouton 'Installer l'App' apparaîtra (généralement dans Chrome) vous permettant de l'ajouter à votre écran d'accueil pour un accès rapide. L'expérience visuelle hors ligne est désormais identique à l'expérience en ligne. **IMPORTANT : En cas de problème persistant après une mise à jour (comme des erreurs d'API inattendues), DÉSINSTALLEZ la PWA, VIDEZ le cache du navigateur (données de site pour jw-hub.vercel.app), puis RÉINSTALLEZ l'application pour garantir le chargement des dernières versions des fichiers.**",
       icon: <Download className="text-green-400" size={48} />
+    },
+    {
+      title: "Vérification des logs API sur Vercel",
+      content: "Si vous rencontrez toujours des erreurs API (comme 'is not valid JSON'), il est essentiel de vérifier les logs de votre fonction `generate-content` sur Vercel. Effectuez une requête, puis examinez les logs du déploiement Vercel pour voir si le message 'API Route /api/generate-content hit!' apparaît. Cela indique si votre requête atteint bien le serveur.",
+      icon: <AlertTriangle className="text-red-500" size={48} />
     }
   ];
 

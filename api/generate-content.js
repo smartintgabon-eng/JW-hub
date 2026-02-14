@@ -25,6 +25,11 @@ const getApplicationQuestions = () => `
 `;
 
 export default async function handler(req, res) {
+  // IMPORTANT: Log this to Vercel's console to see if the API route is even being hit.
+  console.log("API Route /api/generate-content hit!");
+  console.log("Request method:", req.method);
+  // console.log("Request body:", req.body); // Uncomment for full debugging, but be cautious with sensitive data.
+
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
@@ -261,7 +266,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ text, title, theme });
 
   } catch (error) {
-    console.error("Gemini API Error:", error);
+    console.error("Gemini API Error (in serverless function):", error); // More specific log
     
     const errorStr = JSON.stringify(error); 
     const status = error.status || (error.response && error.response.status); 
@@ -277,31 +282,21 @@ export default async function handler(req, res) {
     const isRateLimit = errorStr.includes('429') || errorStr.includes('quota') || errorStr.includes('exhausted');
     const isSearchToolError = errorStr.includes('tool error') || errorStr.includes('Google Search') || errorStr.includes('not found');
     
+    // Serverless functions are stateless, so client-side retry logic is preferred.
+    // We return clear messages for the client to handle cooldowns.
     if (isRateLimit) {
-      if (retryCount < 2) {
-        const wait = (retryCount + 1) * 20000;
-        await sleep(wait);
-        // Retry logic should be handled client-side if it's a direct API call or passed through
-        // For simplicity with Vercel API Route, we'll return a cooldown message
-        return res.status(429).json({ message: `Limite globale des requêtes Google atteinte. Veuillez patienter ${wait / 1000}s pour réessayer.` });
-      }
-      return res.status(429).json({ message: "Limite globale des requêtes Google atteinte. Les tentatives répétées prolongeront le délai de récupération. Veuillez patienter pour réessayer." });
+      return res.status(429).json({ message: `Limite des requêtes Google atteinte. Veuillez patienter 90s pour réessayer. Les tentatives répétées prolongeront ce délai. (Code: 429)` });
     }
 
     if (isSearchToolError) {
-      if (retryCount < 1 && !isLink) { 
-         const wait = 15000;
-         await sleep(wait);
-         // Client-side retry will call the API again with incremented retryCount
-         return res.status(429).json({ message: `Le service de recherche Google est temporairement saturé. Veuillez patienter ${wait / 1000}s pour réessayer avec un 'Lien direct' ou patientez.` });
-      }
-      return res.status(500).json({ message: "Le service de recherche Google est temporairement saturé. Veuillez réessayer avec un 'Lien direct' ou patientez." });
+      return res.status(500).json({ message: "Le service de recherche Google est temporairement saturé ou n'a pas trouvé de résultats pertinents. Veuillez réessayer avec un 'Lien direct' ou patientez. (Code: 500-SEARCH)" });
     }
     
     if (error.message === "MODEL_PROCESSING_ERROR") {
-        return res.status(500).json({ message: "L'IA n'a pas pu trouver ou analyser l'article. Essayez un lien direct ou une formulation différente. Assurez-vous que le lien est valide et public." });
+        return res.status(500).json({ message: "L'IA n'a pas pu trouver ou analyser l'article. Essayez un lien direct ou une formulation différente. Assurez-vous que le lien est valide et public. (Code: 500-AI)" });
     }
 
-    return res.status(500).json({ message: `Une erreur de communication est survenue avec l'API Gemini (${status || 'unknown'}). Vérifiez votre connexion. Message: ${error.message}` });
+    // Generic error
+    return res.status(500).json({ message: `Une erreur de communication est survenue avec l'API Gemini. Statut: ${status || 'inconnu'}. Détails: ${error.message}. (Code: 500-GENERIC)` });
   }
 }

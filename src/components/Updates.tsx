@@ -97,6 +97,17 @@ const updates: UpdateItem[] = [
       "Instructions détaillées ajoutées au tutoriel et aux messages d'erreur pour aider l'utilisateur à vider le cache du navigateur ou à réinstaller la PWA en cas de problèmes de déploiement côté client.",
       "La version du Service Worker a été incrémentée (`v10`) pour forcer la mise à jour des règles de cache chez tous les utilisateurs."
     ]
+  },
+  {
+    version: "1.6.0",
+    date: "30 Octobre 2024",
+    features: [
+      "Amélioration des diagnostics des erreurs API côté serveur avec des logs explicites sur Vercel, et messages d'erreur frontend plus précis."
+    ],
+    fixes: [
+      "Tentative de correction finale de l'erreur 'Unexpected token <' / 'is not valid JSON' en affinant la gestion d'erreurs côté serveur et en fournissant des instructions de débogage et de nettoyage de cache approfondies.",
+      "La version du Service Worker a été incrémentée (`v11`) pour garantir que les dernières règles de cache et de routage sont appliquées, en insistant sur la nécessité de vider le cache du navigateur et de réinstaller la PWA."
+    ]
   }
 ];
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jw-study-pro-cache-v10'; // Incrément de la version du cache
+const CACHE_NAME = 'jw-study-pro-cache-v11'; // Incrément de la version du cache
 const ASSETS = [
   './',
   './index.html',
