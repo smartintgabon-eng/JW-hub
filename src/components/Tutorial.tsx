@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { HelpCircle, ChevronRight, ChevronLeft, Lightbulb, Link as LinkIcon, Search, Save, Calendar, BookOpen, Settings as SettingsIcon, History as HistoryIcon, Download, BellRing, Megaphone } from 'lucide-react';
+import { HelpCircle, ChevronRight, ChevronLeft, Lightbulb, Link as LinkIcon, Search, Save, Calendar, BookOpen, Settings as SettingsIcon, History as HistoryIcon, Download, BellRing, Megaphone, Server } from 'lucide-react';
 
 const Tutorial: React.FC = () => {
   const [step, setStep] = useState(0);
@@ -17,43 +17,48 @@ const Tutorial: React.FC = () => {
       icon: <Lightbulb className="text-cyan-500" size={48} />
     },
     {
+      title: "Architecture Server-side pour un meilleur grounding",
+      content: "L'application utilise désormais une architecture 'Server-side' avec les API Routes de Vercel. Cela signifie que les appels à l'IA de Gemini sont gérés sur un serveur sécurisé, ce qui permet à l'IA d'accéder *réellement* et de manière plus fiable aux informations de jw.org (via l'outil Google Search) pour générer des réponses plus précises et fidèles.",
+      icon: <Server className="text-gray-400" size={48} />
+    },
+    {
       title: "Préparation de la Tour de Garde",
-      content: "Dans l'onglet 'Tour de Garde', vous pouvez coller le lien direct de l'article de jw.org ou rechercher l'article par sa date ou son thème. L'IA analysera le texte et vous fournira des questions, des versets clés (avec leur texte complet), des réponses, des commentaires et des applications, ainsi que les questions de révision. L'IA s'efforcera de 'lire' l'article pour des réponses précises.",
+      content: "Dans l'onglet 'Tour de Garde', vous pouvez coller le lien direct de l'article de jw.org ou rechercher l'article par sa date ou son thème. L'IA analysera le texte et vous fournira des questions, des versets clés (avec leur texte complet, Traduction du Monde Nouveau), des réponses, des commentaires et des applications, ainsi que les questions de révision. L'IA s'efforcera de 'lire' l'article pour des réponses précises.",
       icon: <BookOpen className="text-emerald-500" size={48} />
     },
     {
       title: "Préparation du Cahier Vie et Ministère : Lien ou Recherche",
-      content: "Comme pour la Tour de Garde, vous pouvez entrer un lien direct vers l'article du Cahier de la semaine ou effectuer une recherche par date ou thème pour trouver le bon article sur jw.org. L'IA tentera d'analyser le contenu des articles trouvés.",
+      content: "Comme pour la Tour de Garde, vous pouvez entrer un lien direct vers l'article du Cahier de la semaine ou effectuer une recherche par date ou thème pour trouver le bon article sur jw.org. Grâce à la nouvelle architecture, l'IA analyse le contenu de manière plus approfondie.",
       icon: <LinkIcon className="text-orange-500" size={48} />
     },
     {
       title: "Cahier Vie et Ministère : Choix des parties d'étude",
-      content: "Après avoir confirmé l'article, vous pourrez choisir la partie spécifique du Cahier que vous souhaitez préparer : 'Joyaux de la Parole de Dieu', 'Perles Spirituelles', 'Applique-toi au Ministère', 'Vie Chrétienne', 'Étude Biblique de l'Assemblée', ou 'Toutes les parties' pour une préparation complète.",
+      content: "Après avoir confirmé l'article, vous pourrez choisir la partie spécifique du Cahier que vous souhaitez préparer : 'Joyaux de la Parole de Dieu', 'Perles Spirituelles', 'Applique-toi au Ministère', 'Vie Chrétienne', 'Étude Biblique de l'Assemblée', ou 'Toutes les parties' pour une préparation complète. Les versets bibliques complets de la Traduction du Monde Nouveau sont désormais inclus.",
       icon: <Calendar className="text-red-500" size={48} />
     },
     {
       title: "Détail : Joyaux de la Parole de Dieu",
-      content: "Cette option vous fournira une proposition d'exposé détaillée basée sur les versets et les publications de référence. L'IA générera un thème, une introduction, des points principaux développés avec des références bibliques et une conclusion.",
+      content: "Cette option vous fournira une proposition d'exposé détaillée basée sur les versets et les publications de référence. L'IA générera un thème, une introduction, des points principaux développés avec des références bibliques complètes (Traduction du Monde Nouveau) et une conclusion.",
       icon: <Lightbulb className="text-purple-500" size={48} />
     },
     {
       title: "Détail : Perles Spirituelles",
-      content: "Obtenez des réponses concises aux questions, avec les versets clés (texte complet), des références de publication, un commentaire d'approfondissement, une application personnelle et une réponse sur les leçons tirées de la lecture biblique.",
+      content: "Obtenez des réponses concises aux questions, avec les versets clés (texte complet, Traduction du Monde Nouveau), des références de publication, un commentaire d'approfondissement, une application personnelle et une réponse sur les leçons tirées de la lecture biblique.",
       icon: <Lightbulb className="text-yellow-500" size={48} />
     },
     {
       title: "Détail : Applique-toi au Ministère",
-      content: "L'IA vous présentera les différents exposés possibles pour la semaine et générera des propositions complètes d'introduction, de points à développer et de conclusion pour chacun. Vous pourrez ainsi choisir celui qui vous convient le mieux.",
+      content: "L'IA vous présentera les différents exposés possibles pour la semaine et générera des propositions complètes d'introduction, de points à développer (avec versets bibliques complets, Traduction du Monde Nouveau) et de conclusion pour chacun. Vous pourrez ainsi choisir celui qui vous convient le mieux.",
       icon: <Lightbulb className="text-teal-500" size={48} />
     },
     {
       title: "Détail : Vie Chrétienne",
-      content: "Cette section, souvent accompagnée d'une vidéo ou d'un article, vous fournira des réponses aux questions et des points de discussion pertinents, basés sur l'analyse du contenu par l'IA. Elle inclura aussi des applications personnelles.",
+      content: "Cette section, souvent accompagnée d'une vidéo ou d'un article, vous fournira des réponses aux questions et des points de discussion pertinents, basés sur l'analyse du contenu par l'IA. Elle inclura aussi des applications personnelles. Les versets sont maintenant complets.",
       icon: <Lightbulb className="text-pink-500" size={48} />
     },
     {
       title: "Détail : Étude Biblique de l'Assemblée",
-      content: "L'IA répondra aux questions de l'étude (livre/brochure) et, spécifiquement pour cette section, ajoutera des questions d'application pour vous aider à réfléchir sur les leçons personnelles, pour la prédication, la famille, l'assemblée, et sur Jéhovah/Jésus.",
+      content: "L'IA répondra aux questions de l'étude (livre/brochure) et, spécifiquement pour cette section, ajoutera des questions d'application pour vous aider à réfléchir sur les leçons personnelles, pour la prédication, la famille, l'assemblée, et sur Jéhovah/Jésus. Les versets sont complets et les réponses plus fidèles.",
       icon: <Lightbulb className="text-lime-500" size={48} />
     },
     {
@@ -78,12 +83,12 @@ const Tutorial: React.FC = () => {
     },
     {
       title: "Historique & Utilisation hors ligne",
-      content: "Toutes vos études générées sont automatiquement sauvegardées dans l'onglet 'Historique' de votre appareil (cache local). Cela signifie que vous pouvez y accéder et les consulter même sans connexion internet ! Vous pouvez les supprimer ou les partager à tout moment.",
+      content: "Toutes vos études générées sont automatiquement sauvegardées dans l'onglet 'Historique' de votre appareil (cache local). Cela signifie que vous pouvez y accéder et les consulter même sans connexion internet ! Vous pouvez les supprimer ou les partager à tout moment. Les études sont désormais catégorisées pour faciliter la recherche.",
       icon: <HistoryIcon className="text-blue-400" size={48} />
     },
     {
       title: "Installation de l'application (PWA)",
-      content: "Pour profiter pleinement de JW Study Pro et l'utiliser hors ligne, installez-la comme une application web progressive (PWA). Un bouton 'Installer l'App' apparaîtra (généralement dans Chrome) vous permettant de l'ajouter à votre écran d'accueil pour un accès rapide.",
+      content: "Pour profiter pleinement de JW Study Pro et l'utiliser hors ligne, installez-la comme une application web progressive (PWA). Un bouton 'Installer l'App' apparaîtra (généralement dans Chrome) vous permettant de l'ajouter à votre écran d'accueil pour un accès rapide. L'expérience visuelle hors ligne est désormais identique à l'expérience en ligne.",
       icon: <Download className="text-green-400" size={48} />
     }
   ];

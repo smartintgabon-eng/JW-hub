@@ -60,6 +60,20 @@ const updates: UpdateItem[] = [
       "Unification du style de l'application en mode PWA hors ligne, garantissant une expérience visuelle cohérente avec la version en ligne.",
       "Meilleure gestion des erreurs et des quotas API avec des messages plus clairs et des délais de récupération adaptés."
     ]
+  },
+  {
+    version: "1.3.0",
+    date: "27 Octobre 2024",
+    features: [
+      "Passage de l'appel à l'IA du frontend vers une API Route Vercel (serverless function) pour un 'grounding' (ancrage des réponses) beaucoup plus fiable et sécurisé. L'IA accède désormais réellement aux informations de jw.org sans les limitations du navigateur.",
+      "Utilisation du modèle Gemini 2.5 Flash pour toutes les requêtes (Tour de Garde, Cahier, Prédication) pour des réponses rapides et précises.",
+      "Les prompts de l'IA sont encore plus précis pour la demande de versets bibliques complets (Traduction du Monde Nouveau) et des références exactes aux publications."
+    ],
+    fixes: [
+      "Correction de l'erreur 'Unexpected token <' / 'A server e' lors de l'appel à l'API, due à une mauvaise configuration de `vercel.json` qui redirigeait les appels API vers la page `index.html`. Le routage est maintenant correct.",
+      "Amélioration de la robustesse de l'API Route Vercel pour mieux gérer les erreurs et les quotas, renvoyant des messages d'erreur JSON clairs au client.",
+      "Nettoyage des fichiers dupliqués ou mal placés suite à la migration vers une structure de projet standard React/Vercel (fichiers à la racine, etc.)."
+    ]
   }
 ];
 
