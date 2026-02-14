@@ -27,9 +27,12 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
     return localStorage.getItem(`study_mode_${type}`) as 'link' | 'date' || 'link';
   });
   const [input, setInput] = useState(() => {
-    // Restaurer l'input depuis localStorage au chargement initial
-    return localStorage.getItem(`draft_${type}_${mode}`) || '';
+    // Restaurer l'input (pour le mode 'link') depuis localStorage au chargement initial
+    return localStorage.getItem(`draft_${type}_link`) || '';
   });
+  const [startDateInput, setStartDateInput] = useState(() => localStorage.getItem(`draft_${type}_startDate`) || '');
+  const [themeInput, setThemeInput] = useState(() => localStorage.getItem(`draft_${type}_theme`) || '');
+
   const [selectedPart, setSelectedPart] = useState<StudyPart>(() => {
     return localStorage.getItem(`selected_part_${type}`) as StudyPart || 'tout';
   });
@@ -38,16 +41,29 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
 
-  // Charger l'input du brouillon à partir du localStorage quand le type ou le mode change
+  // Charger/sauvegarder l'input du brouillon à partir/vers le localStorage quand le type ou le mode change
   useEffect(() => {
-    setInput(localStorage.getItem(`draft_${type}_${mode}`) || '');
+    // For 'link' mode
+    if (mode === 'link') {
+      setInput(localStorage.getItem(`draft_${type}_link`) || '');
+    } else { // For 'date' mode
+      setStartDateInput(localStorage.getItem(`draft_${type}_startDate`) || '');
+      setThemeInput(localStorage.getItem(`draft_${type}_theme`) || '');
+    }
     localStorage.setItem(`study_mode_${type}`, mode);
   }, [type, mode]);
 
-  // Sauvegarder l'input du brouillon dans le localStorage à chaque modification
+  // Sauvegarder les inputs du brouillon dans le localStorage à chaque modification
   useEffect(() => {
-    localStorage.setItem(`draft_${type}_${mode}`, input);
-  }, [input, type, mode]);
+    localStorage.setItem(`draft_${type}_link`, input);
+  }, [input, type]);
+  useEffect(() => {
+    localStorage.setItem(`draft_${type}_startDate`, startDateInput);
+  }, [startDateInput, type]);
+  useEffect(() => {
+    localStorage.setItem(`draft_${type}_theme`, themeInput);
+  }, [themeInput, type]);
+
 
   // Sauvegarder la partie sélectionnée
   useEffect(() => {
@@ -61,24 +77,34 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
     }
   }, [cooldown]);
 
-  const handleInputChange = (val: string) => {
-    setInput(val);
+  const handleInputChange = (val: string, inputType: 'link' | 'startDate' | 'theme') => {
+    if (inputType === 'link') setInput(val);
+    else if (inputType === 'startDate') setStartDateInput(val);
+    else if (inputType === 'theme') setThemeInput(val);
   };
 
-  const resetState = (clearInput: boolean = true) => {
+  const resetState = (clearAllInputs: boolean = true) => {
     setLoading(false);
     setError(null);
     setPreview(null);
     setGlobalLoadingMessage(null); // Clear loading message on reset
-    if (clearInput) {
+    if (clearAllInputs) {
       setInput('');
-      localStorage.removeItem(`draft_${type}_${mode}`);
+      setStartDateInput('');
+      setThemeInput('');
+      localStorage.removeItem(`draft_${type}_link`);
+      localStorage.removeItem(`draft_${type}_startDate`);
+      localStorage.removeItem(`draft_${type}_theme`);
     }
     // selectedPart is not reset here as it's part of the user's preference for MINISTRY
   };
 
+  const currentCombinedInput = mode === 'date' 
+    ? `${startDateInput.trim()} ${themeInput.trim()}`.trim()
+    : input.trim();
+
   const handleInitialSearch = async () => {
-    if (loading || cooldown > 0 || !input.trim()) return;
+    if (loading || cooldown > 0 || !currentCombinedInput) return;
 
     setLoading(true);
     setGlobalLoadingMessage(mode === 'link' ? 'Analyse du lien...' : 'Recherche de l\'article...');
@@ -86,8 +112,15 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
 
     try {
       // Uniquement pour obtenir le titre/thème pour l'aperçu, pas la génération complète
-      const result = await callGenerateContentApi(type, input.trim(), 'tout', settings, true, undefined); 
-      setPreview({ title: result.title, theme: result.theme, url: input.trim().startsWith('http') ? input.trim() : undefined });
+      const result = await callGenerateContentApi(
+        type, 
+        currentCombinedInput, // Use the combined input
+        'tout', 
+        settings, 
+        true, 
+        undefined
+      ); 
+      setPreview({ title: result.title, theme: result.theme, url: mode === 'link' && currentCombinedInput.startsWith('http') ? currentCombinedInput : undefined });
     } catch (err: any) {
       handleError(err);
     } finally {
@@ -104,7 +137,14 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
     setError(null);
 
     try {
-      const result = await callGenerateContentApi(type, preview.url || input.trim(), selectedPart, settings, false, undefined); 
+      const result = await callGenerateContentApi(
+        type, 
+        preview.url || currentCombinedInput, // Use the URL from the preview or the combined input
+        selectedPart, 
+        settings, 
+        false, 
+        undefined
+      ); 
       
       setGlobalLoadingMessage('Enregistrement de l\'étude et redirection...');
       const newStudy: GeneratedStudy = {
@@ -114,7 +154,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
         date: new Date().toLocaleDateString('fr-FR'),
         content: result.text,
         timestamp: Date.now(),
-        url: preview.url, // Use the URL from the preview or the original input
+        url: preview.url || (mode === 'link' && currentCombinedInput.startsWith('http') ? currentCombinedInput : undefined), // Use the URL from the preview or the original link input
         part: type === 'MINISTRY' ? selectedPart : undefined ,
         category: type === 'WATCHTOWER' ? 'tour_de_garde' : 'cahier_vie_et_ministere'
       };
@@ -146,6 +186,9 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
     }
   };
 
+  const getCommonFormStyles = () => `w-full bg-black/40 border border-white/10 rounded-xl py-5 pl-14 pr-4 focus:border-[var(--btn-color)] outline-none transition-all font-medium ${cooldown > 0 || loading || preview !== null ? 'opacity-30 cursor-not-allowed' : ''}`;
+  const getCommonLabelStyles = () => "text-[10px] font-black uppercase opacity-40 ml-1 tracking-[0.2em]";
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -162,24 +205,57 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
       </div>
 
       <div className="bg-white/5 border border-white/10 rounded-[2rem] p-8 space-y-8 shadow-2xl relative">
-        <div className="space-y-3">
-          <label className="text-[10px] font-black uppercase opacity-40 ml-1 tracking-[0.2em]">
-            {mode === 'link' ? "Lien de l'article JW.ORG" : "Date ou Thème de l'étude"}
-          </label>
-          <div className="relative">
-            <input
-              type={mode === 'link' ? "text" : "text"}
-              value={input}
-              disabled={cooldown > 0 || loading || preview !== null} 
-              onChange={(e) => handleInputChange(e.target.value)}
-              placeholder={mode === 'link' ? "https://www.jw.org/..." : "Ex: 25 novembre 2025 ou 'Soyez courageux !'"}
-              className={`w-full bg-black/40 border border-white/10 rounded-xl py-5 pl-14 pr-4 focus:border-[var(--btn-color)] outline-none transition-all font-medium ${cooldown > 0 || loading || preview !== null ? 'opacity-30 cursor-not-allowed' : ''}`}
-            />
-            <div className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30">
-              {mode === 'link' ? <LinkIcon size={22} /> : <Search size={22} />}
+        {mode === 'link' && (
+          <div className="space-y-3">
+            <label className={getCommonLabelStyles()}>Lien de l'article JW.ORG</label>
+            <div className="relative">
+              <input
+                type="text"
+                value={input}
+                disabled={cooldown > 0 || loading || preview !== null} 
+                onChange={(e) => handleInputChange(e.target.value, 'link')}
+                placeholder="https://www.jw.org/..."
+                className={getCommonFormStyles()}
+              />
+              <div className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30">
+                <LinkIcon size={22} />
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {mode === 'date' && (
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <label className={getCommonLabelStyles()}>Date de début de semaine (JJ/MM/AAAA)</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={startDateInput}
+                  disabled={cooldown > 0 || loading || preview !== null} 
+                  onChange={(e) => handleInputChange(e.target.value, 'startDate')}
+                  placeholder="Ex: 25/11/2025"
+                  className={getCommonFormStyles()}
+                />
+                <Calendar size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
+              </div>
+            </div>
+            <div className="space-y-3">
+              <label className={getCommonLabelStyles()}>Thème principal (facultatif)</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={themeInput}
+                  disabled={cooldown > 0 || loading || preview !== null} 
+                  onChange={(e) => handleInputChange(e.target.value, 'theme')}
+                  placeholder="Ex: Soyez courageux !"
+                  className={getCommonFormStyles()}
+                />
+                <Search size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
+              </div>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-sm animate-in fade-in zoom-in duration-300">
@@ -211,7 +287,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
         {!preview ? (
             <button
                 onClick={() => handleInitialSearch()}
-                disabled={loading || cooldown > 0 || !input.trim()}
+                disabled={loading || cooldown > 0 || !currentCombinedInput}
                 style={{ backgroundColor: cooldown > 0 ? '#1f2937' : 'var(--btn-color)', color: 'var(--btn-text)' }}
                 className="w-full py-6 rounded-xl font-black uppercase tracking-widest flex flex-col items-center justify-center space-y-1 shadow-2xl active:scale-95 disabled:opacity-50 transition-all min-h-[100px]"
             >

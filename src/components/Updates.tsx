@@ -119,6 +119,19 @@ const updates: UpdateItem[] = [
       "Correction de l'erreur `Cannot find module '/var/task/node_modules/@google/genai/dist/node/index.cjs'` sur Vercel en ajoutant `'type': 'module'` au `package.json` et en assurant la cohérence de la version `@google/genai`. Ceci résout le problème où l'API renvoyait une erreur HTML (`Unexpected token 'A'`) au lieu de JSON.",
       "Instructions de dépannage mises à jour dans le tutoriel et les messages d'erreur, insistant sur le nettoyage du cache de build de Vercel et le cache du navigateur/PWA."
     ]
+  },
+  {
+    version: "1.8.0",
+    date: "15 Février 2025",
+    features: [
+      "**Amélioration majeure du 'grounding' de l'IA** pour les études 'Cahier Vie et Ministère' et 'Tour de Garde' : l'IA utilise désormais systématiquement l'outil Google Search pour extraire les informations directement des publications jw.org, garantissant des réponses fidèles et non inventées, même avec un lien direct.",
+      "**Nouvelle fonctionnalité : Masquer/Afficher la barre latérale** de navigation sur ordinateur (desktop). Un bouton de bascule est disponible pour passer d'une vue étendue à une vue icône-seulement, maximisant l'espace de lecture. L'état est sauvegardé.",
+      "**Amélioration de la recherche par date/thème** pour 'Cahier Vie et Ministère' et 'Tour de Garde' : le champ unique est remplacé par deux champs distincts ('Date de début de semaine (JJ/MM/AAAA)' et 'Thème principal (facultatif)') pour une recherche plus précise."
+    ],
+    fixes: [
+      "Stabilisation des requêtes API en forçant l'utilisation de l'outil Google Search pour toutes les requêtes basées sur des contenus externes (liens ou recherches par mots-clés) pour assurer une meilleure fidélité des réponses de l'IA.",
+      "La version du Service Worker a été incrémentée (`v13`) pour garantir la mise à jour des dernières règles de cache et fonctionnalités chez tous les utilisateurs."
+    ]
   }
 ];
 

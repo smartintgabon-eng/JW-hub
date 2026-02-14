@@ -13,7 +13,9 @@ import {
   Lightbulb,
   BellRing,
   Loader2,
-  Megaphone // Icon for Predication
+  Megaphone, // Icon for Predication
+  ChevronLeft, // For sidebar toggle
+  ChevronRight // For sidebar toggle
 } from 'lucide-react';
 import { AppView, GeneratedStudy, AppSettings } from './types'; 
 import { getSettings, getHistory, saveToHistory } from './utils/storage'; 
@@ -38,12 +40,24 @@ const getContrastColor = (hex: string) => {
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>(AppView.HOME);
   const [settings, setAppSettings] = useState<AppSettings>(getSettings());
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // For mobile overlay sidebar
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(() => { // For desktop push-content sidebar
+    const savedState = localStorage.getItem('isSidebarExpanded');
+    if (savedState !== null) {
+      return JSON.parse(savedState);
+    }
+    return window.innerWidth >= 768; // Default to expanded on desktop
+  });
   const [history, setHistory] = useState<GeneratedStudy[]>(getHistory());
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isReadingModeActive, setIsReadingModeActive] = useState(false); 
   const [globalLoadingMessage, setGlobalLoadingMessage] = useState<string | null>(null); 
+
+  useEffect(() => {
+    // Save sidebar expanded state to localStorage
+    localStorage.setItem('isSidebarExpanded', JSON.stringify(isSidebarExpanded));
+  }, [isSidebarExpanded]);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
@@ -105,7 +119,7 @@ const App: React.FC = () => {
 
   const navigateTo = (newView: AppView) => {
     setView(newView);
-    setIsSidebarOpen(false);
+    setIsSidebarOpen(false); // Close mobile sidebar on navigation
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -116,7 +130,8 @@ const App: React.FC = () => {
     navigateTo(AppView.HISTORY);
   };
 
-  const NavItem = ({ icon: Icon, label, active, onClick }: any) => (
+  // NavItem component for sidebar
+  const NavItem = ({ icon: Icon, label, active, onClick, isExpanded }: any) => (
     <button
       onClick={onClick}
       style={{ 
@@ -125,15 +140,15 @@ const App: React.FC = () => {
       }}
       className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
         active ? 'shadow-lg font-bold' : 'opacity-50 hover:opacity-100 hover:bg-white/5'
-      }`}
+      } ${!isExpanded ? 'justify-center px-0' : ''}`} // Center icon if collapsed
     >
       <Icon size={20} />
-      <span className="text-sm uppercase tracking-wider">{label}</span>
+      {isExpanded && <span className="text-sm uppercase tracking-wider">{label}</span>}
     </button>
   );
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row font-sans">
+    <div className="min-h-screen flex flex-row font-sans"> {/* Changed to flex-row to manage sidebar */}
       {/* Global Loading Overlay */}
       {globalLoadingMessage && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center z-[1000] text-white p-6 text-center animate-in fade-in duration-300">
@@ -152,7 +167,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Mobile Header */}
+      {/* Mobile Header (for hamburger menu) */}
       <header className={`md:hidden flex items-center justify-between p-4 border-b border-white/10 sticky top-0 z-50 bg-[var(--bg-color)] ${isReadingModeActive ? 'hidden' : ''}`}>
         <div className="flex items-center space-x-2" onClick={() => navigateTo(AppView.HOME)}>
            <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="w-8 h-8 flex items-center justify-center rounded-lg font-black text-sm">JW</div>
@@ -163,32 +178,54 @@ const App: React.FC = () => {
         </button>
       </header>
 
+      {/* Desktop Sidebar Toggle Button */}
+      {!isReadingModeActive && (
+        <button 
+          onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
+          style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }}
+          className={`hidden md:flex items-center justify-center p-2 rounded-full shadow-lg fixed top-6 z-50 transition-all duration-300 ease-in-out hover:brightness-110 active:scale-90 
+            ${isSidebarExpanded ? 'left-[calc(18rem+40px)]' : 'left-[calc(5rem+40px)]'} 
+          `}
+        >
+          {isSidebarExpanded ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+        </button>
+      )}
+
       {/* Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-40 w-72 bg-black/40 backdrop-blur-xl border-r border-white/10 p-6 transform transition-transform duration-300 md:translate-x-0 md:static flex flex-col
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        fixed inset-y-0 left-0 z-40 bg-black/40 backdrop-blur-xl border-r border-white/10 p-6 transform transition-all duration-300 ease-in-out flex-shrink-0 flex-col
         ${isReadingModeActive ? 'hidden' : ''}
+        
+        // Mobile specific (overlay)
+        ${isSidebarOpen ? 'translate-x-0 w-72' : '-translate-x-full w-0'} 
+        
+        // Desktop specific (push content)
+        md:static // Makes it part of the normal flow on desktop
+        md:${isSidebarExpanded ? 'w-72 translate-x-0' : 'w-20 translate-x-0 items-center md:py-8'} 
+        md:flex // Ensure it's always flex on desktop, for icon-only mode
       `}>
-        <div className="mb-10 px-2 flex items-center space-x-3 cursor-pointer" onClick={() => navigateTo(AppView.HOME)}>
+        <div className={`mb-10 px-2 flex items-center ${isSidebarExpanded ? 'space-x-3' : 'justify-center'} cursor-pointer`} onClick={() => navigateTo(AppView.HOME)}>
            <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="w-12 h-12 flex items-center justify-center rounded-xl font-black text-xl shadow-lg">JW</div>
-           <div>
-            <h1 className="font-black text-xl leading-none uppercase">Study</h1>
-            <span className="text-[10px] font-bold opacity-30 uppercase tracking-widest">Assistant</span>
-          </div>
+           {isSidebarExpanded && ( // Only show text when expanded
+               <div>
+                <h1 className="font-black text-xl leading-none uppercase">Study</h1>
+                <span className="text-[10px] font-bold opacity-30 uppercase tracking-widest">Assistant</span>
+              </div>
+           )}
         </div>
 
         <nav className="space-y-1 flex-1">
-          <NavItem icon={HomeIcon} label="Accueil" active={view === AppView.HOME} onClick={() => navigateTo(AppView.HOME)} />
-          <NavItem icon={Calendar} label="Cahier" active={view === AppView.MINISTRY} onClick={() => navigateTo(AppView.MINISTRY)} />
-          <NavItem icon={BookOpen} label="Tour de Garde" active={view === AppView.WATCHTOWER} onClick={() => navigateTo(AppView.WATCHTOWER)} />
-          <NavItem icon={Megaphone} label="Prédication" active={view === AppView.PREDICATION} onClick={() => navigateTo(AppView.PREDICATION)} />
-          <NavItem icon={HistoryIcon} label="Historique" active={view === AppView.HISTORY} onClick={() => navigateTo(AppView.HISTORY)} />
-          <NavItem icon={BellRing} label="Mises à jour" active={view === AppView.UPDATES} onClick={() => navigateTo(AppView.UPDATES)} />
-          <NavItem icon={HelpCircle} label="Tutoriel" active={view === AppView.TUTORIAL} onClick={() => navigateTo(AppView.TUTORIAL)} />
-          <NavItem icon={SettingsIcon} label="Paramètres" active={view === AppView.SETTINGS} onClick={() => navigateTo(AppView.SETTINGS)} />
+          <NavItem icon={HomeIcon} label="Accueil" active={view === AppView.HOME} onClick={() => navigateTo(AppView.HOME)} isExpanded={isSidebarExpanded} />
+          <NavItem icon={Calendar} label="Cahier" active={view === AppView.MINISTRY} onClick={() => navigateTo(AppView.MINISTRY)} isExpanded={isSidebarExpanded} />
+          <NavItem icon={BookOpen} label="Tour de Garde" active={view === AppView.WATCHTOWER} onClick={() => navigateTo(AppView.WATCHTOWER)} isExpanded={isSidebarExpanded} />
+          <NavItem icon={Megaphone} label="Prédication" active={view === AppView.PREDICATION} onClick={() => navigateTo(AppView.PREDICATION)} isExpanded={isSidebarExpanded} />
+          <NavItem icon={HistoryIcon} label="Historique" active={view === AppView.HISTORY} onClick={() => navigateTo(AppView.HISTORY)} isExpanded={isSidebarExpanded} />
+          <NavItem icon={BellRing} label="Mises à jour" active={view === AppView.UPDATES} onClick={() => navigateTo(AppView.UPDATES)} isExpanded={isSidebarExpanded} />
+          <NavItem icon={HelpCircle} label="Tutoriel" active={view === AppView.TUTORIAL} onClick={() => navigateTo(AppView.TUTORIAL)} isExpanded={isSidebarExpanded} />
+          <NavItem icon={SettingsIcon} label="Paramètres" active={view === AppView.SETTINGS} onClick={() => navigateTo(AppView.SETTINGS)} isExpanded={isSidebarExpanded} />
         </nav>
 
-        {deferredPrompt && (
+        {deferredPrompt && isSidebarExpanded && ( // Only show install button when sidebar is expanded
           <button 
             onClick={handleInstallClick}
             className="mt-4 w-full bg-blue-600/20 border border-blue-600/30 text-blue-400 py-3 rounded-xl flex items-center justify-center space-x-2 text-xs font-bold uppercase tracking-widest hover:bg-blue-600/30 transition-all"
