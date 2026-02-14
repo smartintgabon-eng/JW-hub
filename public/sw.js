@@ -1,15 +1,17 @@
-const CACHE_NAME = 'jw-study-pro-cache-v5';
+const CACHE_NAME = 'jw-study-pro-cache-v6'; // Incrément de la version du cache
 const ASSETS = [
   './',
-  './index.html', // Cette entrée sera gérée par le process de build de react-scripts
-  './logo192.png', // Ajout pour PWA
-  './logo512.png', // Ajout pour PWA
-  './favicon.ico' // Ajout pour le favicon
+  './index.html',
+  './logo192.png',
+  './logo512.png',
+  './favicon.ico',
+  // Ajout du CDN TailwindCSS au cache pour l'accès hors ligne
+  'https://cdn.tailwindcss.com' 
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS.filter(asset => asset.indexOf('http') === 0 || asset.indexOf('./') === 0))) // Filtrer pour n'ajouter que les URL valides
   );
   self.skipWaiting();
 });

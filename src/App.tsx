@@ -12,7 +12,8 @@ import {
   Download,
   Lightbulb,
   BellRing,
-  Loader2 // Import Loader2
+  Loader2,
+  Megaphone // Icon for Predication
 } from 'lucide-react';
 import { AppView, GeneratedStudy, AppSettings } from './types'; 
 import { getSettings, getHistory, saveToHistory } from './utils/storage'; 
@@ -22,7 +23,8 @@ import StudyTool from './components/StudyTool';
 import History from './components/History'; 
 import Settings from './components/Settings'; 
 import Tutorial from './components/Tutorial'; 
-import Updates from './components/Updates'; // Import the new Updates component
+import Updates from './components/Updates'; 
+import PredicationTool from './components/PredicationTool'; // New Predication component
 
 const getContrastColor = (hex: string) => {
   if (!hex || hex.length < 6) return 'white';
@@ -40,8 +42,8 @@ const App: React.FC = () => {
   const [history, setHistory] = useState<GeneratedStudy[]>(getHistory());
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isReadingModeActive, setIsReadingModeActive] = useState(false); // État pour le mode lecture global
-  const [globalLoadingMessage, setGlobalLoadingMessage] = useState<string | null>(null); // Message de chargement global
+  const [isReadingModeActive, setIsReadingModeActive] = useState(false); 
+  const [globalLoadingMessage, setGlobalLoadingMessage] = useState<string | null>(null); 
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
@@ -70,7 +72,7 @@ const App: React.FC = () => {
     return () => {
       window.removeEventListener('online', handleStatus);
       window.removeEventListener('offline', handleStatus);
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('beforeInstallPrompt', handleBeforeInstallPrompt); // Correct event name
     };
   }, [settings]);
 
@@ -179,6 +181,7 @@ const App: React.FC = () => {
           <NavItem icon={HomeIcon} label="Accueil" active={view === AppView.HOME} onClick={() => navigateTo(AppView.HOME)} />
           <NavItem icon={Calendar} label="Cahier" active={view === AppView.MINISTRY} onClick={() => navigateTo(AppView.MINISTRY)} />
           <NavItem icon={BookOpen} label="Tour de Garde" active={view === AppView.WATCHTOWER} onClick={() => navigateTo(AppView.WATCHTOWER)} />
+          <NavItem icon={Megaphone} label="Prédication" active={view === AppView.PREDICATION} onClick={() => navigateTo(AppView.PREDICATION)} />
           <NavItem icon={HistoryIcon} label="Historique" active={view === AppView.HISTORY} onClick={() => navigateTo(AppView.HISTORY)} />
           <NavItem icon={BellRing} label="Mises à jour" active={view === AppView.UPDATES} onClick={() => navigateTo(AppView.UPDATES)} />
           <NavItem icon={HelpCircle} label="Tutoriel" active={view === AppView.TUTORIAL} onClick={() => navigateTo(AppView.TUTORIAL)} />
@@ -250,6 +253,7 @@ const App: React.FC = () => {
           <div style={{ color: 'var(--text-color)' }}>
             {view === AppView.MINISTRY && <StudyTool type="MINISTRY" onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
             {view === AppView.WATCHTOWER && <StudyTool type="WATCHTOWER" onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
+            {view === AppView.PREDICATION && <PredicationTool onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
             {view === AppView.HISTORY && <History history={history} setHistory={setHistory} settings={settings} />}
             {view === AppView.SETTINGS && <Settings setSettings={setAppSettings} settings={settings} />}
             {view === AppView.TUTORIAL && <Tutorial />}

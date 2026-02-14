@@ -86,7 +86,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
 
     try {
       // Uniquement pour obtenir le titre/thème pour l'aperçu, pas la génération complète
-      const result = await generateStudyContent(type, input.trim(), 'tout', settings, 0, true); 
+      const result = await generateStudyContent(type, input.trim(), 'tout', settings, 0, true, undefined); 
       setPreview({ title: result.title, theme: result.theme, url: input.trim().startsWith('http') ? input.trim() : undefined });
     } catch (err: any) {
       handleError(err);
@@ -104,7 +104,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
     setError(null);
 
     try {
-      const result = await generateStudyContent(type, preview.url || input.trim(), selectedPart, settings); 
+      const result = await generateStudyContent(type, preview.url || input.trim(), selectedPart, settings, 0, false, undefined); 
       
       setGlobalLoadingMessage('Enregistrement de l\'étude et redirection...');
       const newStudy: GeneratedStudy = {
@@ -115,7 +115,8 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
         content: result.text,
         timestamp: Date.now(),
         url: preview.url, // Use the URL from the preview or the original input
-        part: type === 'MINISTRY' ? selectedPart : undefined 
+        part: type === 'MINISTRY' ? selectedPart : undefined ,
+        category: type === 'WATCHTOWER' ? 'tour_de_garde' : 'cahier_vie_et_ministere'
       };
       onGenerated(newStudy); // This will also navigate to history and clear loading message
       resetState(true); // Clear input after successful generation

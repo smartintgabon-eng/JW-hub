@@ -1,5 +1,5 @@
 import React from 'react';
-import { BellRing, CheckCircle, Bug, Rocket } from 'lucide-react';
+import { BellRing, CheckCircle, Bug, Rocket, Megaphone } from 'lucide-react'; // Added Megaphone for new feature
 
 interface UpdateItem {
   version: string;
@@ -40,6 +40,25 @@ const updates: UpdateItem[] = [
       "Correction de l'export DOCX/PDF : les réponses sont désormais entièrement visibles et le formatage (gras, italique) est correctement appliqué.",
       "Amélioration des messages de chargement : Un message global indique l'état de la génération et une redirection automatique vers l'historique est effectuée à la fin.",
       "Ajout du bouton 'Recommencer la recherche' après l'aperçu de l'article."
+    ]
+  },
+  {
+    version: "1.2.0",
+    date: "26 Octobre 2024",
+    features: [
+      "**Nouveau : Onglet 'Prédication'** pour préparer différents types de présentations :",
+      "- **Porte-en-porte :** Génération de sujet, entrée en matière, versets et question pour revenir, avec option d'offrir un cours biblique.",
+      "- **Nouvelle Visite :** Préparation pour enchaîner un cours biblique ou répondre à une question en suspens, avec proposition systématique d'étude si pertinente.",
+      "- **Cours Biblique :** Aide à la préparation de nouveaux chapitres ou à la poursuite d'études en cours.",
+      "Amélioration significative du 'grounding' de l'IA : instruction plus stricte pour analyser les liens directs ou les résultats de recherche sans invention.",
+      "Catégorisation des études dans l'historique pour une meilleure organisation (Cahier, Tour de Garde, Prédication : Porte-en-porte, Nouvelle Visite, Cours Biblique).",
+      "Application des préférences de réponses (définies dans les paramètres) à toutes les sections de l'application, y compris la prédication.",
+    ],
+    fixes: [
+      "Correction majeure des exports DOCX et PDF : le contenu est désormais complet, lisible, bien formaté et respecte les couleurs définies dans les paramètres.",
+      "Correction du mode lecture : le contenu est visible et le bouton 'Fermer' (ou 'Quitter le mode lecture') est toujours accessible pour sortir du mode immersif.",
+      "Unification du style de l'application en mode PWA hors ligne, garantissant une expérience visuelle cohérente avec la version en ligne.",
+      "Meilleure gestion des erreurs et des quotas API avec des messages plus clairs et des délais de récupération adaptés."
     ]
   }
 ];

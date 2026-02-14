@@ -60,7 +60,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
     setIsRegenerating(true);
     try {
       // Pour la régénération, on utilise le type et l'input original, et la partie si elle était définie
-      const result = await generateStudyContent(study.type, study.url || study.title, study.part || 'tout', settings);
+      const result = await generateStudyContent(study.type, study.url || study.title, study.part || 'tout', settings, 0, false, study.preachingType);
       const updatedStudy = { ...study, content: result.text, timestamp: Date.now() };
       saveToHistory(updatedStudy); // Met à jour l'historique
       setHistory(prev => prev.map(h => h.id === study.id ? updatedStudy : h));
@@ -144,14 +144,14 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
           new Paragraph({
             alignment: AlignmentType.CENTER,
             spacing: { after: 360 },
-            children: [new TextRun({ text: study.type === 'WATCHTOWER' ? `Étude de la Tour de Garde - ${study.date}` : `Cahier Vie et Ministère - ${getPartLabel(study.part)} - ${study.date}`, color: defaultTextColor, size: 24, italics: true })] // Adjust size for date/type
+            children: [new TextRun({ text: getStudyLabel(study), color: defaultTextColor, size: 24, italics: true })] // Adjust size for date/type
           }),
           ...study.content.split('\n').map(line => {
             const trimmed = line.trim();
             if (!trimmed) return new Paragraph({});
 
             // Titres de section (ex: # PERLES SPIRITUELLES)
-            if (trimmed.startsWith('# ') || trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION)/i)) { // Main Section Headers
+            if (trimmed.startsWith('# ') || trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION|PORTE-EN-PORTE|NOUVELLE VISITE|COURS BIBLIQUE)/i)) { // Main Section Headers
                 return new Paragraph({ 
                   children: [new TextRun({ text: trimmed.replace(/^#\s*/, '').trim(), bold: true, color: btnColor, size: 32 })],
                   spacing: { before: 480, after: 180 },
@@ -188,8 +188,8 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
                   spacing: { before: 120, after: 120 },
                 });
             }
-            // QUESTIONS, RÉPONSES, COMMENTAIRES, APPLICATIONS, INTRODUCTION, POINTS À DÉVELOPPER, CONCLUSION, POINTS PRINCIPAUX
-            if (trimmed.startsWith('QUESTION:') || trimmed.startsWith('RÉPONSE:') || trimmed.startsWith('COMMENTAIRE:') || trimmed.startsWith('APPLICATION:') || trimmed.startsWith('INTRODUCTION:') || trimmed.startsWith('POINTS À DÉVELOPPER:') || trimmed.startsWith('CONCLUSION:') || trimmed.startsWith('POINTS PRINCIPAUX:')) {
+            // QUESTIONS, RÉPONSES, COMMENTAIRES, APPLICATIONS, INTRODUCTION, POINTS À DÉVELOPPER, CONCLUSION, POINTS PRINCIPAUX, SUJET, ENTRÉE EN MATIÈRE, MANIÈRE DE FAIRE
+            if (trimmed.startsWith('QUESTION:') || trimmed.startsWith('RÉPONSE:') || trimmed.startsWith('COMMENTAIRE:') || trimmed.startsWith('APPLICATION:') || trimmed.startsWith('INTRODUCTION:') || trimmed.startsWith('POINTS À DÉVELOPPER:') || trimmed.startsWith('CONCLUSION:') || trimmed.startsWith('POINTS PRINCIPAUX:') || trimmed.startsWith('SUJET:') || trimmed.startsWith('ENTRÉE EN MATIÈRE:') || trimmed.startsWith('MANIÈRE DE FAIRE:') || trimmed.startsWith('QUESTION POUR REVENIR:')) {
                 const [label, ...rest] = trimmed.split(':');
                 return new Paragraph({
                   children: [
@@ -202,12 +202,14 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
             // Questions d'application spécifiques (listes)
             if (trimmed.startsWith('- Quelle leçon')) { 
               return new Paragraph({
+                // Fix: Changed 'defaultColor' to 'defaultTextColor'
                 children: formatTextRun(trimmed, defaultTextColor),
                 spacing: { before: 60, after: 60 },
                 indent: { left: 240 },
               });
             }
             // Texte normal (incluant les lignes de liste ou autres non capturées ci-dessus)
+            // Fix: Changed 'defaultColor' to 'defaultTextColor'
             return new Paragraph({ children: formatTextRun(trimmed, defaultTextColor), spacing: { after: 60 } });
           })
         ],
@@ -238,7 +240,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
 
     // Type and Date
     doc.setFontSize(12);
-    doc.text(study.type === 'WATCHTOWER' ? `Étude de la Tour de Garde - ${study.date}` : `Cahier Vie et Ministère - ${getPartLabel(study.part)} - ${study.date}`, pageWidth / 2, y + 5, { align: 'center' });
+    doc.text(getStudyLabel(study), pageWidth / 2, y + 5, { align: 'center' });
     y += 15;
 
     doc.setFontSize(11);
@@ -269,7 +271,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
         doc.text(trimmed, margin, y);
         y += 7;
         doc.setFont('helvetica', 'normal');
-      } else if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION)/i)) { // Section headers for Ministry
+      } else if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION|PORTE-EN-PORTE|NOUVELLE VISITE|COURS BIBLIQUE)/i)) { // Section headers for Ministry / Predication
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(btnColor);
@@ -292,7 +294,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
         doc.text(textLines, margin + 5, y); // Small indent for verses
         y += (textLines.length * 5) + 3;
         doc.setFont('helvetica', 'normal');
-      } else if (trimmed.startsWith('QUESTION:') || trimmed.startsWith('RÉPONSE:') || trimmed.startsWith('COMMENTAIRE:') || trimmed.startsWith('APPLICATION:') || trimmed.startsWith('INTRODUCTION:') || trimmed.startsWith('POINTS À DÉVELOPPER:') || trimmed.startsWith('CONCLUSION:') || trimmed.startsWith('POINTS PRINCIPAUX:')) { // Labeled content
+      } else if (trimmed.startsWith('QUESTION:') || trimmed.startsWith('RÉPONSE:') || trimmed.startsWith('COMMENTAIRE:') || trimmed.startsWith('APPLICATION:') || trimmed.startsWith('INTRODUCTION:') || trimmed.startsWith('POINTS À DÉVELOPPER:') || trimmed.startsWith('CONCLUSION:') || trimmed.startsWith('POINTS PRINCIPAUX:') || trimmed.startsWith('SUJET:') || trimmed.startsWith('ENTRÉE EN MATIÈRE:') || trimmed.startsWith('MANIÈRE DE FAIRE:') || trimmed.startsWith('QUESTION POUR REVENIR:')) { // Labeled content
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
         const [label, ...rest] = trimmed.split(':');
@@ -329,11 +331,25 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
     return option ? option.label : 'Toutes les parties';
   };
 
+  const getStudyLabel = (study: GeneratedStudy) => {
+    if (study.type === 'WATCHTOWER') return `Étude de la Tour de Garde - ${study.date}`;
+    if (study.type === 'MINISTRY') return `Cahier Vie et Ministère - ${getPartLabel(study.part)} - ${study.date}`;
+    if (study.type === 'PREDICATION') {
+      let label = `Prédication - ${study.date}`;
+      if (study.preachingType === 'porte_en_porte') label += ' (Porte-en-porte)';
+      if (study.preachingType === 'nouvelle_visite') label += ' (Nouvelle Visite)';
+      if (study.preachingType === 'cours_biblique') label += ' (Cours Biblique)';
+      return label;
+    }
+    return '';
+  };
+
+
   if (selectedStudy) {
     return (
       <div className={`animate-in fade-in slide-in-from-right-4 duration-500 pb-24 ${readingMode ? 'fixed inset-0 z-[100] bg-[var(--bg-color)] overflow-y-auto p-0 md:p-0' : ''}`}>
-        {/* En-tête avec boutons d'action (masqué en mode lecture) */}
-        <div className={`flex items-center justify-between mb-10 sticky top-0 py-4 z-20 bg-[var(--bg-color)] border-b border-white/5 ${readingMode ? 'hidden' : ''} print:hidden`}>
+        {/* En-tête avec boutons d'action (visible en mode lecture) */}
+        <div className={`flex items-center justify-between mb-10 sticky top-0 py-4 z-20 bg-[var(--bg-color)] border-b border-white/5 print:hidden ${readingMode ? 'px-6' : ''}`}>
           <button onClick={() => { setSelectedStudy(null); setReadingMode(false); }} className="flex items-center space-x-3 opacity-60 hover:opacity-100 transition-all group">
             <ChevronLeft size={24} className="group-hover:-translate-x-1 transition-transform" />
             <span className="text-xs font-black uppercase tracking-[0.2em]">Fermer</span>
@@ -363,7 +379,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
         <article className={`max-w-4xl mx-auto ${readingMode ? 'pt-10 px-6' : ''} print:p-0 print:text-black`}>
           <header className="mb-16 text-center">
              <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="text-[10px] font-black uppercase tracking-[0.4em] px-6 py-2 rounded-full mb-8 inline-block shadow-lg">
-                {selectedStudy.type === 'WATCHTOWER' ? 'Étude de la Tour de Garde' : `Cahier Vie et Ministère - ${getPartLabel(selectedStudy.part)}`}
+                {selectedStudy.type === 'WATCHTOWER' ? 'Étude de la Tour de Garde' : (selectedStudy.type === 'MINISTRY' ? `Cahier Vie et Ministère - ${getPartLabel(selectedStudy.part)}` : `Prédication - ${selectedStudy.preachingType ? selectedStudy.preachingType.replace(/_/g, ' ').toUpperCase() : 'Général'}`)}
              </div>
              <h1 className="text-4xl md:text-6xl font-black leading-none mb-6 tracking-tighter uppercase">{selectedStudy.title}</h1>
              <p className="opacity-30 text-xs font-black uppercase tracking-[0.5em]">Mis à jour le {selectedStudy.date}</p>
@@ -374,7 +390,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
               const trimmed = line.trim();
               if (!trimmed) return null;
               // TITRES DE SECTION (ex: # PERLES SPIRITUELLES ou JOYAUX DE LA PAROLE DE DIEU)
-              if (trimmed.startsWith('# ') || trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION)/i)) {
+              if (trimmed.startsWith('# ') || trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION|PORTE-EN-PORTE|NOUVELLE VISITE|COURS BIBLIQUE)/i)) {
                 return <h3 key={idx} className="text-3xl font-black pt-12 border-t border-white/10 mt-12 uppercase tracking-tight" style={{ color: 'var(--btn-color)' }}>{trimmed.replace(/^#\s*/, '').trim()}</h3>;
               }
               // THÈME
@@ -390,7 +406,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
                 return <div key={idx} className="p-8 bg-white/5 border-l-8 border-[var(--btn-color)] italic rounded-r-3xl my-8 print:border-black print:bg-gray-100">{trimmed}</div>;
               }
               // QUESTIONS, RÉPONSES, COMMENTAIRES, APPLICATIONS
-              if (trimmed.startsWith('QUESTION:') || trimmed.startsWith('RÉPONSE:') || trimmed.startsWith('COMMENTAIRE:') || trimmed.startsWith('APPLICATION:') || trimmed.startsWith('INTRODUCTION:') || trimmed.startsWith('POINTS À DÉVELOPPER:') || trimmed.startsWith('CONCLUSION:') || trimmed.startsWith('POINTS PRINCIPAUX:')) {
+              if (trimmed.startsWith('QUESTION:') || trimmed.startsWith('RÉPONSE:') || trimmed.startsWith('COMMENTAIRE:') || trimmed.startsWith('APPLICATION:') || trimmed.startsWith('INTRODUCTION:') || trimmed.startsWith('POINTS À DÉVELOPPER:') || trimmed.startsWith('CONCLUSION:') || trimmed.startsWith('POINTS PRINCIPAUX:') || trimmed.startsWith('SUJET:') || trimmed.startsWith('ENTRÉE EN MATIÈRE:') || trimmed.startsWith('MANIÈRE DE FAIRE:') || trimmed.startsWith('QUESTION POUR REVENIR:')) {
                 const [label, ...rest] = trimmed.split(':');
                 return (
                   <div key={idx} className="space-y-2">
@@ -436,7 +452,11 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
               <div className="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button onClick={(e) => handleDelete(study.id, e)} className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg"><Trash2 size={18}/></button>
               </div>
-              <div className="text-[9px] font-black uppercase tracking-widest opacity-30 mb-4">{study.type} {study.part && `- ${getPartLabel(study.part).toUpperCase()}`}</div>
+              <div className="text-[9px] font-black uppercase tracking-widest opacity-30 mb-4">
+                {study.type} 
+                {study.part && `- ${getPartLabel(study.part).toUpperCase()}`}
+                {study.preachingType && `- ${study.preachingType.replace(/_/g, ' ').toUpperCase()}`}
+              </div>
               <h3 className="font-black text-2xl mb-6 line-clamp-2 leading-tight uppercase tracking-tight">{study.title}</h3>
               <div className="flex justify-between items-center mt-auto pt-6 border-t border-white/5">
                 <span className="text-[10px] font-bold opacity-30">{study.date}</span>

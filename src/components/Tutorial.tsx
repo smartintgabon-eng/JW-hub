@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { HelpCircle, ChevronRight, ChevronLeft, Lightbulb, Link as LinkIcon, Search, Save, Calendar, BookOpen, Settings as SettingsIcon, History as HistoryIcon, Download, BellRing } from 'lucide-react';
+import { HelpCircle, ChevronRight, ChevronLeft, Lightbulb, Link as LinkIcon, Search, Save, Calendar, BookOpen, Settings as SettingsIcon, History as HistoryIcon, Download, BellRing, Megaphone } from 'lucide-react';
 
 const Tutorial: React.FC = () => {
   const [step, setStep] = useState(0);
@@ -57,8 +57,13 @@ const Tutorial: React.FC = () => {
       icon: <Lightbulb className="text-lime-500" size={48} />
     },
     {
+      title: "Nouvel Onglet : Prédication",
+      content: "Préparez vos présentations de prédication (porte-en-porte, nouvelles visites, cours bibliques) avec l'aide de l'IA. Vous pourrez spécifier les publications, les sujets, les questions laissées en suspens, ou votre progression dans un cours pour générer des entrées en matière, des manières de faire et des versets pertinents. Les préférences des réponses de vos paramètres s'appliqueront aussi à cette section.",
+      icon: <Megaphone className="text-purple-400" size={48} />
+    },
+    {
       title: "Options après génération : Export & Régénération",
-      content: "Une fois les réponses générées, vous pourrez les lire directement sur le site (avec un mode lecture immersif qui masque les distractions), les télécharger au format DOCX ou PDF (avec un formatage amélioré), ou même les régénérer si vous souhaitez une autre perspective ou des détails supplémentaires.",
+      content: "Une fois les réponses générées, vous pourrez les lire directement sur le site (avec un mode lecture immersif qui masque les distractions), les télécharger au format DOCX ou PDF (avec un formatage amélioré), ou même les régénérer si vous souhaitez une autre perspective ou des détails supplémentaires. Les études sont catégorisées dans l'historique.",
       icon: <Save className="text-gray-400" size={48} />
     },
     {

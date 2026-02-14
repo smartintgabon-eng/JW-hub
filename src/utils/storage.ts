@@ -1,6 +1,6 @@
 // src/utils/storage.ts
 
-import { AppSettings, GeneratedStudy, AppView } from '../types';
+import { AppSettings, GeneratedStudy, AppView, HistoryCategory } from '../types';
 
 const SETTINGS_KEY = 'jw_study_pro_settings';
 const HISTORY_KEY = 'jw_study_pro_history';
@@ -37,7 +37,24 @@ export const saveSettings = (settings: AppSettings) => {
 export const getHistory = (): GeneratedStudy[] => {
   try {
     const savedHistory = localStorage.getItem(HISTORY_KEY);
-    return savedHistory ? JSON.parse(savedHistory) : [];
+    const history: GeneratedStudy[] = savedHistory ? JSON.parse(savedHistory) : [];
+    
+    // Migration de données si nécessaire pour ajouter 'category' aux anciennes études
+    return history.map(study => {
+      if (!study.category) {
+        if (study.type === 'WATCHTOWER') {
+          study.category = 'tour_de_garde';
+        } else if (study.type === 'MINISTRY') {
+          study.category = 'cahier_vie_et_ministere';
+        } else if (study.type === 'PREDICATION' && study.preachingType) {
+          study.category = `predication_${study.preachingType}` as HistoryCategory;
+        } else {
+          study.category = 'cahier_vie_et_ministere'; // Default fallback
+        }
+      }
+      return study;
+    });
+
   } catch (error) {
     console.error("Error getting history from localStorage:", error);
     return [];
@@ -46,7 +63,21 @@ export const getHistory = (): GeneratedStudy[] => {
 
 export const saveToHistory = (study: GeneratedStudy) => {
   try {
-    const history = getHistory();
+    const history = getHistory(); // Get history with potential migration
+    
+    // Ensure category is set before saving
+    if (!study.category) {
+        if (study.type === 'WATCHTOWER') {
+            study.category = 'tour_de_garde';
+        } else if (study.type === 'MINISTRY') {
+            study.category = 'cahier_vie_et_ministere';
+        } else if (study.type === 'PREDICATION' && study.preachingType) {
+            study.category = `predication_${study.preachingType}` as HistoryCategory;
+        } else {
+            study.category = 'cahier_vie_et_ministere'; // Fallback
+        }
+    }
+
     // Check if the study already exists and update it, otherwise add new
     const existingIndex = history.findIndex(s => s.id === study.id);
     if (existingIndex > -1) {

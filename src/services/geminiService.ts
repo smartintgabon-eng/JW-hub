@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { StudyPart, AppSettings } from "../types"; 
+import { StudyPart, AppSettings, PredicationType } from "../types"; 
 
 // Fix: setTimeout expects a function as its first argument
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve as TimerHandler, ms));
@@ -26,12 +26,13 @@ const getApplicationQuestions = () => `
 `;
 
 export const generateStudyContent = async (
-  type: 'WATCHTOWER' | 'MINISTRY',
+  type: 'WATCHTOWER' | 'MINISTRY' | 'PREDICATION',
   input: string,
   part: StudyPart = 'tout', // Ajout de la partie d'étude
   settings: AppSettings,
   retryCount = 0,
-  isInitialSearchForPreview = false // Nouvelle prop pour une recherche initiale légère
+  isInitialSearchForPreview = false, // Nouvelle prop pour une recherche initiale légère
+  preachingType: PredicationType | undefined // Nouvelle prop pour le type de prédication
 ): Promise<{ text: string; title: string; theme?: string }> => {
   
   const apiKey = process.env.REACT_APP_GEMINI_API_KEY || "";
@@ -46,15 +47,15 @@ export const generateStudyContent = async (
   let toolsConfig: any[] | undefined; 
   let systemInstruction = '';
   let temperature = 0.2; 
-  let groundingInstruction = ''; // Declare groundingInstruction in a higher scope
+  let groundingInstruction = ''; 
 
   // Determine grounding instruction and tools config based on whether the input is a link or a search query
   if (!isLink) {
     toolsConfig = [{ googleSearch: {} }]; 
-    groundingInstruction = `Vous avez effectué une recherche pour l'article "${input}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés pour extraire et analyser l'article. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations ou si les résultats sont ambigus, indiquez-le clairement.`;
+    groundingInstruction = `Vous avez effectué une recherche pour le contenu "${input}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés pour extraire et analyser l'information. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations ou si les résultats sont ambigus, indiquez-le clairement.`;
   } else {
     toolsConfig = undefined; // No need for googleSearch for a direct link
-    groundingInstruction = `Le contenu de l'article se trouve à l'URL suivante : "${input}". Vous devez agir comme si vous aviez lu l'intégralité de cette page web, y compris les références bibliques et les sous-liens. Extrayez toutes les informations pertinentes directement de ce contenu. Soyez très fidèle à toutes les informations trouvées et n'inventez rien.`;
+    groundingInstruction = `Le contenu à analyser se trouve à l'URL suivante : "${input}". Vous devez agir comme si vous aviez lu l'intégralité de cette page web, y compris les références bibliques et les sous-liens. Extrayez toutes les informations pertinentes directement de ce contenu. Soyez très fidèle à toutes les informations trouvées et n'inventez rien.`;
   }
 
   if (type === 'WATCHTOWER') {
@@ -84,9 +85,7 @@ export const generateStudyContent = async (
     temperature = 0.1; 
   } else if (type === 'MINISTRY') {
     let partInstruction = '';
-    // groundingInstruction is now correctly defined for MINISTRY type
     
-
     switch (part) {
       case 'joyaux_parole_dieu':
         partInstruction = `**JOYAUX DE LA PAROLE DE DIEU**
@@ -168,19 +167,80 @@ export const generateStudyContent = async (
     
     Style: ${settings.answerPreferences || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé. Élabore avec des points pertinents.'}. Réponds en Markdown.`;
     temperature = 0.2; 
+  } else if (type === 'PREDICATION') {
+    let preachingInstruction = '';
+    let titlePrefix = 'Préparation Prédication';
+    switch (preachingType) {
+      case 'porte_en_porte':
+        titlePrefix = 'Prédication Porte-à-porte';
+        preachingInstruction = `Préparer une présentation de porte-en-porte. Le sujet est "${input}". ${groundingInstruction}
+        
+        Structure:
+        # SUJET: [Titre concis et accrocheur basé sur le sujet et la publication]
+        ENTRÉE EN MATIÈRE: [Une introduction simple et naturelle pour engager la conversation, basée sur l'actualité si fournie ou sur des préoccupations courantes. Inclure une question pour lancer la discussion.]
+        VERSETS CLÉS: (Verset biblique complet entre parenthèses, Traduction du Monde Nouveau, adapté au sujet. Expliquer brièvement le lien avec le sujet.)
+        ${input.includes('Offre étude:') ? 
+          `OFFRE DE COURS BIBLIQUE: [Proposer un cours biblique avec la brochure "Vivez pour toujours" en utilisant le lien ${input.split('Offre étude: ')[1]?.split(',')[0] || ''}. Expliquer l'intérêt.]` 
+          : `QUESTION POUR REVENIR: [Une question simple à poser à la fin de la discussion pour créer un intérêt pour la prochaine visite.]`}
+        
+        Style: Simple, facile à retenir, pratique. Utilise un langage courant.`;
+        break;
+      case 'nouvelle_visite':
+        titlePrefix = 'Prédication Nouvelle Visite';
+        preachingInstruction = `Préparer une nouvelle visite. ${input}. ${groundingInstruction}
+        
+        Structure:
+        # MANIÈRE DE FAIRE: [Une approche naturelle pour la nouvelle visite, reprenant le fil de la discussion précédente ou la question en suspens.]
+        ${input.includes('Question en suspens:') ? 
+          `RÉPONSE À LA QUESTION: [Réponse claire et basée sur la Bible (versets complets TND entre parenthèses) à la question laissée en suspens "${input.split('Question en suspens: ')[1]?.split(',')[0] || ''}".]` 
+          : `CONTINUITÉ DU COURS: [Reprendre le cours biblique là où il s'était arrêté ("${input.split('Arrêté à: ')[1] || ''}") en utilisant la publication spécifiée. Inclure une question pour réviser et une pour le point suivant.]`}
+        
+        PROPOSITION COURS BIBLIQUE: [Si non déjà un cours, proposer un cours biblique en utilisant le lien ${input.includes('Offre étude:') ? input.split('Offre étude: ')[1]?.split(',')[0] : '' || 'vers la brochure "Vivez pour toujours"'}, en expliquant les avantages.]
+        
+        Style: Simple, facile à retenir, pratique. Axé sur la progression de l'intérêt.`;
+        break;
+      case 'cours_biblique':
+        titlePrefix = 'Préparation Cours Biblique';
+        preachingInstruction = `Préparer un cours biblique. ${input}. ${groundingInstruction}
+        
+        Structure:
+        # MANIÈRE DE FAIRE: [Plan détaillé pour conduire le cours biblique. Expliquer comment aborder le chapitre/leçon, souligner les points clés, utiliser les versets bibliques (complets TND entre parenthèses) et les questions.]
+        POINTS CLÉS À SOULIGNER: [Liste de 3-4 points importants du chapitre/leçon, avec des références aux publications si possibles.]
+        QUESTIONS À POSER: [Quelques questions de compréhension ou d'application à poser pendant l'étude.]
+        
+        Style: Clair, pédagogique, encourageant la participation de l'étudiant.`;
+        break;
+      default:
+        preachingInstruction = `Générer une préparation de prédication pour le sujet: ${input}. ${groundingInstruction}`;
+        break;
+    }
+
+    systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est de préparer du matériel de prédication. La réponse doit être **impérativement basée** et strictement fidèle aux publications officielles de jw.org et à la Bible Traduction du Monde Nouveau. Ne pas inventer d'informations.
+    ${groundingInstruction}
+    
+    ${preachingInstruction}
+    
+    Style: ${settings.answerPreferences || 'Simple, facile à retenir, pratique. Utilise un langage courant et des versets bibliques complets Traduction du Monde Nouveau.'}. Réponds en Markdown.`;
+    temperature = 0.5; // Un peu plus de créativité pour l'entrée en matière, mais toujours basée sur les faits.
   }
 
   // Si c'est une recherche initiale pour l'aperçu, on utilise un prompt plus court et moins exigeant.
   if (isInitialSearchForPreview) {
-    systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'identifier le titre et le thème principal de l'article lié à "${input}" (qu'il soit un lien ou un sujet/date de Tour de Garde ou Cahier Vie et Ministère).
-    ${groundingInstruction}
-    Réponds uniquement avec le format suivant: # [Titre de l'article] \n Thème: [Thème de l'article]. Ne fournis aucun autre détail ou contenu de l'article.`;
+    let previewInstruction = '';
+    if (type === 'WATCHTOWER' || type === 'MINISTRY') {
+      previewInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'identifier le titre et le thème principal de l'article lié à "${input}" (qu'il soit un lien ou un sujet/date de Tour de Garde ou Cahier Vie et Ministère).
+      ${groundingInstruction}
+      Réponds uniquement avec le format suivant: # [Titre de l'article] \n Thème: [Thème de l'article]. Ne fournis aucun autre détail ou contenu de l'article.`;
+    } else if (type === 'PREDICATION') {
+      previewInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est de fournir un titre et un bref résumé pour une préparation de prédication de type "${preachingType}" avec le sujet "${input}".
+      ${groundingInstruction}
+      Réponds uniquement avec le format suivant: # [Titre de la préparation] \n Thème: [Bref résumé de l'objectif]. Ne fournis aucun autre détail.`;
+    }
+    systemInstruction = previewInstruction;
   }
 
   try {
-    // Si c'est un lien direct, le contenu est "l'URL" pour le modèle, même si nous ne le scrapons pas.
-    // L'instruction système est ce qui le "grounde".
-    const modelContent = isLink ? `Analyser le contenu de l'article à l'URL : ${cleanedInput}` : `Rechercher et analyser l'article pour le sujet/la date : ${input}`;
+    const modelContent = isLink ? `Analyser le contenu de l'article/publication à l'URL : ${cleanedInput}` : `Rechercher et analyser l'information pour le sujet/la date/le contexte : ${input}`;
 
     const response = await ai.models.generateContent({
       model: modelToUse,
@@ -194,12 +254,12 @@ export const generateStudyContent = async (
 
     const text = response.text || "";
     
-    if (!text || text.length < 50 || text.toLowerCase().includes('désolé') || text.toLowerCase().includes('impossible de trouver') || text.toLowerCase().includes('ne peut pas accéder à des sites web externes')) {
+    if (!text || text.length < 50 || text.toLowerCase().includes('désolé') || text.toLowerCase().includes('impossible de trouver') || text.toLowerCase().includes('ne peut pas accéder à des sites web externes') || text.toLowerCase().includes('erreur') || text.toLowerCase().includes('aucune information')) {
       throw new Error("MODEL_PROCESSING_ERROR");
     }
 
     const titleMatch = text.match(/^#\s*(.*)/m);
-    const title = titleMatch ? titleMatch[1].trim() : "Étude Biblique";
+    const title = titleMatch ? titleMatch[1].trim() : (preachingType ? `Préparation ${preachingType.replace(/_/g, ' ')}` : "Étude Biblique");
     const theme = text.match(/Thème\s*:\s*(.*)/i)?.[1]?.trim() || "";
 
     return { text, title, theme };
@@ -225,7 +285,7 @@ export const generateStudyContent = async (
       if (retryCount < 2) {
         const wait = (retryCount + 1) * 20000;
         await sleep(wait);
-        return generateStudyContent(type, input, part, settings, retryCount + 1, isInitialSearchForPreview);
+        return generateStudyContent(type, input, part, settings, retryCount + 1, isInitialSearchForPreview, preachingType);
       }
       throw new Error("COOLDOWN_REQUIRED");
     }
@@ -234,13 +294,13 @@ export const generateStudyContent = async (
       if (retryCount < 1 && !isLink) { // Réessayer une fois si c'est une recherche par date/thème
          const wait = 15000;
          await sleep(wait);
-         return generateStudyContent(type, input, part, settings, retryCount + 1, isInitialSearchForPreview);
+         return generateStudyContent(type, input, part, settings, retryCount + 1, isInitialSearchForPreview, preachingType);
       }
       throw new Error("SEARCH_QUOTA_EXCEEDED");
     }
     
     if (error.message === "MODEL_PROCESSING_ERROR") {
-        throw new Error("L'IA n'a pas pu trouver ou analyser l'article. Essayez un lien direct ou une formulation différente.");
+        throw new Error("L'IA n'a pas pu trouver ou analyser l'article. Essayez un lien direct ou une formulation différente. Assurez-vous que le lien est valide et public.");
     }
 
     // Erreur générique avec le statut si disponible, pour le diagnostic.

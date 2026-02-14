@@ -3,10 +3,11 @@ export enum AppView {
   HOME = 'HOME',
   MINISTRY = 'MINISTRY',
   WATCHTOWER = 'WATCHTOWER',
+  PREDICATION = 'PREDICATION', // New view for Predication
   TUTORIAL = 'TUTORIAL',
   SETTINGS = 'SETTINGS',
   HISTORY = 'HISTORY',
-  UPDATES = 'UPDATES' // New view for updates
+  UPDATES = 'UPDATES' 
 }
 
 export type StudyPart =
@@ -17,17 +18,29 @@ export type StudyPart =
   | 'etude_biblique_assemblee' 
   | 'tout';
 
-// studyPartOptions a été déplacé dans src/components/StudyTool.tsx pour être local à son utilisation.
+export type PredicationType =
+  | 'porte_en_porte'
+  | 'nouvelle_visite'
+  | 'cours_biblique';
+
+export type HistoryCategory = 
+  | 'cahier_vie_et_ministere'
+  | 'tour_de_garde'
+  | 'predication_porte_en_porte'
+  | 'predication_nouvelle_visite'
+  | 'predication_cours_biblique';
 
 export interface GeneratedStudy {
   id: string;
-  type: 'WATCHTOWER' | 'MINISTRY';
+  type: 'WATCHTOWER' | 'MINISTRY' | 'PREDICATION'; // Added PREDICATION type
   title: string;
   date: string;
   url?: string;
   content: string;
   timestamp: number;
-  part?: StudyPart; // Nouvelle propriété pour stocker la partie d'étude demandée
+  part?: StudyPart; // Pour Cahier Vie et Ministère
+  preachingType?: PredicationType; // Pour Prédication
+  category: HistoryCategory; // Nouvelle propriété pour la catégorisation
 }
 
 export interface AppSettings {
