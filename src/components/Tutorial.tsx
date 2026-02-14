@@ -88,7 +88,7 @@ const Tutorial: React.FC = () => {
     },
     {
       title: "Installation de l'application (PWA)",
-      content: "Pour profiter pleinement de JW Study Pro et l'utiliser hors ligne, installez-la comme une application web progressive (PWA). Un bouton 'Installer l'App' apparaîtra (généralement dans Chrome) vous permettant de l'ajouter à votre écran d'accueil pour un accès rapide. L'expérience visuelle hors ligne est désormais identique à l'expérience en ligne.",
+      content: "Pour profiter pleinement de JW Study Pro et l'utiliser hors ligne, installez-la comme une application web progressive (PWA). Un bouton 'Installer l'App' apparaîtra (généralement dans Chrome) vous permettant de l'ajouter à votre écran d'accueil pour un accès rapide. L'expérience visuelle hors ligne est désormais identique à l'expérience en ligne. **En cas de problème après une mise à jour, pensez à désinstaller la PWA, vider le cache du navigateur, puis la réinstaller.**",
       icon: <Download className="text-green-400" size={48} />
     }
   ];

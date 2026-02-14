@@ -74,6 +74,29 @@ const updates: UpdateItem[] = [
       "Amélioration de la robustesse de l'API Route Vercel pour mieux gérer les erreurs et les quotas, renvoyant des messages d'erreur JSON clairs au client.",
       "Nettoyage des fichiers dupliqués ou mal placés suite à la migration vers une structure de projet standard React/Vercel (fichiers à la racine, etc.)."
     ]
+  },
+  {
+    version: "1.4.0",
+    date: "28 Octobre 2024",
+    features: [
+      "Amélioration de la gestion des erreurs API côté frontend avec des messages plus spécifiques et compréhensibles, notamment pour les quotas et les problèmes de connexion."
+    ],
+    fixes: [
+      "Correction définitive de l'erreur 'Unexpected token <' / 'is not valid JSON' en ajustant les règles de réécriture dans `vercel.json`. Le trafic API est maintenant correctement dirigé vers la fonction serverless de Vercel.",
+      "Optimisation de la gestion du Service Worker pour s'assurer que les appels vers l'API Route Vercel ne sont jamais mis en cache par erreur."
+    ]
+  },
+  {
+    version: "1.5.0",
+    date: "29 Octobre 2024",
+    features: [
+      "Amélioration de la robustesse de la communication avec l'API Gemini, notamment en cas de surcharge des services Google."
+    ],
+    fixes: [
+      "Nouvelle correction des problèmes persistants de routage sur Vercel (`vercel.json`) qui causaient l'erreur 'Unexpected token <' / 'is not valid JSON'. Le déploiement est maintenant plus stable.",
+      "Instructions détaillées ajoutées au tutoriel et aux messages d'erreur pour aider l'utilisateur à vider le cache du navigateur ou à réinstaller la PWA en cas de problèmes de déploiement côté client.",
+      "La version du Service Worker a été incrémentée (`v10`) pour forcer la mise à jour des règles de cache chez tous les utilisateurs."
+    ]
   }
 ];
 
