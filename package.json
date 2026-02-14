@@ -2,6 +2,7 @@
   "name": "jw-study-pro",
   "version": "1.0.0",
   "description": "Assistant d'étude pour la Tour de Garde et le Cahier Vie et Ministère.",
+  "type": "module",
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
@@ -9,7 +10,7 @@
     "eject": "react-scripts eject"
   },
   "dependencies": {
-    "@google/genai": "^1.40.0",
+    "@google/genai": "^1.41.0",
     "docx": "^9.5.1",
     "file-saver": "^2.0.5",
     "jspdf": "^2.5.1",

@@ -92,8 +92,8 @@ const Tutorial: React.FC = () => {
       icon: <Download className="text-green-400" size={48} />
     },
     {
-      title: "Vérification des logs API sur Vercel",
-      content: "Si vous rencontrez toujours des erreurs API (comme 'is not valid JSON'), il est essentiel de vérifier les logs de votre fonction `generate-content` sur Vercel. Effectuez une requête, puis examinez les logs du déploiement Vercel pour voir si le message 'API Route /api/generate-content hit!' apparaît. Cela indique si votre requête atteint bien le serveur.",
+      title: "Vérification et Réinitialisation des logs API sur Vercel",
+      content: "Si vous rencontrez toujours des erreurs API (comme 'is not valid JSON' ou 'Cannot find module'), il est **essentiel** de vérifier les logs de votre fonction `generate-content` sur Vercel après avoir forcé un déploiement avec cache vide. Effectuez une requête, puis examinez les logs du déploiement Vercel pour voir si le message 'API Route /api/generate-content hit!' apparaît. Si l'erreur 'Cannot find module' persiste, assurez-vous d'avoir bien vidé le cache de build sur Vercel lors du redéploiement.",
       icon: <AlertTriangle className="text-red-500" size={48} />
     }
   ];

@@ -108,6 +108,17 @@ const updates: UpdateItem[] = [
       "Tentative de correction finale de l'erreur 'Unexpected token <' / 'is not valid JSON' en affinant la gestion d'erreurs côté serveur et en fournissant des instructions de débogage et de nettoyage de cache approfondies.",
       "La version du Service Worker a été incrémentée (`v11`) pour garantir que les dernières règles de cache et de routage sont appliquées, en insistant sur la nécessité de vider le cache du navigateur et de réinstaller la PWA."
     ]
+  },
+  {
+    version: "1.7.0",
+    date: "14 Février 2025",
+    features: [
+      "Amélioration de la compatibilité des fonctions serverless Vercel avec le module `@google/genai`."
+    ],
+    fixes: [
+      "Correction de l'erreur `Cannot find module '/var/task/node_modules/@google/genai/dist/node/index.cjs'` sur Vercel en ajoutant `'type': 'module'` au `package.json` et en assurant la cohérence de la version `@google/genai`. Ceci résout le problème où l'API renvoyait une erreur HTML (`Unexpected token 'A'`) au lieu de JSON.",
+      "Instructions de dépannage mises à jour dans le tutoriel et les messages d'erreur, insistant sur le nettoyage du cache de build de Vercel et le cache du navigateur/PWA."
+    ]
   }
 ];
 
