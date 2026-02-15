@@ -146,6 +146,17 @@ const updates: UpdateItem[] = [
       "Amélioration des messages d'erreur en cas d'échec de l'extraction de contenu (scraping) depuis une URL.",
       "La version du Service Worker a été incrémentée (`v14`) pour garantir la mise à jour des dernières règles de cache et fonctionnalités chez tous les utilisateurs."
     ]
+  },
+  {
+    version: "1.9.1",
+    date: "15 Février 2025",
+    features: [
+      "Amélioration de la robustesse du 'Deep Research' (scraping) pour les liens directs, rendant la récupération de contenu plus fiable."
+    ],
+    fixes: [
+      "Correction de l'erreur 'fetch failed' lors de l'extraction de contenu : ajout d'en-têtes HTTP (User-Agent, Referer) aux requêtes de scraping pour simuler un navigateur et améliorer la compatibilité avec les sites web. Les messages d'erreur ont été affinés pour mieux diagnostiquer les problèmes de connexion.",
+      "La version du Service Worker a été incrémentée (`v15`) pour garantir la mise à jour des dernières règles et améliorations chez tous les utilisateurs."
+    ]
   }
 ];
 

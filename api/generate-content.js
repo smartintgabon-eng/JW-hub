@@ -61,9 +61,15 @@ export default async function handler(req, res) {
     // SCRIBING MODE: Fetch and scrape the content directly from the URL
     try {
       console.log(`Scraping content from URL: ${cleanedInput}`);
-      const responseHtml = await fetch(cleanedInput);
+      const responseHtml = await fetch(cleanedInput, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Referer': 'https://www.jw.org/', 
+        },
+      });
       if (!responseHtml.ok) {
-        throw new Error(`Failed to fetch URL: ${responseHtml.statusText} (${responseHtml.status})`);
+        // This handles HTTP errors like 403, 404, 500 from the target server
+        throw new Error(`Échec de la récupération de l'URL avec le code statut ${responseHtml.status}.`);
       }
       const html = await responseHtml.text();
       const $ = cheerio.load(html);
@@ -87,6 +93,11 @@ export default async function handler(req, res) {
 
     } catch (scrapeError) {
       console.error("Scraping error:", scrapeError);
+      // Differentiate between network 'fetch failed' errors and other scraping errors
+      if (scrapeError instanceof TypeError && scrapeError.message.includes('fetch failed')) {
+         return res.status(500).json({ message: `Erreur de connexion lors de l'extraction de l'URL. Veuillez vérifier l'URL et votre connexion Internet, ou réessayez plus tard. (Code: 500-NETWORK)` });
+      }
+      // For other errors (HTTP errors caught by !responseHtml.ok, Cheerio errors, etc.)
       return res.status(500).json({ message: `Erreur lors de l'extraction du contenu de la page : ${scrapeError.message}. Vérifiez l'URL ou réessayez. (Code: 500-SCRAPE)` });
     }
 

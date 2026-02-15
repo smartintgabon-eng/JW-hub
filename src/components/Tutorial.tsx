@@ -103,7 +103,7 @@ const Tutorial: React.FC = () => {
     },
     {
       title: "Vérification et Réinitialisation des logs API sur Vercel",
-      content: "Si vous rencontrez toujours des erreurs API (comme 'is not valid JSON' ou 'Cannot find module'), il est **essentiel** de vérifier les logs de votre fonction `generate-content` sur Vercel après avoir forcé un déploiement avec cache vide. Effectuez une requête, puis examinez les logs du déploiement Vercel pour voir si le message 'API Route /api/generate-content hit!' apparaît. Si l'erreur 'Cannot find module' persiste, assurez-vous d'avoir bien vidé le cache de build sur Vercel lors du redéploiement.",
+      content: "Si vous rencontrez toujours des erreurs API (comme 'is not valid JSON' ou 'Cannot find module'), il est **essentiel** de vérifier les logs de votre fonction `generate-content` sur Vercel après avoir forcé un déploiement avec cache vide. Effectuez une requête, puis examinez les logs du déploiement Vercel pour voir si le message 'API Route /api/generate-content hit!' apparaît. Si l'erreur 'Cannot find module' persiste, assurez-vous d'avoir bien vidé le cache de build sur Vercel lors du redéploiement. Les erreurs de scraping peuvent indiquer des problèmes de réseau ou que l'URL fournie n'est pas accessible au serveur.",
       icon: <AlertTriangle className="text-red-500" size={48} />
     }
   ];
