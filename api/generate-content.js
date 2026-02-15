@@ -50,75 +50,68 @@ export default async function handler(req, res) {
 
   let modelToUse = 'gemini-2.5-flash'; // Unified to gemini-2.5-flash as requested
   
-  let toolsConfig = undefined; // Default to no tools
+  let toolsConfig = undefined; 
   let systemInstruction = '';
   let temperature = 0.2; 
   
   let modelContents; // This will hold the actual 'contents' payload for Gemini
+  let initialScrapeAttempted = false;
+  let initialScrapeSuccess = false;
 
-  // --- NEW: Conditional content preparation based on input type (link vs search) ---
+  // --- Conditional content preparation based on input type (link vs search) ---
   if (isLink) {
-    // SCRIBING MODE: Fetch and scrape the content directly from the URL
+    initialScrapeAttempted = true;
     try {
-      console.log(`Scraping content from URL: ${cleanedInput}`);
+      console.log(`Attempting direct scrape from URL: ${cleanedInput}`);
       const responseHtml = await fetch(cleanedInput, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Referer': 'https://www.jw.org/', 
+          'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36', // User-Agent Android/Chrome
+          'Referer': 'https://www.google.com/', // Simulate coming from Google Search
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
           'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
           'Connection': 'keep-alive',
           'Upgrade-Insecure-Requests': '1',
         },
       });
-      if (!responseHtml.ok) {
-        // This handles HTTP errors like 403, 404, 500 from the target server
-        let errorMessage = `Échec de la récupération de l'URL avec le code statut ${responseHtml.status}.`;
-        if (responseHtml.status === 403) {
-          errorMessage += " Accès refusé par le serveur cible (peut-être un blocage anti-bot).";
-        } else if (responseHtml.status === 404) {
-          errorMessage += " Page non trouvée (vérifiez l'URL).";
+
+      if (responseHtml.ok) {
+        const html = await responseHtml.text();
+        const $ = cheerio.load(html);
+        const extractedText = $('body').text().replace(/\s\s+/g, ' ').trim();
+        if (extractedText && extractedText.length >= 100) {
+          modelContents = [
+            { text: `Voici le contenu complet de la page à l'URL : ${cleanedInput} \n\n` },
+            { text: extractedText }
+          ];
+          systemInstruction = `Vous agissez en tant qu'Assistant JW expert en publications. Vous avez reçu le texte brut d'une page web. Votre tâche est d'analyser ce texte. La réponse doit être **impérativement basée** et strictement fidèle aux informations et références (bibliques complètes, publications jw.org) trouvées *directement* dans le texte fourni. Ne pas inventer d'informations.`;
+          initialScrapeSuccess = true;
+          console.log("Direct scrape successful.");
+        } else {
+          console.warn("Direct scrape resulted in insufficient content. Falling back to Google Search tool.");
+          initialScrapeSuccess = false; // Not a full success if content is bad
         }
-        throw new Error(errorMessage);
+      } else {
+        console.warn(`Direct scrape failed with status ${responseHtml.status}. Falling back to Google Search tool.`);
       }
-      const html = await responseHtml.text();
-      const $ = cheerio.load(html);
-      // Extract text from body, clean multiple spaces and trim
-      const texteComplet = $('body').text().replace(/\s\s+/g, ' ').trim(); 
-      
-      if (!texteComplet || texteComplet.length < 100) { // Basic check for minimal content
-        throw new Error("Contenu extrait insuffisant ou page vide.");
-      }
-
-      // Gemini's contents will directly include the scraped text
-      modelContents = [
-        { text: `Voici le contenu complet de la page à l'URL : ${cleanedInput} \n\n` },
-        { text: texteComplet }
-      ];
-      // No search tool needed as content is provided directly
-      toolsConfig = undefined; 
-
-      // Update grounding instruction for system to reflect direct content provision
-      systemInstruction = `Vous agissez en tant qu'Assistant JW expert en publications. Vous avez reçu le texte brut d'une page web. Votre tâche est d'analyser ce texte. La réponse doit être **impérativement basée** et strictement fidèle aux informations et références (bibliques complètes, publications jw.org) trouvées *directement* dans le texte fourni. Ne pas inventer d'informations.`;
-
     } catch (scrapeError) {
-      console.error("Scraping error:", scrapeError);
-      // Differentiate between network 'fetch failed' errors and other scraping errors
-      if (scrapeError instanceof TypeError && String(scrapeError).includes('fetch failed')) { // Use String(scrapeError) to catch underlying message
-         return res.status(500).json({ message: `Erreur de connexion lors de l'extraction de l'URL (problème réseau ou blocage). Veuillez vérifier l'URL et votre connexion Internet, ou réessayez plus tard. (Code: 500-NETWORK)` });
-      }
-      // For other errors (HTTP errors caught by !responseHtml.ok, Cheerio errors, etc.)
-      return res.status(500).json({ message: `Erreur lors de l'extraction du contenu de la page : ${scrapeError.message}. Vérifiez l'URL ou réessayez. (Code: 500-SCRAPE)` });
+      console.error("Direct scrape encountered a network/fetch error. Falling back to Google Search tool:", scrapeError);
     }
-
-  } else {
-    // SEARCH MODE: Use Google Search tool for queries by date/theme
-    toolsConfig = [{ googleSearch: {} }]; 
-    modelContents = `Utilise l'outil Google Search pour trouver et analyser l'information pertinente pour le sujet/la date/le contexte : "${input}". Ensuite, génère le contenu selon les instructions de système.`;
-    
-    // Update grounding instruction for system to reflect Google Search usage
-    systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'analyser l'information obtenue via l'outil Google Search pour le contenu "${input}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés pour extraire et analyser l'information. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations ou si les résultats sont ambigus, indiquez-le clairement.`;
   }
+
+  // If direct scrape failed or it's not a link, or it's a date/theme search, use googleSearch grounding
+  if (!initialScrapeSuccess) {
+    toolsConfig = [{ googleSearch: {} }];
+    
+    // Construct modelContents based on whether it was a failed link scrape or a regular search
+    if (isLink) { // It was a link, but direct scrape failed, so use googleSearch for the link
+      modelContents = `Analyse le contenu de ce lien jw.org en utilisant tes outils de recherche : "${cleanedInput}". Extrait les informations pertinentes pour générer le contenu selon les instructions de système. Ne te contente pas du titre, cherche le texte complet de l'article si possible.`;
+      systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'analyser l'information obtenue via l'outil Google Search pour le lien "${cleanedInput}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés pour extraire et analyser l'information. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations ou si les résultats sont ambigus, indiquez-le clairement.`;
+    } else { // It's a search by date/theme
+      modelContents = `Utilise l'outil Google Search pour trouver et analyser l'information pertinente pour le sujet/la date/le contexte : "${input}". Ensuite, génère le contenu selon les instructions de système.`;
+      systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'analyser l'information obtenue via l'outil Google Search pour le contenu "${input}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés pour extraire et analyser l'information. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations ou si les résultats sont ambigus, indiquez-le clairement.`;
+    }
+  }
+
   // --- END NEW CONTENT PREPARATION ---
 
 
@@ -285,24 +278,29 @@ export default async function handler(req, res) {
       Réponds uniquement avec le format suivant: # [Titre de la préparation] \n Thème: [Bref résumé de l'objectif]. Ne fournis aucun autre détail.`;
     }
     // Prepend the specific grounding instruction to the preview instruction
-    systemInstruction = (isLink ? systemInstruction : '') + '\n\n' + previewInstruction;
+    systemInstruction = (isLink && !initialScrapeSuccess ? systemInstruction : '') + '\n\n' + previewInstruction;
   }
 
 
   try {
     const response = await ai.models.generateContent({
       model: modelToUse,
-      contents: modelContents, // Now intelligently set as scraped text or search prompt
+      contents: modelContents, // Now intelligently set as scraped text or search prompt / direct URL analysis
       config: {
         systemInstruction,
         temperature,
-        tools: toolsConfig, // Now intelligently set (undefined for scrape, googleSearch for search)
+        tools: toolsConfig, // Now intelligently set (undefined for successful scrape, googleSearch for fallback or search mode)
       },
     });
 
     const text = response.text || "";
     
     if (!text || text.length < 50 || text.toLowerCase().includes('désolé') || text.toLowerCase().includes('impossible de trouver') || text.toLowerCase().includes('ne peut pas accéder à des sites web externes') || text.toLowerCase().includes('erreur') || text.toLowerCase().includes('aucune information')) {
+      // If initial scrape failed, and now Gemini also failed
+      if (initialScrapeAttempted && !initialScrapeSuccess) {
+          // Provide a specific message about persistent issues for direct links
+          throw new Error("MODEL_PROCESSING_ERROR_WITH_SCRAPE_FALLBACK");
+      }
       throw new Error("MODEL_PROCESSING_ERROR");
     }
 
@@ -339,6 +337,9 @@ export default async function handler(req, res) {
       return res.status(500).json({ message: "Le service de recherche Google est temporairement saturé ou n'a pas trouvé de résultats pertinents. Veuillez réessayer avec un 'Lien direct' ou patientez. (Code: 500-SEARCH)" });
     }
     
+    if (error.message === "MODEL_PROCESSING_ERROR_WITH_SCRAPE_FALLBACK") {
+      return res.status(500).json({ message: "Échec de l'analyse du lien direct via notre serveur ET via les outils de Google. Le site jw.org est probablement en train de bloquer toutes les requêtes automatiques pour ce lien. Veuillez essayer la 'Recherche par date/thème' comme alternative. (Code: 500-LINK-BLOCKED)" });
+    }
     if (error.message === "MODEL_PROCESSING_ERROR") {
         return res.status(500).json({ message: "L'IA n'a pas pu trouver ou analyser l'article. Essayez un lien direct ou une formulation différente. Assurez-vous que le lien est valide et public. (Code: 500-AI)" });
     }

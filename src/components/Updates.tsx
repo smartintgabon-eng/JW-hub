@@ -170,12 +170,38 @@ const updates: UpdateItem[] = [
       "Correction de l'erreur 'Erreur de connexion lors de l'extraction de l'URL' en optimisant les en-têtes HTTP du `fetch` de scraping. Les messages d'erreur ont été rendus plus spécifiques pour aider à diagnostiquer les problèmes de blocage réseau ou les réponses HTTP du serveur cible.",
       "La version du Service Worker a été incrémentée (`v16`) pour garantir la mise à jour des dernières règles et améliorations chez tous les utilisateurs."
     ]
+  },
+  {
+    version: "1.9.3",
+    date: "16 Février 2025",
+    features: [
+      "**Amélioration de l'expérience utilisateur sur mobile** : la barre latérale s'adapte de manière optimale aux petits écrans. Le contenu des pages s'ajuste dynamiquement pour tirer pleinement parti de l'espace disponible, améliorant la lisibilité sans nécessiter de zoom manuel."
+    ],
+    fixes: [
+      "Correction de l'erreur persistante 'Erreur de connexion lors de l'extraction de l'URL' en fournissant un message d'erreur plus clair indiquant le probable blocage par `jw.org` et suggérant l'alternative de la 'Recherche par date/thème'.",
+      "Correction de la compatibilité de la barre latérale sur les petits téléphones : ajustement de la largeur pour éviter le débordement et améliorer l'esthétique.",
+      "Optimisation de l'affichage du contenu principal sur mobile pour éviter les problèmes de 'dézoom' et garantir une meilleure adaptabilité à la largeur de l'écran.",
+      "Mise à jour de la version de Cheerio et ajout de Lodash dans `package.json` pour la cohérence des dépendances.",
+      "La version du Service Worker a été incrémentée (`v17`) pour garantir la mise à jour des dernières règles et améliorations chez tous les utilisateurs."
+    ]
+  },
+  {
+    version: "1.9.4",
+    date: "16 Février 2025",
+    features: [
+      "**Robustesse améliorée pour l'analyse des liens directs de jw.org** : Le scraping côté serveur est maintenant renforcé avec des en-têtes HTTP encore plus sophistiqués pour simuler un navigateur mobile. En cas d'échec, un mécanisme de fallback utilise directement l'outil `googleSearch` de Gemini pour tenter d'analyser le contenu du lien, capitalisant sur l'accès plus large de Google au web. Ceci maximise les chances d'obtenir des réponses fiables même face à des blocages.",
+      "**Messages d'erreur plus clairs** : Les messages d'erreur relatifs au scraping des liens directs sont désormais plus explicites, indiquant quand `jw.org` bloque probablement les requêtes et suggérant d'utiliser la 'Recherche par date/thème' comme alternative fiable."
+    ],
+    fixes: [
+      "Correction de l'erreur 'Erreur de connexion lors de l'extraction de l'URL' en implémentant une stratégie de scraping en deux phases (direct puis via Gemini Google Search) et en affinant les messages d'erreur.",
+      "Mise à jour de la version du Service Worker (`v18`) pour assurer la distribution des dernières améliorations de manière fiable."
+    ]
   }
 ];
 
 const Updates: React.FC = () => {
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 max-w-5xl mx-auto">
       <div className="flex items-center space-x-4 mb-6">
         <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="p-4 rounded-2xl shadow-xl">
           <BellRing size={28} />

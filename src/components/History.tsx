@@ -345,7 +345,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
 
   if (selectedStudy) {
     return (
-      <div className={`animate-in fade-in slide-in-from-right-4 duration-500 pb-24 ${readingMode ? 'fixed inset-0 z-[100] bg-[var(--bg-color)] overflow-y-auto p-0 md:p-0' : ''}`}>
+      <div className={`animate-in fade-in slide-in-from-right-4 duration-500 pb-24 ${readingMode ? 'fixed inset-0 z-[100] bg-[var(--bg-color)] overflow-y-auto p-0 md:p-0' : ''} max-w-5xl mx-auto`}>
         {/* En-tête avec boutons d'action (visible en mode lecture) */}
         <div className={`flex items-center justify-between mb-10 sticky top-0 py-4 z-20 bg-[var(--bg-color)] border-b border-white/5 print:hidden ${readingMode ? 'px-6' : ''}`}>
           <button onClick={() => { setSelectedStudy(null); setReadingMode(false); }} className="flex items-center space-x-3 opacity-60 hover:opacity-100 transition-all group">
@@ -427,7 +427,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+    <div className="space-y-8 animate-in fade-in duration-500 pb-20 max-w-5xl mx-auto">
       <div className="flex items-center space-x-4 mb-2">
         <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="p-4 rounded-2xl shadow-xl">
           <HistoryIcon size={28} />

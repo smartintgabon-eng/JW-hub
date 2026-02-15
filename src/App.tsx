@@ -197,7 +197,7 @@ const App: React.FC = () => {
         ${isReadingModeActive ? 'hidden' : ''}
         
         // Mobile specific (overlay)
-        ${isSidebarOpen ? 'translate-x-0 w-[calc(100vw-4rem)] max-w-sm' : '-translate-x-full w-0'} 
+        ${isSidebarOpen ? 'translate-x-0 w-3/4 max-w-[280px]' : '-translate-x-full w-0'} 
         
         // Desktop specific (push content)
         md:static // Makes it part of the normal flow on desktop
@@ -238,56 +238,56 @@ const App: React.FC = () => {
 
       {/* Main Content */}
       <main className="flex-1 p-6 md:p-10 max-h-screen overflow-y-auto">
-        <div className="max-w-5xl mx-auto">
-          {view === AppView.HOME && (
-            <div className="flex flex-col items-center justify-center min-h-[70vh] text-center space-y-12 animate-in fade-in duration-700">
-               <div 
-                 style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
-                 className="w-24 h-24 text-4xl rounded-2xl flex items-center justify-center font-black shadow-2xl hover:scale-105 transition-transform cursor-pointer"
-                 onClick={() => navigateTo(AppView.TUTORIAL)}
-               >JW</div>
-               
-               <div className="space-y-4">
-                  <h1 className="text-5xl md:text-7xl font-black tracking-tight uppercase">Préparez-vous. <br/> <span className="opacity-20">Simplement.</span></h1>
-                  <p className="text-lg opacity-50 max-w-xl mx-auto font-medium">L'outil indispensable pour approfondir votre étude biblique et vos réunions.</p>
-               </div>
-
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl">
-                  <button onClick={() => navigateTo(AppView.MINISTRY)} className="p-8 bg-white/5 border border-white/10 rounded-3xl hover:bg-white/10 transition-all text-left group">
-                    <div className="w-12 h-12 rounded-xl bg-[var(--btn-color)] flex items-center justify-center mb-6 text-[var(--btn-text)] shadow-lg group-hover:scale-110 transition-transform">
-                      <Calendar size={24} />
-                    </div>
-                    <h3 className="font-bold text-2xl mb-2 uppercase tracking-tight">Cahier de Réunion</h3>
-                    <p className="text-sm opacity-40 font-medium">Joyaux, perles et étude biblique.</p>
-                  </button>
-
-                  <button onClick={() => navigateTo(AppView.WATCHTOWER)} className="p-8 bg-white/5 border border-white/10 rounded-3xl hover:bg-white/10 transition-all text-left group">
-                    <div className="w-12 h-12 rounded-xl bg-[var(--btn-color)] flex items-center justify-center mb-6 text-[var(--btn-text)] shadow-lg group-hover:scale-110 transition-transform">
-                      <BookOpen size={24} />
-                    </div>
-                    <h3 className="font-bold text-2xl mb-2 uppercase tracking-tight">Tour de Garde</h3>
-                    <p className="text-sm opacity-40 font-medium">Réponses et commentaires paragraphe par paragraphe.</p>
-                  </button>
-               </div>
-               
-               <div className="mt-12 text-center max-w-2xl mx-auto space-y-4 pt-12 border-t border-white/5">
-                <Lightbulb size={32} className="mx-auto text-amber-500 mb-4" />
-                <h3 className="text-xl font-bold uppercase tracking-tight">Découvrez toutes les fonctionnalités</h3>
-                <p className="text-sm opacity-60 font-medium">
-                  Le tutoriel complet vous guidera à travers chaque aspect de JW Study Pro, des recherches d'articles aux options de personnalisation.
-                </p>
-                <button 
-                  onClick={() => navigateTo(AppView.TUTORIAL)}
-                  style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
-                  className="mt-6 px-8 py-4 rounded-xl font-black uppercase text-sm tracking-widest shadow-lg hover:brightness-110 transition-all active:scale-95"
-                >
-                  Accéder au Tutoriel
-                </button>
-               </div>
-            </div>
-          )}
-
+        {/* Remove max-w-5xl mx-auto from here. Each view component will handle its own content width */}
           <div style={{ color: 'var(--text-color)' }}>
+            {view === AppView.HOME && (
+              <div className="max-w-5xl mx-auto flex flex-col items-center justify-center min-h-[70vh] text-center space-y-12 animate-in fade-in duration-700">
+                 <div 
+                   style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
+                   className="w-24 h-24 text-4xl rounded-2xl flex items-center justify-center font-black shadow-2xl hover:scale-105 transition-transform cursor-pointer"
+                   onClick={() => navigateTo(AppView.TUTORIAL)}
+                 >JW</div>
+                 
+                 <div className="space-y-4">
+                    <h1 className="text-5xl md:text-7xl font-black tracking-tight uppercase">Préparez-vous. <br/> <span className="opacity-20">Simplement.</span></h1>
+                    <p className="text-lg opacity-50 max-w-xl mx-auto font-medium">L'outil indispensable pour approfondir votre étude biblique et vos réunions.</p>
+                 </div>
+
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl">
+                    <button onClick={() => navigateTo(AppView.MINISTRY)} className="p-8 bg-white/5 border border-white/10 rounded-3xl hover:bg-white/10 transition-all text-left group">
+                      <div className="w-12 h-12 rounded-xl bg-[var(--btn-color)] flex items-center justify-center mb-6 text-[var(--btn-text)] shadow-lg group-hover:scale-110 transition-transform">
+                        <Calendar size={24} />
+                      </div>
+                      <h3 className="font-bold text-2xl mb-2 uppercase tracking-tight">Cahier de Réunion</h3>
+                      <p className="text-sm opacity-40 font-medium">Joyaux, perles et étude biblique.</p>
+                    </button>
+
+                    <button onClick={() => navigateTo(AppView.WATCHTOWER)} className="p-8 bg-white/5 border border-white/10 rounded-3xl hover:bg-white/10 transition-all text-left group">
+                      <div className="w-12 h-12 rounded-xl bg-[var(--btn-color)] flex items-center justify-center mb-6 text-[var(--btn-text)] shadow-lg group-hover:scale-110 transition-transform">
+                        <BookOpen size={24} />
+                      </div>
+                      <h3 className="font-bold text-2xl mb-2 uppercase tracking-tight">Tour de Garde</h3>
+                      <p className="text-sm opacity-40 font-medium">Réponses et commentaires paragraphe par paragraphe.</p>
+                    </button>
+                 </div>
+                 
+                 <div className="mt-12 text-center max-w-2xl mx-auto space-y-4 pt-12 border-t border-white/5">
+                  <Lightbulb size={32} className="mx-auto text-amber-500 mb-4" />
+                  <h3 className="text-xl font-bold uppercase tracking-tight">Découvrez toutes les fonctionnalités</h3>
+                  <p className="text-sm opacity-60 font-medium">
+                    Le tutoriel complet vous guidera à travers chaque aspect de JW Study Pro, des recherches d'articles aux options de personnalisation.
+                  </p>
+                  <button 
+                    onClick={() => navigateTo(AppView.TUTORIAL)}
+                    style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
+                    className="mt-6 px-8 py-4 rounded-xl font-black uppercase text-sm tracking-widest shadow-lg hover:brightness-110 transition-all active:scale-95"
+                  >
+                    Accéder au Tutoriel
+                  </button>
+                 </div>
+              </div>
+            )}
+
             {view === AppView.MINISTRY && <StudyTool type="MINISTRY" onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
             {view === AppView.WATCHTOWER && <StudyTool type="WATCHTOWER" onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
             {view === AppView.PREDICATION && <PredicationTool onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
@@ -296,10 +296,9 @@ const App: React.FC = () => {
             {view === AppView.TUTORIAL && <Tutorial />}
             {view === AppView.UPDATES && <Updates />}
           </div>
-        </div>
-      </main>
-    </div>
-  );
-};
-
-export default App;
+        </main>
+      </div>
+    );
+  };
+  
+  export default App;

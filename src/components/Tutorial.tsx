@@ -28,17 +28,17 @@ const Tutorial: React.FC = () => {
     },
     {
       title: "Préparation de la Tour de Garde : Lecture Profonde des Liens",
-      content: "Dans l'onglet 'Tour de Garde', si vous collez le lien direct d'un article de jw.org, l'application va maintenant 'scraper' (extraire) tout le texte de cette page côté serveur et le fournir directement à l'IA. Pour une meilleure fiabilité, des en-têtes de navigateur complets sont envoyés, mais des blocages par le site cible peuvent toujours survenir. L'IA lira ce texte brut pour vous fournir des réponses ultra-précises, des versets clés (texte complet, Traduction du Monde Nouveau), des commentaires et des applications, sans jamais inventer d'informations. Pour la recherche par date/thème, l'IA utilise l'outil Google Search pour trouver des réponses fiables.",
+      content: "Dans l'onglet 'Tour de Garde', si vous collez le lien direct d'un article de jw.org, l'application va d'abord tenter d'extraire tout le texte de la page avec des en-têtes de navigateur avancés. En cas de blocage ou de contenu insuffisant, elle basculera automatiquement sur l'outil Google Search de Gemini pour analyser le lien. C'est notre meilleure chance de surmonter les blocages et d'obtenir des réponses précises.",
       icon: <BookOpen className="text-emerald-500" size={48} />
     },
     {
       title: "Préparation du Cahier Vie et Ministère : Lecture Profonde des Liens",
-      content: "Comme pour la Tour de Garde, si vous entrez un lien direct vers l'article du Cahier de la semaine, le serveur va en extraire tout le texte. L'IA analysera alors ce contenu en profondeur pour générer des réponses détaillées et fidèles aux publications. Des en-têtes HTTP complets sont utilisés pour la robustesse du scraping. Pour la recherche par date/thème, l'IA utilise l'outil Google Search.",
+      content: "Comme pour la Tour de Garde, si vous entrez un lien direct vers l'article du Cahier, l'application tentera d'abord un scraping direct robuste. Si cela échoue, l'outil Google Search de Gemini prendra le relais pour analyser le lien. Cette double approche vise à maximiser la fiabilité pour l'analyse des liens directs. **Cependant, la 'Recherche par date/thème' reste la méthode la plus fiable en cas de blocage persistant.**",
       icon: <LinkIcon className="text-orange-500" size={48} />
     },
     {
       title: "Recherche par date/thème améliorée",
-      content: "Lorsque vous choisissez la 'Recherche par date/thème' (pour Cahier ou Tour de Garde), vous disposez maintenant de deux champs distincts : 'Date de début de semaine (JJ/MM/AAAA)' et 'Thème principal (facultatif)'. Utilisez-les pour affiner votre recherche et aider l'IA (via l'outil Google Search) à trouver le contenu le plus pertinent sur jw.org.",
+      content: "Lorsque vous choisissez la 'Recherche par date/thème' (pour Cahier ou Tour de Garde), vous disposez maintenant de deux champs distincts : 'Date de début de semaine (JJ/MM/AAAA)' et 'Thème principal (facultatif)'. Utilisez-les pour affiner votre recherche et aider l'IA (via l'outil Google Search) à trouver le contenu le plus pertinent sur jw.org. C'est la méthode la plus fiable actuellement pour obtenir des réponses sur les publications.",
       icon: <Search className="text-indigo-500" size={48} />
     },
     {
