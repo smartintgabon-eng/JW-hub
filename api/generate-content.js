@@ -127,8 +127,8 @@ export default async function handler(req, res) {
     
     // Construct modelContents based on whether it was a failed link scrape or a regular search
     if (isLink) { // It was a link, but direct scrape failed, so use googleSearch for the link
-      modelContents = `Analyse le contenu de ce lien jw.org en utilisant tes outils de recherche : "${cleanedInput}". Extrait les informations pertinentes pour générer le contenu selon les instructions de système. Ne te contente pas du titre, cherche le texte complet de l'article si possible.`;
-      systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'analyser l'information obtenue via l'outil Google Search pour le lien "${cleanedInput}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés pour extraire et analyser l'information. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations ou si les résultats sont ambigus, indiquez-le clairement.`;
+      modelContents = `Analyse le contenu de ce lien jw.org en utilisant tes outils de recherche : "${cleanedInput}". Extrait les informations pertinentes pour générer le contenu selon les instructions de système. Ne te contente pas du titre, cherche le texte complet de l'article pour extraire chaque paragraphe et sa question associée si possible. Ensuite, génère le contenu selon les instructions de système, en respectant scrupuleusement le format structuré demandé.`;
+      systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'analyser l'information obtenue via l'outil Google Search pour le lien "${cleanedInput}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés pour extraire et analyser l'information. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations ou si les résultats sont ambigus, indiquez-le clairement. **Il est impératif d'extraire et de présenter l'information paragraphe par paragraphe, incluant la question, le verset (avec texte complet) et une réponse détaillée. Si une question de paragraphe ou un verset n'est pas explicitement trouvé, l'IA doit l'indiquer clairement ou se baser sur le contexte pour formuler une question ou un verset pertinent à ce paragraphe.**`;
     } else { // It's a search by date/theme
       modelContents = `Utilise l'outil Google Search pour trouver et analyser l'information pertinente pour le sujet/la date/le contexte : "${input}". Ensuite, génère le contenu selon les instructions de système.`;
       systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'analyser l'information obtenue via l'outil Google Search pour le contenu "${input}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés pour extraire et analyser l'information. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations ou si les résultats sont ambigus, indiquez-le clairement.`;
@@ -139,15 +139,15 @@ export default async function handler(req, res) {
 
 
   if (type === 'WATCHTOWER') {
-    systemInstruction += `\n\nSubdivisez l'article de manière structurée et très détaillée. Priorise la clarté et la concision tout en étant exhaustif.
+    systemInstruction += `\n\nSubdivisez l'article de manière structurée et très détaillée. Priorise la clarté et la concision tout en étant exhaustif. **Il est impératif d'extraire et de présenter l'information paragraphe par paragraphe, incluant la question, le verset (avec texte complet) et une réponse détaillée. Si une question de paragraphe ou un verset n'est pas explicitement trouvé, l'IA doit l'indiquer clairement ou se baser sur le contexte pour formuler une question ou un verset pertinent à ce paragraphe.**
     
     Structure: 
     # [Titre de l'article] 
     Thème: [Thème de l'article] 
     
     PARAGRAPHE [N°]: 
-    QUESTION: [Question du paragraphe]
-    VERSET: (Inclure le texte complet du verset biblique entre parenthèses, Traduction du Monde Nouveau)
+    QUESTION: [Question du paragraphe, extraite ou formulée contextuellement]
+    VERSET: (Inclure le texte complet du verset biblique entre parenthèses, Traduction du Monde Nouveau, ou indiquer 'Non trouvé' si absent)
     RÉPONSE: (D'après le verset biblique et le paragraphe, inclure des détails et des explications en vous basant *directement* sur le contenu de l'article/page web ou des snippets de recherche.)
     COMMENTAIRE: (Un point d'approfondissement ou une idée supplémentaire pertinente tirée de l'article.)
     APPLICATION: (Comment appliquer personnellement cette information, en vous basant *directement* sur le contenu de l'article/page web ou des snippets de recherche.)

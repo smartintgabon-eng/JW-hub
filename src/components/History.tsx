@@ -345,7 +345,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
 
   if (selectedStudy) {
     return (
-      <div className={`animate-in fade-in slide-in-from-right-4 duration-500 pb-24 ${readingMode ? 'fixed inset-0 z-[100] bg-[var(--bg-color)] overflow-y-auto p-0 md:p-0' : ''} max-w-5xl mx-auto`}>
+      <div className={`animate-in fade-in slide-in-from-right-4 duration-500 pb-24 ${readingMode ? 'fixed inset-0 z-[100] bg-[var(--bg-color)] overflow-y-auto p-0 md:p-0' : ''} md:max-w-5xl md:mx-auto`}> {/* Adjusted for mobile full width */}
         {/* En-tête avec boutons d'action (visible en mode lecture) */}
         <div className={`flex items-center justify-between mb-10 sticky top-0 py-4 z-20 bg-[var(--bg-color)] border-b border-white/5 print:hidden ${readingMode ? 'px-6' : ''}`}>
           <button onClick={() => { setSelectedStudy(null); setReadingMode(false); }} className="flex items-center space-x-3 opacity-60 hover:opacity-100 transition-all group">
@@ -374,7 +374,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
           </div>
         </div>
 
-        <article className={`max-w-4xl mx-auto ${readingMode ? 'pt-10 px-6' : ''} print:p-0 print:text-black`}>
+        <article className={`md:max-w-4xl md:mx-auto ${readingMode ? 'pt-10 px-6' : ''} print:p-0 print:text-black`}> {/* Adjusted for mobile full width */}
           <header className="mb-16 text-center">
              <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="text-[10px] font-black uppercase tracking-[0.4em] px-6 py-2 rounded-full mb-8 inline-block shadow-lg">
                 {selectedStudy.type === 'WATCHTOWER' ? 'Étude de la Tour de Garde' : (selectedStudy.type === 'MINISTRY' ? `Cahier Vie et Ministère - ${getPartLabel(selectedStudy.part)}` : `Prédication - ${selectedStudy.preachingType ? selectedStudy.preachingType.replace(/_/g, ' ').toUpperCase() : 'Général'}`)}
@@ -403,12 +403,22 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
               if (trimmed.startsWith('VERSET:')) {
                 return <div key={idx} className="p-8 bg-white/5 border-l-8 border-[var(--btn-color)] italic rounded-r-3xl my-8 print:border-black print:bg-gray-100">{trimmed}</div>;
               }
-              // QUESTIONS, RÉPONSES, COMMENTAIRES, APPLICATIONS
-              if (trimmed.startsWith('QUESTION:') || trimmed.startsWith('RÉPONSE:') || trimmed.startsWith('COMMENTAIRE:') || trimmed.startsWith('APPLICATION:') || trimmed.startsWith('INTRODUCTION:') || trimmed.startsWith('POINTS À DÉVELOPPER:') || trimmed.startsWith('CONCLUSION:') || trimmed.startsWith('POINTS PRINCIPAUX:') || trimmed.startsWith('SUJET:') || trimmed.startsWith('ENTRÉE EN MATIÈRE:') || trimmed.startsWith('MANIÈRE DE FAIRE:') || trimmed.startsWith('QUESTION POUR REVENIR:')) {
+              // QUESTIONS
+              if (trimmed.startsWith('QUESTION:')) {
+                const [label, ...rest] = trimmed.split(':');
+                return (
+                  <div key={idx} className="space-y-2 mt-6"> {/* Added margin-top */}
+                    <span className="inline-block px-3 py-1 bg-[var(--btn-color)] text-[var(--btn-text)] text-[10px] font-black uppercase tracking-widest rounded-md">{label}</span>
+                    <p className="font-sans font-bold text-lg opacity-90">{rest.join(':').trim()}</p>
+                  </div>
+                );
+              }
+              // RÉPONSES, COMMENTAIRES, APPLICATIONS
+              if (trimmed.startsWith('RÉPONSE:') || trimmed.startsWith('COMMENTAIRE:') || trimmed.startsWith('APPLICATION:') || trimmed.startsWith('INTRODUCTION:') || trimmed.startsWith('POINTS À DÉVELOPPER:') || trimmed.startsWith('CONCLUSION:') || trimmed.startsWith('POINTS PRINCIPAUX:') || trimmed.startsWith('SUJET:') || trimmed.startsWith('ENTRÉE EN MATIÈRE:') || trimmed.startsWith('MANIÈRE DE FAIRE:') || trimmed.startsWith('QUESTION POUR REVENIR:')) {
                 const [label, ...rest] = trimmed.split(':');
                 return (
                   <div key={idx} className="space-y-2">
-                    <span className="inline-block px-3 py-1 bg-[var(--btn-color)] text-[var(--btn-text)] text-[10px] font-black uppercase tracking-widest rounded-md">{label}</span>
+                    <span className="inline-block px-3 py-1 bg-white/10 text-white/70 text-[10px] font-black uppercase tracking-widest rounded-md">{label}</span>
                     <p className="font-sans font-bold text-lg opacity-90">{rest.join(':').trim()}</p>
                   </div>
                 );
@@ -427,7 +437,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-20 max-w-5xl mx-auto">
+    <div className="space-y-8 animate-in fade-in duration-500 pb-20 md:max-w-5xl md:mx-auto"> {/* Adjusted for mobile full width */}
       <div className="flex items-center space-x-4 mb-2">
         <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="p-4 rounded-2xl shadow-xl">
           <HistoryIcon size={28} />

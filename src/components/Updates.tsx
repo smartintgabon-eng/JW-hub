@@ -209,6 +209,20 @@ const updates: UpdateItem[] = [
       "Messages d'erreur API affinés pour mieux informer l'utilisateur des blocages potentiels par jw.org et recommander la 'Recherche par date/thème' comme solution de repli.",
       "La version du Service Worker a été incrémentée (`v19`) pour garantir la distribution fiable de ces améliorations."
     ]
+  },
+  {
+    version: "1.9.6",
+    date: "17 Février 2025",
+    features: [
+      "**Amélioration de la fiabilité du 'Deep Research' de jw.org** : Le scraping du contenu est encore plus ciblé (paragraphes, titres, listes) et inclut un délai de 500ms pour imiter un comportement humain, réduisant les risques de blocage. En cas d'échec du scraping direct, l'outil `googleSearch` de Gemini est instruit de rechercher le texte **intégral** pour obtenir la structure par paragraphe.",
+      "**Affichage des réponses plus lisible** : Les questions de l'IA dans l'historique sont désormais mises en gras avec une couleur distinctive, et un espacement adéquat est ajouté entre les sections pour une meilleure lisibilité sur tous les écrans.",
+      "**Optimisation de l'affichage mobile** : La barre latérale est affinée à `75vw` (max 280px) et les pages principales prennent désormais 100% de la largeur sur les petits écrans, évitant le problème de 'dézoom' et rendant l'expérience plus fluide et agréable."
+    ],
+    fixes: [
+      "Correction des problèmes de `FUNCTION_INVOCATION_TIMEOUT` et `500-LINK-BLOCKED` en affinant le scraping et le fallback Gemini pour réduire la charge de traitement et contourner les blocages de jw.org plus efficacement.",
+      "Correction de l'affichage mobile où la barre latérale était trop large et le contenu principal ne prenait pas toute la largeur, résolvant les problèmes de 'dézoom' et de lisibilité.",
+      "Mise à jour de la version du Service Worker (`v20`) pour assurer la distribution fiable de ces améliorations."
+    ]
   }
 ];
 
