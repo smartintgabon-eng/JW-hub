@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
-import * as cheerio from 'cheerio'; // Import cheerio
+// Importation de cheerio retirée car le scraping direct est abandonné
+// import * as cheerio from 'cheerio'; 
 
 // Fix: setTimeout expects a function as its first argument
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -50,89 +51,20 @@ export default async function handler(req, res) {
 
   let modelToUse = 'gemini-2.5-flash'; // Unified to gemini-2.5-flash as requested
   
-  let toolsConfig = undefined; 
+  let toolsConfig = [{ googleSearch: {} }]; // googleSearch est toujours activé pour les liens et les recherches
   let systemInstruction = '';
   let temperature = 0.2; 
   
   let modelContents; // This will hold the actual 'contents' payload for Gemini
-  let initialScrapeAttempted = false;
-  let initialScrapeSuccess = false;
 
   // --- Conditional content preparation based on input type (link vs search) ---
   if (isLink) {
-    initialScrapeAttempted = true;
-    try {
-      console.log(`Attempting direct scrape from URL: ${cleanedInput}`);
-      await sleep(500); // Add a 500ms delay to appear more human
-
-      const responseHtml = await fetch(cleanedInput, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36', // User-Agent Android/Chrome
-          'Referer': 'https://www.google.com/', // Simulate coming from Google Search
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-          'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
-          'Connection': 'keep-alive',
-          'Upgrade-Insecure-Requests': '1',
-        },
-      });
-
-      if (responseHtml.ok) {
-        const html = await responseHtml.text();
-        const $ = cheerio.load(html);
-        
-        let articleContent = '';
-        // Target main article content and specific text elements within it
-        const mainArticle = $('article#article, .bodyTxt'); 
-        if (mainArticle.length > 0) {
-            mainArticle.find('p, h1, h2, h3, h4, ul, ol').each((i, el) => {
-                const text = $(el).text().trim();
-                if (text) {
-                    // Add a separator to distinguish paragraphs/sections
-                    if ($(el).is('h1, h2, h3, h4')) {
-                        articleContent += `\n# ${text}\n\n`; // Use Markdown headers for clarity
-                    } else if ($(el).is('p')) {
-                        articleContent += text + '\n\n';
-                    } else if ($(el).is('li')) { // List items
-                        articleContent += `- ${text}\n`;
-                    }
-                }
-            });
-        }
-        
-        const extractedText = articleContent.replace(/\s\s+/g, ' ').trim(); // Further clean up spaces
-
-        if (extractedText && extractedText.length >= 100) {
-          modelContents = [
-            { text: `Voici le contenu complet (textes, titres, listes) extrait de la page à l'URL : ${cleanedInput} \n\n` },
-            { text: extractedText }
-          ];
-          systemInstruction = `Vous agissez en tant qu'Assistant JW expert en publications. Vous avez reçu le texte brut d'une page web. Votre tâche est d'analyser ce texte. La réponse doit être **impérativement basée** et strictement fidèle aux informations et références (bibliques complètes, publications jw.org) trouvées *directement* dans le texte fourni. Ne pas inventer d'informations.`;
-          initialScrapeSuccess = true;
-          console.log("Direct scrape successful with refined content extraction.");
-        } else {
-          console.warn("Direct scrape resulted in insufficient content or no main article found. Falling back to Google Search tool.");
-          initialScrapeSuccess = false; // Not a full success if content is bad
-        }
-      } else {
-        console.warn(`Direct scrape failed with status ${responseHtml.status}. Falling back to Google Search tool.`);
-      }
-    } catch (scrapeError) {
-      console.error("Direct scrape encountered a network/fetch error. Falling back to Google Search tool:", scrapeError);
-    }
-  }
-
-  // If direct scrape failed or it's not a link, or it's a date/theme search, use googleSearch grounding
-  if (!initialScrapeSuccess) {
-    toolsConfig = [{ googleSearch: {} }];
-    
-    // Construct modelContents based on whether it was a failed link scrape or a regular search
-    if (isLink) { // It was a link, but direct scrape failed, so use googleSearch for the link
-      modelContents = `Analyse le contenu de ce lien jw.org en utilisant tes outils de recherche : "${cleanedInput}". Extrait les informations pertinentes pour générer le contenu selon les instructions de système. Ne te contente pas du titre, cherche le texte complet de l'article pour extraire chaque paragraphe et sa question associée si possible. Ensuite, génère le contenu selon les instructions de système, en respectant scrupuleusement le format structuré demandé.`;
-      systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'analyser l'information obtenue via l'outil Google Search pour le lien "${cleanedInput}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés pour extraire et analyser l'information. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations ou si les résultats sont ambigus, indiquez-le clairement. **Il est impératif d'extraire et de présenter l'information paragraphe par paragraphe, incluant la question, le verset (avec texte complet) et une réponse détaillée. Si une question de paragraphe ou un verset n'est pas explicitement trouvé, l'IA doit l'indiquer clairement ou se baser sur le contexte pour formuler une question ou un verset pertinent à ce paragraphe.**`;
-    } else { // It's a search by date/theme
-      modelContents = `Utilise l'outil Google Search pour trouver et analyser l'information pertinente pour le sujet/la date/le contexte : "${input}". Ensuite, génère le contenu selon les instructions de système.`;
-      systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'analyser l'information obtenue via l'outil Google Search pour le contenu "${input}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés pour extraire et analyser l'information. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations ou si les résultats sont ambigus, indiquez-le clairement.`;
-    }
+    // Si c'est un lien, utilisez googleSearch pour "cliquer" virtuellement et extraire le texte
+    modelContents = `Utilise l'outil Google Search pour "cliquer" sur ce lien jw.org et extraire le texte intégral de l'article, sans le design : "${cleanedInput}". Extrait les informations pertinentes pour générer le contenu selon les instructions de système. Cherche spécifiquement chaque paragraphe et sa question associée si possible.`;
+    systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'analyser l'information obtenue via l'outil Google Search pour le lien "${cleanedInput}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés pour extraire et analyser l'information. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations ou si les résultats sont ambigus, indiquez-le clairement. **Il est impératif d'extraire et de présenter l'information paragraphe par paragraphe, incluant la question, le verset (avec texte complet) et une réponse détaillée. Si une question de paragraphe ou un verset n'est pas explicitement trouvé, l'IA doit l'indiquer clairement ou se baser sur le contexte pour formuler une question ou un verset pertinent à ce paragraphe.**`;
+  } else { // It's a search by date/theme
+    modelContents = `Utilise l'outil Google Search pour trouver et analyser l'information pertinente pour le sujet/la date/le contexte : "${input}". Ensuite, génère le contenu selon les instructions de système.`;
+    systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'analyser l'information obtenue via l'outil Google Search pour le contenu "${input}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés pour extraire et analyser l'information. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations ou si les résultats sont ambigus, indiquez-le clairement.`;
   }
 
   // --- END NEW CONTENT PREPARATION ---
@@ -301,33 +233,26 @@ export default async function handler(req, res) {
       Réponds uniquement avec le format suivant: # [Titre de la préparation] \n Thème: [Bref résumé de l'objectif]. Ne fournis aucun autre détail.`;
     }
     // Prepend the specific grounding instruction to the preview instruction
-    systemInstruction = (isLink && !initialScrapeSuccess ? systemInstruction : '') + '\n\n' + previewInstruction;
+    systemInstruction = (isLink ? systemInstruction : '') + '\n\n' + previewInstruction;
   }
 
 
   try {
-    // Utiliser generateContentStream si l'on veut vraiment streamer le contenu de l'API.
-    // Pour l'instant, on reste sur generateContent pour retourner une réponse complète
-    // et on s'appuie sur la réduction du texte scrapé pour éviter le timeout.
     const response = await ai.models.generateContent({
       model: modelToUse,
       contents: modelContents, // Now intelligently set as scraped text or search prompt / direct URL analysis
       config: {
         systemInstruction,
         temperature,
-        tools: toolsConfig, // Now intelligently set (undefined for successful scrape, googleSearch for fallback or search mode)
+        tools: toolsConfig, // googleSearch est toujours activé
       },
     });
 
     const text = response.text || "";
     
     if (!text || text.length < 50 || text.toLowerCase().includes('désolé') || text.toLowerCase().includes('impossible de trouver') || text.toLowerCase().includes('ne peut pas accéder à des sites web externes') || text.toLowerCase().includes('erreur') || text.toLowerCase().includes('aucune information')) {
-      // If initial scrape failed, and now Gemini also failed
-      if (initialScrapeAttempted && !initialScrapeSuccess) {
-          // Provide a specific message about persistent issues for direct links
-          throw new Error("MODEL_PROCESSING_ERROR_WITH_SCRAPE_FALLBACK");
-      }
-      throw new Error("MODEL_PROCESSING_ERROR");
+      // Si Gemini n'a rien trouvé, même avec Google Search
+      throw new Error("MODEL_PROCESSING_ERROR_WITH_GOOGLE_SEARCH");
     }
 
     const titleMatch = text.match(/^#\s*(.*)/m);
@@ -359,12 +284,8 @@ export default async function handler(req, res) {
       return res.status(429).json({ message: `Limite des requêtes Google atteinte. Veuillez patienter 90s pour réessayer. Les tentatives répétées prolongeront ce délai. (Code: 429)` });
     }
 
-    if (isSearchToolError) {
-      return res.status(500).json({ message: "Le service de recherche Google est temporairement saturé ou n'a pas trouvé de résultats pertinents. Veuillez réessayer avec un 'Lien direct' ou patientez. (Code: 500-SEARCH)" });
-    }
-    
-    if (error.message === "MODEL_PROCESSING_ERROR_WITH_SCRAPE_FALLBACK") {
-      return res.status(500).json({ message: "Échec de l'analyse du lien direct via notre serveur ET via les outils de Google. Le site jw.org est probablement en train de bloquer toutes les requêtes automatiques pour ce lien. Veuillez essayer la 'Recherche par date/thème' comme alternative. (Code: 500-LINK-BLOCKED)" });
+    if (isSearchToolError || error.message === "MODEL_PROCESSING_ERROR_WITH_GOOGLE_SEARCH") {
+      return res.status(500).json({ message: "L'outil Google Search n'a pas pu analyser le lien ou trouver l'article de jw.org. Le site bloque probablement l'accès même aux outils de Google. Veuillez essayer la 'Recherche par date/thème' comme alternative. (Code: 500-LINK-BLOCKED)" });
     }
     if (error.message === "MODEL_PROCESSING_ERROR") {
         return res.status(500).json({ message: "L'IA n'a pas pu trouver ou analyser l'article. Essayez un lien direct ou une formulation différente. Assurez-vous que le lien est valide et public. (Code: 500-AI)" });

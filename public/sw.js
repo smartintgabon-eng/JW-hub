@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jw-study-pro-cache-v20'; // Incrément de la version du cache
+const CACHE_NAME = 'jw-study-pro-cache-v21'; // Incrément de la version du cache
 const ASSETS = [
   './',
   './index.html',
@@ -13,7 +13,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS.filter(asset => asset.indexOf('http') === 0 || asset.indexOf('./') === 0))) // Filtrer pour n'ajouter que les URL valides
   );
-  self.skipWaiting();
+  self.skipWaiting(); // Permet au nouveau SW de s'activer immédiatement
 });
 
 self.addEventListener('activate', (event) => {
@@ -22,7 +22,7 @@ self.addEventListener('activate', (event) => {
       keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
     ))
   );
-  self.clients.claim();
+  self.clients.claim(); // Prend le contrôle des clients existants immédiatement
 });
 
 self.addEventListener('fetch', (event) => {

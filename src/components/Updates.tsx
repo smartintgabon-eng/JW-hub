@@ -223,6 +223,21 @@ const updates: UpdateItem[] = [
       "Correction de l'affichage mobile où la barre latérale était trop large et le contenu principal ne prenait pas toute la largeur, résolvant les problèmes de 'dézoom' et de lisibilité.",
       "Mise à jour de la version du Service Worker (`v20`) pour assurer la distribution fiable de ces améliorations."
     ]
+  },
+  {
+    version: "1.9.7",
+    date: "17 Février 2025",
+    features: [
+      "**Fiabilité accrue pour l'analyse des liens jw.org** : Le scraping direct est désormais abandonné au profit d'une utilisation exclusive de l'outil `googleSearch` de Gemini. L'IA est instruite de 'cliquer virtuellement' sur les liens et d'extraire le texte intégral avec une structure paragraphe par paragraphe.",
+      "**Mises à jour de l'application automatiques et non-disruptives** : L'application détecte et installe automatiquement les nouvelles versions en arrière-plan. La page se rechargera pour appliquer les mises à jour sans effacer l'historique ou les paramètres de l'utilisateur.",
+      "**Amélioration de l'interface mobile** : La barre latérale est désormais entièrement masquée et ne prend plus d'espace ni ne se superpose au contenu principal lorsqu'elle est fermée. Le contenu des pages s'adapte encore mieux pour occuper toute la largeur disponible sur les petits écrans."
+    ],
+    fixes: [
+      "Résolution des erreurs `500-LINK-BLOCKED` et `FUNCTION_INVOCATION_TIMEOUT` en simplifiant la méthode d'extraction de contenu des liens `jw.org`, réduisant la charge serveur et les risques de blocage.",
+      "Correction des problèmes de superposition de la barre latérale sur mobile et de la largeur du contenu principal, offrant une expérience utilisateur plus propre et intuitive.",
+      "Implémentation d'un mécanisme de mise à jour automatique via le Service Worker (`skipWaiting`, `clientsClaim` et `controllerchange` listener) pour éviter les réinitialisations manuelles.",
+      "Mise à jour de la version du Service Worker (`v21`) pour garantir la distribution fiable de ces améliorations."
+    ]
   }
 ];
 

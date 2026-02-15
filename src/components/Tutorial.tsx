@@ -18,22 +18,22 @@ const Tutorial: React.FC = () => {
     },
     {
       title: "Architecture Server-side pour un meilleur grounding",
-      content: "L'application utilise désormais une architecture 'Server-side' avec les API Routes de Vercel. Cela signifie que les appels à l'IA de Gemini sont gérés sur un serveur sécurisé, ce qui permet à l'IA d'accéder *réellement* et de manière plus fiable aux informations de jw.org (via l'outil Google Search ou par scraping direct) pour générer des réponses plus précises et fidèles. Ce 'grounding' est maintenant appliqué à TOUTES les requêtes de contenu.",
+      content: "L'application utilise désormais une architecture 'Server-side' avec les API Routes de Vercel. Cela signifie que les appels à l'IA de Gemini sont gérés sur un serveur sécurisé, ce qui permet à l'IA d'accéder *réellement* et de manière plus fiable aux informations de jw.org (via l'outil Google Search) pour générer des réponses plus précises et fidèles. Ce 'grounding' est maintenant appliqué à TOUTES les requêtes de contenu, y compris les liens directs.",
       icon: <Server className="text-gray-400" size={48} />
     },
     {
       title: "Masquer/Afficher la barre latérale (Desktop & Mobile)",
-      content: "Sur ordinateur, vous pouvez masquer ou afficher la barre latérale avec le bouton en haut à gauche. Sur mobile, la barre latérale en superposition a été améliorée pour s'adapter parfaitement aux petits écrans en mode portrait, occupant une largeur optimale de votre appareil. L'état est sauvegardé.",
+      content: "Sur ordinateur, vous pouvez masquer ou afficher la barre latérale avec le bouton en haut à gauche. Sur mobile, la barre latérale en superposition a été améliorée pour s'adapter parfaitement aux petits écrans en mode portrait, occupant une largeur optimale de votre appareil. Elle disparaît totalement quand elle est fermée et le contenu principal prend toute la largeur de l'écran. L'état est sauvegardé.",
       icon: <ChevronLeft className="text-gray-400" size={48} />
     },
     {
       title: "Préparation de la Tour de Garde : Lecture Profonde des Liens",
-      content: "Dans l'onglet 'Tour de Garde', si vous collez le lien direct d'un article de jw.org, l'application va d'abord tenter d'extraire tout le texte pertinent (paragraphes, titres, listes) de la page avec des en-têtes de navigateur avancés et un court délai pour paraître plus humain. En cas de blocage ou de contenu insuffisant, elle basculera automatiquement sur l'outil Google Search de Gemini pour analyser le lien, avec l'instruction de rechercher le texte intégral et sa structure par paragraphes et questions. C'est notre meilleure chance de surmonter les blocages et d'obtenir des réponses précises et structurées.",
+      content: "Dans l'onglet 'Tour de Garde', si vous collez le lien direct d'un article de jw.org, l'application utilisera directement l'outil Google Search de Gemini pour analyser le lien. L'IA est instruite de rechercher le texte **intégral** et sa structure par paragraphes et questions. C'est notre meilleure chance de surmonter les blocages et d'obtenir des réponses précises et structurées.",
       icon: <BookOpen className="text-emerald-500" size={48} />
     },
     {
       title: "Préparation du Cahier Vie et Ministère : Lecture Profonde des Liens",
-      content: "Comme pour la Tour de Garde, si vous entrez un lien direct vers l'article du Cahier, l'application tentera d'abord un scraping direct robuste et ciblé. Si cela échoue, l'outil Google Search de Gemini prendra le relais pour analyser le lien avec une instruction stricte de recherche du texte intégral. Cette double approche vise à maximiser la fiabilité pour l'analyse des liens directs et à obtenir une structure par paragraphe. **Cependant, la 'Recherche par date/thème' reste la méthode la plus fiable en cas de blocage persistant.**",
+      content: "Comme pour la Tour de Garde, si vous entrez un lien direct vers l'article du Cahier, l'outil Google Search de Gemini prendra le relais pour analyser le lien avec une instruction stricte de recherche du texte intégral. Cette approche vise à maximiser la fiabilité pour l'analyse des liens directs et à obtenir une structure par paragraphe. **Cependant, la 'Recherche par date/thème' reste la méthode la plus fiable en cas de blocage persistant par jw.org.**",
       icon: <LinkIcon className="text-orange-500" size={48} />
     },
     {
@@ -97,13 +97,13 @@ const Tutorial: React.FC = () => {
       icon: <HistoryIcon className="text-blue-400" size={48} />
     },
     {
-      title: "Installation de l'application (PWA) & Dépannage",
-      content: "Pour profiter pleinement de JW Study Pro et l'utiliser hors ligne, installez-la comme une application web progressive (PWA). Un bouton 'Installer l'App' apparaîtra (généralement dans Chrome) vous permettant de l'ajouter à votre écran d'accueil pour un accès rapide. L'expérience visuelle hors ligne est désormais identique à l'expérience en ligne. **IMPORTANT : En cas de problème persistant après une mise à jour (comme des erreurs d'API inattendues), DÉSINSTALLEZ la PWA, VIDEZ le cache du navigateur (données de site pour jw-hub.vercel.app), puis RÉINSTALLEZ l'application pour garantir le chargement des dernières versions des fichiers.**",
+      title: "Installation de l'application (PWA) & Mises à jour automatiques",
+      content: "Pour profiter pleinement de JW Study Pro et l'utiliser hors ligne, installez-la comme une application web progressive (PWA). Un bouton 'Installer l'App' apparaîtra (généralement dans Chrome) vous permettant de l'ajouter à votre écran d'accueil. **Désormais, l'application se mettra à jour automatiquement** en rechargeant la page si une nouvelle version est détectée, sans perte de votre historique ou de vos paramètres. En cas de problème persistant, désinstallez la PWA et videz le cache du navigateur pour `jw-hub.vercel.app` avant de la réinstaller.",
       icon: <Download className="text-green-400" size={48} />
     },
     {
       title: "Vérification et Réinitialisation des logs API sur Vercel",
-      content: "Si vous rencontrez toujours des erreurs API (comme 'is not valid JSON' ou 'Cannot find module'), il est **essentiel** de vérifier les logs de votre fonction `generate-content` sur Vercel après avoir forcé un déploiement avec cache vide. Effectuez une requête, puis examinez les logs du déploiement Vercel pour voir si le message 'API Route /api/generate-content hit!' apparaît. Si l'erreur 'Cannot find module' persiste, assurez-vous d'avoir bien vidé le cache de build sur Vercel lors du redéploiement. Les erreurs de scraping peuvent indiquer des problèmes de réseau, que l'URL fournie n'est pas accessible au serveur, ou un blocage actif de la part du site cible (comme `jw.org`).",
+      content: "Si vous rencontrez toujours des erreurs API (comme 'is not valid JSON' ou 'Cannot find module'), il est **essentiel** de vérifier les logs de votre fonction `generate-content` sur Vercel après avoir forcé un déploiement avec cache vide. Effectuez une requête, puis examinez les logs du déploiement Vercel pour voir si le message 'API Route /api/generate-content hit!' apparaît. Si l'erreur 'Cannot find module' persiste, assurez-vous d'avoir bien vidé le cache de build sur Vercel lors du redéploiement. Les erreurs de l'outil Google Search (500-LINK-BLOCKED) peuvent indiquer un blocage actif de la part du site cible (jw.org) qui empêche même les outils de Google d'accéder au texte complet.",
       icon: <AlertTriangle className="text-red-500" size={48} />
     }
   ];

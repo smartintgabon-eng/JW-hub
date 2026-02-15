@@ -293,7 +293,13 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
         y += (textLines.length * 5) + 3;
         doc.setFont('helvetica', 'normal');
       } else if (trimmed.startsWith('QUESTION:') || trimmed.startsWith('RÉPONSE:') || trimmed.startsWith('COMMENTAIRE:') || trimmed.startsWith('APPLICATION:') || trimmed.startsWith('INTRODUCTION:') || trimmed.startsWith('POINTS À DÉVELOPPER:') || trimmed.startsWith('CONCLUSION:') || trimmed.startsWith('POINTS PRINCIPAUX:') || trimmed.startsWith('SUJET:') || trimmed.startsWith('ENTRÉE EN MATIÈRE:') || trimmed.startsWith('MANIÈRE DE FAIRE:') || trimmed.startsWith('QUESTION POUR REVENIR:')) { // Labeled content
-        doc.setFontSize(11);
+        // Ajout d'espace avant les QUESTIONS pour les distinguer
+        if (trimmed.startsWith('QUESTION:')) {
+          y += 5; // Extra spacing for questions
+          doc.setFontSize(12); // Slightly larger font for questions
+        } else {
+          doc.setFontSize(11);
+        }
         doc.setFont('helvetica', 'bold');
         const [label, ...rest] = trimmed.split(':');
         doc.setTextColor(btnColor);

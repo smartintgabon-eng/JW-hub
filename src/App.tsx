@@ -70,6 +70,18 @@ const App: React.FC = () => {
     window.addEventListener('online', handleStatus);
     window.addEventListener('offline', handleStatus);
 
+    // --- Service Worker Update Logic ---
+    const handleControllerChange = () => {
+      // Un nouveau Service Worker a pris le contrôle, recharger la page pour appliquer les mises à jour.
+      console.log('New Service Worker activated, reloading page for updates...');
+      window.location.reload();
+    };
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+    }
+    // --- END Service Worker Update Logic ---
+
     const bgColor = settings.customHex || settings.backgroundColor || '#09090b';
     const btnColor = settings.customButtonHex || settings.buttonColor || '#4a70b5';
     const textColor = getContrastColor(bgColor);
@@ -87,6 +99,9 @@ const App: React.FC = () => {
       window.removeEventListener('online', handleStatus);
       window.removeEventListener('offline', handleStatus);
       window.removeEventListener('beforeInstallPrompt', handleBeforeInstallPrompt); // Correct event name
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+      }
     };
   }, [settings]);
 
@@ -193,16 +208,15 @@ const App: React.FC = () => {
 
       {/* Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-40 bg-black/40 backdrop-blur-xl border-r border-white/10 p-6 transform transition-all duration-300 ease-in-out flex-shrink-0 flex-col
+        z-40 bg-black/40 backdrop-blur-xl border-r border-white/10 p-6 transform transition-all duration-300 ease-in-out flex-shrink-0 flex-col
         ${isReadingModeActive ? 'hidden' : ''}
         
         // Mobile specific (overlay)
-        ${isSidebarOpen ? 'translate-x-0 w-[75vw] max-w-[280px]' : '-translate-x-full w-0'} 
+        ${isSidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0 w-[75vw] max-w-[280px] flex' : 'hidden -translate-x-full w-0'} 
         
-        // Desktop specific (push content)
-        md:static // Makes it part of the normal flow on desktop
-        md:${isSidebarExpanded ? 'w-72 translate-x-0' : 'w-20 translate-x-0 items-center md:py-8'} 
-        md:flex // Ensure it's always flex on desktop, for icon-only mode
+        // Desktop specific (push content, always visible but collapsed/expanded)
+        md:static md:flex 
+        md:${isSidebarExpanded ? 'w-72 translate-x-0' : 'w-20 translate-x-0 items-center md:py-8'}
       `}>
         <div className={`mb-10 px-2 flex items-center ${isSidebarExpanded ? 'space-x-3' : 'justify-center'} cursor-pointer`} onClick={() => navigateTo(AppView.HOME)}>
            <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="w-12 h-12 flex items-center justify-center rounded-xl font-black text-xl shadow-lg">JW</div>
