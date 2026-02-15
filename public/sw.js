@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jw-study-pro-cache-v21'; // Incrément de la version du cache
+const CACHE_NAME = 'jw-study-pro-cache-v22'; // Incrément de la version du cache
 const ASSETS = [
   './',
   './index.html',
@@ -40,4 +40,11 @@ self.addEventListener('fetch', (event) => {
       }).catch(() => null);
     })
   );
+});
+
+// Écouteur pour les messages du client pour ignorer l'attente du Service Worker
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });

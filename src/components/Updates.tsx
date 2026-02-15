@@ -238,6 +238,20 @@ const updates: UpdateItem[] = [
       "Implémentation d'un mécanisme de mise à jour automatique via le Service Worker (`skipWaiting`, `clientsClaim` et `controllerchange` listener) pour éviter les réinitialisations manuelles.",
       "Mise à jour de la version du Service Worker (`v21`) pour garantir la distribution fiable de ces améliorations."
     ]
+  },
+  {
+    version: "1.9.8",
+    date: "18 Février 2025",
+    features: [
+      "**Mises à jour intelligentes du Service Worker** : L'application détecte désormais une nouvelle version du Service Worker et affiche un bouton 'Mettre à jour l'App' pour permettre à l'utilisateur de déclencher la mise à jour sans perdre ses données locales.",
+      "**Bouton 'Installer l'App' plus accessible** : Le bouton d'installation de la PWA est maintenant visible dans la barre latérale sur mobile lorsqu'elle est ouverte, améliorant la découvrabilité.",
+      "**Nettoyage des dépendances et fichiers obsolètes** : Suppression des modules inutilisés comme `cheerio` et des fichiers redondants pour alléger l'application et prévenir les conflits."
+    ],
+    fixes: [
+      "Finalisation de la logique de mise à jour du Service Worker pour une transition plus fluide et sans perte de données.",
+      "Correction des problèmes persistants de superposition de la barre latérale mobile en affinant les classes CSS pour la rendre complètement invisible lorsqu'elle est fermée.",
+      "Suppression de la dépendance `cheerio` qui n'est plus utilisée, résolvant d'éventuels problèmes de compatibilité ou d'empreinte."
+    ]
   }
 ];
 

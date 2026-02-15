@@ -10,7 +10,8 @@ import {
   AlertTriangle,
   CheckCircle
 } from 'lucide-react';
-import { AppSettings } from '../types'; 
+// Fix: Import AppSettings from src/utils/storage.ts as src/types.ts was marked for deletion.
+import { AppSettings } from '../utils/storage'; 
 import { saveSettings, clearHistory, totalReset } from '../utils/storage'; 
 import { isEqual } from 'lodash'; // Using lodash for deep comparison
 
@@ -114,7 +115,7 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 md:max-w-5xl md:mx-auto"> {/* Adjusted for mobile full width */}
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 md:max-w-5xl md:mx-auto"> 
       <div className="flex items-center space-x-4 mb-2">
         <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="p-4 rounded-2xl shadow-lg">
           <SettingsIcon size={28} />

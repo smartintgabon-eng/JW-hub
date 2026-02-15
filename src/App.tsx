@@ -15,9 +15,11 @@ import {
   Loader2,
   Megaphone, // Icon for Predication
   ChevronLeft, // For sidebar toggle
-  ChevronRight // For sidebar toggle
+  ChevronRight, // For sidebar toggle
+  RefreshCw // For update button
 } from 'lucide-react';
-import { AppView, GeneratedStudy, AppSettings } from './types'; 
+// Fix: Import types from src/utils/storage.ts as src/types.ts was marked for deletion.
+import { AppView, GeneratedStudy, AppSettings } from './utils/storage'; 
 import { getSettings, getHistory, saveToHistory } from './utils/storage'; 
 
 // Sub-components
@@ -32,6 +34,7 @@ const getContrastColor = (hex: string) => {
   if (!hex || hex.length < 6) return 'white';
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
+  // Fix: Declare 'b' using 'const'
   const b = parseInt(hex.slice(5, 7), 16);
   const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
   return (yiq >= 128) ? '#09090b' : 'white';
@@ -53,6 +56,8 @@ const App: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isReadingModeActive, setIsReadingModeActive] = useState(false); 
   const [globalLoadingMessage, setGlobalLoadingMessage] = useState<string | null>(null); 
+  const [newWorkerReady, setNewWorkerReady] = useState(false); // New state for update prompt
+  const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null); // New state to hold the waiting SW
 
   useEffect(() => {
     // Save sidebar expanded state to localStorage
@@ -71,15 +76,35 @@ const App: React.FC = () => {
     window.addEventListener('offline', handleStatus);
 
     // --- Service Worker Update Logic ---
+    let registration: ServiceWorkerRegistration | undefined;
+    const checkServiceWorker = async () => {
+      if ('serviceWorker' in navigator) {
+        registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+          registration.addEventListener('updatefound', () => {
+            const installingWorker = registration?.installing;
+            if (installingWorker) {
+              installingWorker.addEventListener('statechange', () => {
+                if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // A new worker is installed and waiting
+                  setNewWorkerReady(true);
+                  setWaitingWorker(installingWorker);
+                }
+              });
+            }
+          });
+        }
+      }
+    };
+    checkServiceWorker();
+
+    // Listen for the new controller to be active
     const handleControllerChange = () => {
-      // Un nouveau Service Worker a pris le contrôle, recharger la page pour appliquer les mises à jour.
-      console.log('New Service Worker activated, reloading page for updates...');
+      console.log('New Service Worker is now active. Reloading page...');
       window.location.reload();
     };
+    navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
 
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
-    }
     // --- END Service Worker Update Logic ---
 
     const bgColor = settings.customHex || settings.backgroundColor || '#09090b';
@@ -98,10 +123,14 @@ const App: React.FC = () => {
     return () => {
       window.removeEventListener('online', handleStatus);
       window.removeEventListener('offline', handleStatus);
-      window.removeEventListener('beforeInstallPrompt', handleBeforeInstallPrompt); // Correct event name
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt); 
+      if (registration) {
+        registration.removeEventListener('updatefound', () => {}); // Remove anonymous listener
+        if (registration.installing) {
+          registration.installing.removeEventListener('statechange', () => {});
+        }
       }
+      navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
     };
   }, [settings]);
 
@@ -130,6 +159,15 @@ const App: React.FC = () => {
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') setDeferredPrompt(null);
+  };
+
+  // New handler for update button
+  const handleUpdateClick = () => {
+    if (waitingWorker) {
+      // Send a message to the waiting Service Worker to skip waiting
+      waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+      // The 'controllerchange' listener will handle the reload
+    }
   };
 
   const navigateTo = (newView: AppView) => {
@@ -163,7 +201,7 @@ const App: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen flex flex-row font-sans"> {/* Changed to flex-row to manage sidebar */}
+    <div className="min-h-screen flex flex-row font-sans"> 
       {/* Global Loading Overlay */}
       {globalLoadingMessage && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center z-[1000] text-white p-6 text-center animate-in fade-in duration-300">
@@ -239,7 +277,7 @@ const App: React.FC = () => {
           <NavItem icon={SettingsIcon} label="Paramètres" active={view === AppView.SETTINGS} onClick={() => navigateTo(AppView.SETTINGS)} isExpanded={isSidebarExpanded} />
         </nav>
 
-        {deferredPrompt && isSidebarExpanded && ( // Only show install button when sidebar is expanded
+        {deferredPrompt && (isSidebarExpanded || isSidebarOpen) && ( 
           <button 
             onClick={handleInstallClick}
             className="mt-4 w-full bg-blue-600/20 border border-blue-600/30 text-blue-400 py-3 rounded-xl flex items-center justify-center space-x-2 text-xs font-bold uppercase tracking-widest hover:bg-blue-600/30 transition-all"
@@ -248,11 +286,20 @@ const App: React.FC = () => {
             <span>Installer l'App</span>
           </button>
         )}
+
+        {newWorkerReady && ( // Show only when an update is ready
+          <button
+            onClick={handleUpdateClick}
+            className="mt-4 w-full bg-emerald-600/20 border border-emerald-600/30 text-emerald-400 py-3 rounded-xl flex items-center justify-center space-x-2 text-xs font-bold uppercase tracking-widest hover:bg-emerald-600/30 transition-all"
+          >
+            <RefreshCw size={16} />
+            <span>Mettre à jour l'App</span>
+          </button>
+        )}
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 p-6 md:p-10 max-h-screen overflow-y-auto">
-        {/* Remove max-w-5xl mx-auto from here. Each view component will handle its own content width */}
           <div style={{ color: 'var(--text-color)' }}>
             {view === AppView.HOME && (
               <div className="max-w-5xl mx-auto flex flex-col items-center justify-center min-h-[70vh] text-center space-y-12 animate-in fade-in duration-700">

@@ -12,7 +12,8 @@ import {
   Download,
   FileSignature
 } from 'lucide-react';
-import { GeneratedStudy, AppSettings, StudyPart } from '../types'; 
+// Fix: Import types from src/utils/storage.ts as src/types.ts was marked for deletion.
+import { GeneratedStudy, AppSettings, StudyPart } from '../utils/storage'; 
 // Importation locale pour studyPartOptions pour éviter les conflits de dépendances avec types.ts si types.ts doit importer History
 import { studyPartOptions } from './StudyTool'; // On importe de StudyTool maintenant
 import { deleteFromHistory, saveToHistory } from '../utils/storage'; 
@@ -75,7 +76,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
   };
 
   // Helper pour formater le texte avec des balises fortes ou italiques pour DOCX
-  const formatTextRun = (text: string, defaultColor: string) => {
+  const formatTextRun = (text: string, defaultTextColor: string) => {
     const children: TextRun[] = [];
     const boldRegex = /\*\*(.*?)\*\*/g;
     const italicRegex = /\*(.*?)\*/g; 
@@ -123,7 +124,8 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
             text: segment.text,
             bold: segment.bold,
             italics: segment.italic,
-            color: defaultColor, 
+            // Fix: Use defaultTextColor instead of defaultColor
+            color: defaultTextColor, 
         }));
     }
     return children;
@@ -266,8 +268,9 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
       } else if (trimmed.startsWith('Thème:')) { // Thème
         doc.setFontSize(11);
         doc.setFont('helvetica', 'italic');
-        doc.text(trimmed, margin, y);
-        y += 7;
+        const textLines = doc.splitTextToSize(trimmed, pageWidth - 2 * margin - 10);
+        doc.text(textLines, margin + 5, y); // Small indent for verses
+        y += (textLines.length * 5) + 3;
         doc.setFont('helvetica', 'normal');
       } else if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION|PORTE-EN-PORTE|NOUVELLE VISITE|COURS BIBLIQUE)/i)) { // Section headers for Ministry / Predication
         doc.setFontSize(14);
@@ -351,7 +354,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
 
   if (selectedStudy) {
     return (
-      <div className={`animate-in fade-in slide-in-from-right-4 duration-500 pb-24 ${readingMode ? 'fixed inset-0 z-[100] bg-[var(--bg-color)] overflow-y-auto p-0 md:p-0' : ''} md:max-w-5xl md:mx-auto`}> {/* Adjusted for mobile full width */}
+      <div className={`animate-in fade-in slide-in-from-right-4 duration-500 pb-24 ${readingMode ? 'fixed inset-0 z-[100] bg-[var(--bg-color)] overflow-y-auto p-0 md:p-0' : ''} md:max-w-5xl md:mx-auto`}> 
         {/* En-tête avec boutons d'action (visible en mode lecture) */}
         <div className={`flex items-center justify-between mb-10 sticky top-0 py-4 z-20 bg-[var(--bg-color)] border-b border-white/5 print:hidden ${readingMode ? 'px-6' : ''}`}>
           <button onClick={() => { setSelectedStudy(null); setReadingMode(false); }} className="flex items-center space-x-3 opacity-60 hover:opacity-100 transition-all group">
@@ -380,7 +383,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
           </div>
         </div>
 
-        <article className={`md:max-w-4xl md:mx-auto ${readingMode ? 'pt-10 px-6' : ''} print:p-0 print:text-black`}> {/* Adjusted for mobile full width */}
+        <article className={`md:max-w-4xl md:mx-auto ${readingMode ? 'pt-10 px-6' : ''} print:p-0 print:text-black`}> 
           <header className="mb-16 text-center">
              <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="text-[10px] font-black uppercase tracking-[0.4em] px-6 py-2 rounded-full mb-8 inline-block shadow-lg">
                 {selectedStudy.type === 'WATCHTOWER' ? 'Étude de la Tour de Garde' : (selectedStudy.type === 'MINISTRY' ? `Cahier Vie et Ministère - ${getPartLabel(selectedStudy.part)}` : `Prédication - ${selectedStudy.preachingType ? selectedStudy.preachingType.replace(/_/g, ' ').toUpperCase() : 'Général'}`)}
@@ -413,7 +416,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
               if (trimmed.startsWith('QUESTION:')) {
                 const [label, ...rest] = trimmed.split(':');
                 return (
-                  <div key={idx} className="space-y-2 mt-6"> {/* Added margin-top */}
+                  <div key={idx} className="space-y-2 mt-6"> 
                     <span className="inline-block px-3 py-1 bg-[var(--btn-color)] text-[var(--btn-text)] text-[10px] font-black uppercase tracking-widest rounded-md">{label}</span>
                     <p className="font-sans font-bold text-lg opacity-90">{rest.join(':').trim()}</p>
                   </div>
@@ -443,7 +446,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-20 md:max-w-5xl md:mx-auto"> {/* Adjusted for mobile full width */}
+    <div className="space-y-8 animate-in fade-in duration-500 pb-20 md:max-w-5xl md:mx-auto"> 
       <div className="flex items-center space-x-4 mb-2">
         <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="p-4 rounded-2xl shadow-xl">
           <HistoryIcon size={28} />

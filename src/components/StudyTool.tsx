@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Link as LinkIcon, Calendar, Loader2, Globe, Check, ShieldCheck, AlertTriangle, RefreshCw, Timer } from 'lucide-react';
-import { StudyPart, GeneratedStudy, AppSettings } from '../types'; 
+// Fix: Import types from src/utils/storage.ts as src/types.ts was marked for deletion.
+import { StudyPart, GeneratedStudy, AppSettings } from '../utils/storage'; 
 import { callGenerateContentApi } from '../services/apiService'; // Utilisez le nouveau service API
 
 interface Props {
@@ -190,7 +191,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
   const getCommonLabelStyles = () => "text-[10px] font-black uppercase opacity-40 ml-1 tracking-[0.2em]";
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 md:max-w-5xl md:mx-auto"> {/* Adjusted for mobile full width */}
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 md:max-w-5xl md:mx-auto"> 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center space-x-4">
           <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="p-4 rounded-2xl shadow-xl">

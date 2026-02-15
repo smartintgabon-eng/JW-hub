@@ -2,9 +2,6 @@ import { GoogleGenAI } from "@google/genai";
 // Importation de cheerio retirée car le scraping direct est abandonné
 // import * as cheerio from 'cheerio'; 
 
-// Fix: setTimeout expects a function as its first argument
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
 const cleanUrl = (url) => {
   try {
     const trimmed = url.trim().replace(/[,.;]+$/, '');
@@ -27,10 +24,8 @@ const getApplicationQuestions = () => `
 `;
 
 export default async function handler(req, res) {
-  // IMPORTANT: Log this to Vercel's console to see if the API route is even being hit.
   console.log("API Route /api/generate-content hit!");
   console.log("Request method:", req.method);
-  // console.log("Request body:", req.body); // Uncomment for full debugging, but be cautious with sensitive data.
 
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method Not Allowed' });
@@ -49,26 +44,24 @@ export default async function handler(req, res) {
   const cleanedInput = cleanUrl(input);
   const isLink = cleanedInput.startsWith('http'); 
 
-  let modelToUse = 'gemini-2.5-flash'; // Unified to gemini-2.5-flash as requested
+  let modelToUse = 'gemini-2.5-flash'; 
   
-  let toolsConfig = [{ googleSearch: {} }]; // googleSearch est toujours activé pour les liens et les recherches
+  // googleSearch est toujours activé pour les liens et les recherches
+  let toolsConfig = [{ googleSearch: {} }]; 
   let systemInstruction = '';
   let temperature = 0.2; 
   
-  let modelContents; // This will hold the actual 'contents' payload for Gemini
+  let modelContents; 
 
-  // --- Conditional content preparation based on input type (link vs search) ---
+  // --- Préparation du contenu en fonction du type d'entrée (lien ou recherche) ---
   if (isLink) {
     // Si c'est un lien, utilisez googleSearch pour "cliquer" virtuellement et extraire le texte
     modelContents = `Utilise l'outil Google Search pour "cliquer" sur ce lien jw.org et extraire le texte intégral de l'article, sans le design : "${cleanedInput}". Extrait les informations pertinentes pour générer le contenu selon les instructions de système. Cherche spécifiquement chaque paragraphe et sa question associée si possible.`;
     systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'analyser l'information obtenue via l'outil Google Search pour le lien "${cleanedInput}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés pour extraire et analyser l'information. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations ou si les résultats sont ambigus, indiquez-le clairement. **Il est impératif d'extraire et de présenter l'information paragraphe par paragraphe, incluant la question, le verset (avec texte complet) et une réponse détaillée. Si une question de paragraphe ou un verset n'est pas explicitement trouvé, l'IA doit l'indiquer clairement ou se baser sur le contexte pour formuler une question ou un verset pertinent à ce paragraphe.**`;
-  } else { // It's a search by date/theme
+  } else { // C'est une recherche par date/thème
     modelContents = `Utilise l'outil Google Search pour trouver et analyser l'information pertinente pour le sujet/la date/le contexte : "${input}". Ensuite, génère le contenu selon les instructions de système.`;
     systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'analyser l'information obtenue via l'outil Google Search pour le contenu "${input}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés pour extraire et analyser l'information. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations ou si les résultats sont ambigus, indiquez-le clairement.`;
   }
-
-  // --- END NEW CONTENT PREPARATION ---
-
 
   if (type === 'WATCHTOWER') {
     systemInstruction += `\n\nSubdivisez l'article de manière structurée et très détaillée. Priorise la clarté et la concision tout en étant exhaustif. **Il est impératif d'extraire et de présenter l'information paragraphe par paragraphe, incluant la question, le verset (avec texte complet) et une réponse détaillée. Si une question de paragraphe ou un verset n'est pas explicitement trouvé, l'IA doit l'indiquer clairement ou se baser sur le contexte pour formuler une question ou un verset pertinent à ce paragraphe.**
@@ -232,26 +225,24 @@ export default async function handler(req, res) {
       previewInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est de fournir un titre et un bref résumé pour une préparation de prédication de type "${preachingType}" avec le sujet "${input}".
       Réponds uniquement avec le format suivant: # [Titre de la préparation] \n Thème: [Bref résumé de l'objectif]. Ne fournis aucun autre détail.`;
     }
-    // Prepend the specific grounding instruction to the preview instruction
+    // Ajoute l'instruction de grounding spécifique au début de l'instruction de prévisualisation si c'est un lien
     systemInstruction = (isLink ? systemInstruction : '') + '\n\n' + previewInstruction;
   }
-
 
   try {
     const response = await ai.models.generateContent({
       model: modelToUse,
-      contents: modelContents, // Now intelligently set as scraped text or search prompt / direct URL analysis
+      contents: modelContents, 
       config: {
         systemInstruction,
         temperature,
-        tools: toolsConfig, // googleSearch est toujours activé
+        tools: toolsConfig, 
       },
     });
 
     const text = response.text || "";
     
     if (!text || text.length < 50 || text.toLowerCase().includes('désolé') || text.toLowerCase().includes('impossible de trouver') || text.toLowerCase().includes('ne peut pas accéder à des sites web externes') || text.toLowerCase().includes('erreur') || text.toLowerCase().includes('aucune information')) {
-      // Si Gemini n'a rien trouvé, même avec Google Search
       throw new Error("MODEL_PROCESSING_ERROR_WITH_GOOGLE_SEARCH");
     }
 
@@ -262,12 +253,12 @@ export default async function handler(req, res) {
     return res.status(200).json({ text, title, theme });
 
   } catch (error) {
-    console.error("Gemini API Error (in serverless function):", error); // More specific log
+    console.error("Gemini API Error (in serverless function):", error); 
     
     const errorStr = JSON.stringify(error); 
     const status = error.status || (error.response && error.response.status); 
 
-    // Specific API key/billing errors
+    // Erreurs spécifiques à la clé API/facturation
     if (status === 401 || errorStr.includes('Unauthorized') || errorStr.includes('invalid API key')) {
         return res.status(401).json({ message: "Clé API invalide. Vérifiez que votre clé est correcte et configurée dans votre projet Google Cloud (et Vercel si déployé)." });
     }
@@ -278,8 +269,6 @@ export default async function handler(req, res) {
     const isRateLimit = errorStr.includes('429') || errorStr.includes('quota') || errorStr.includes('exhausted');
     const isSearchToolError = errorStr.includes('tool error') || errorStr.includes('Google Search') || errorStr.includes('not found');
     
-    // Serverless functions are stateless, so client-side retry logic is preferred.
-    // We return clear messages for the client to handle cooldowns.
     if (isRateLimit) {
       return res.status(429).json({ message: `Limite des requêtes Google atteinte. Veuillez patienter 90s pour réessayer. Les tentatives répétées prolongeront ce délai. (Code: 429)` });
     }
@@ -291,7 +280,7 @@ export default async function handler(req, res) {
         return res.status(500).json({ message: "L'IA n'a pas pu trouver ou analyser l'article. Essayez un lien direct ou une formulation différente. Assurez-vous que le lien est valide et public. (Code: 500-AI)" });
     }
 
-    // Generic error
+    // Erreur générique
     return res.status(500).json({ message: `Une erreur de communication est survenue avec l'API Gemini. Statut: ${status || 'inconnu'}. Détails: ${error.message}. (Code: 500-GENERIC)` });
   }
 }
