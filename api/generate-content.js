@@ -1,6 +1,5 @@
-import { GoogleGenAI } from "@google/genai";
-// Importation de cheerio retirée car le scraping direct est abandonné
-// import * as cheerio from 'cheerio'; 
+import { GoogleGenAI } from "@google/genai"; // Fix: Correct import for GoogleGenAI
+import * as cheerio from 'cheerio'; // Réintroduction de cheerio pour le parsing HTML
 
 const cleanUrl = (url) => {
   try {
@@ -33,7 +32,7 @@ export default async function handler(req, res) {
 
   const { type, input, part, settings, isInitialSearchForPreview, preachingType } = req.body;
 
-  const apiKey = process.env.GEMINI_API_KEY; // Using GEMINI_API_KEY for serverless
+  const apiKey = process.env.GEMINI_API_KEY; 
   if (!apiKey) {
     console.error("API Key is missing in environment variables.");
     return res.status(500).json({ message: "Clé API absente. Vérifiez votre configuration sur Vercel." });
@@ -44,25 +43,77 @@ export default async function handler(req, res) {
   const cleanedInput = cleanUrl(input);
   const isLink = cleanedInput.startsWith('http'); 
 
-  let modelToUse = 'gemini-2.5-flash'; 
-  
-  // googleSearch est toujours activé pour les liens et les recherches
-  let toolsConfig = [{ googleSearch: {} }]; 
+  let modelToUse = 'gemini-2.5-flash'; // Fix: Use gemini-2.5-flash
+  let toolsConfig = [{ googleSearch: {} }]; // googleSearch est toujours activé pour les liens et les recherches
   let systemInstruction = '';
   let temperature = 0.2; 
   
   let modelContents; 
+  let contextTextFromProxy = "";
 
-  // --- Préparation du contenu en fonction du type d'entrée (lien ou recherche) ---
   if (isLink) {
-    // Si c'est un lien, utilisez googleSearch pour "cliquer" virtuellement et extraire le texte
-    modelContents = `Utilise l'outil Google Search pour "cliquer" sur ce lien jw.org et extraire le texte intégral de l'article, sans le design : "${cleanedInput}". Extrait les informations pertinentes pour générer le contenu selon les instructions de système. Cherche spécifiquement chaque paragraphe et sa question associée si possible.`;
-    systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'analyser l'information obtenue via l'outil Google Search pour le lien "${cleanedInput}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés pour extraire et analyser l'information. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations ou si les résultats sont ambigus, indiquez-le clairement. **Il est impératif d'extraire et de présenter l'information paragraphe par paragraphe, incluant la question, le verset (avec texte complet) et une réponse détaillée. Si une question de paragraphe ou un verset n'est pas explicitement trouvé, l'IA doit l'indiquer clairement ou se baser sur le contexte pour formuler une question ou un verset pertinent à ce paragraphe.**`;
-  } else { // C'est une recherche par date/thème
+    try {
+      console.log(`Attempting to fetch content via AllOrigins proxy for URL: ${cleanedInput}`);
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(cleanedInput)}`;
+      const proxyResponse = await fetch(proxyUrl);
+      
+      if (!proxyResponse.ok) {
+        throw new Error(`Failed to fetch via proxy with status: ${proxyResponse.status}`);
+      }
+      
+      const proxyData = await proxyResponse.json();
+      const htmlContent = proxyData.contents;
+
+      const $ = cheerio.load(htmlContent);
+      let articleContent = '';
+      
+      // Cibler les éléments de contenu principaux pour extraire le texte
+      const mainArticle = $('article#article, .bodyTxt'); 
+      if (mainArticle.length > 0) {
+          mainArticle.find('p, h1, h2, h3, h4, ul, ol').each((i, el) => {
+              const text = $(el).text().trim();
+              if (text) {
+                  if ($(el).is('h1, h2, h3, h4')) {
+                      articleContent += `\n# ${text}\n\n`; 
+                  } else if ($(el).is('p')) {
+                      articleContent += text + '\n\n';
+                  } else if ($(el).is('li')) { 
+                      articleContent += `- ${text}\n`;
+                  }
+              }
+          });
+      }
+      
+      contextTextFromProxy = articleContent.replace(/\s\s+/g, ' ').trim(); 
+
+      if (contextTextFromProxy && contextTextFromProxy.length > 100) {
+        // Si le proxy a réussi à récupérer du contenu, on l'utilise directement
+        modelContents = [
+          { text: `Voici le contenu TEXTE BRUT (sans design) extrait de la page à l'URL via un proxy : ${cleanedInput} \n\n` },
+          { text: contextTextFromProxy }
+        ];
+        systemInstruction = `Vous agissez en tant qu'Assistant JW expert en publications. Vous avez reçu le texte brut d'une page web (pré-traité par un proxy). Votre tâche est d'analyser ce texte. La réponse doit être **impérativement basée** et strictement fidèle aux informations et références (bibliques complètes, publications jw.org) trouvées *directement* dans le texte fourni. Ne pas inventer d'informations.`;
+        console.log("Content successfully fetched via proxy and will be used by Gemini.");
+      } else {
+        // Si le proxy n'a pas pu obtenir de contenu suffisant, on tombe sur le googleSearch de Gemini
+        console.warn("Proxy fetch resulted in insufficient content. Falling back to Google Search tool for link analysis.");
+        modelContents = `Analyse le contenu de ce lien jw.org en utilisant tes outils de recherche : "${cleanedInput}". Extrait les informations pertinentes pour générer le contenu selon les instructions de système. Ne te contente pas du titre, cherche le texte complet de l'article pour extraire chaque paragraphe et sa question associée si possible. Ensuite, génère le contenu selon les instructions de système, en respectant scrupuleusement le format structuré demandé.`;
+        systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'analyser l'information obtenue via l'outil Google Search pour le lien "${cleanedInput}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés pour extraire et analyser l'information. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations ou si les résultats sont ambigus, indiquez-le clairement. **Il est impératif d'extraire et de présenter l'information paragraphe par paragraphe, incluant la question, le verset (avec texte complet) et une réponse détaillée. Si une question de paragraphe ou un verset n'est pas explicitement trouvé, l'IA doit l'indiquer clairement ou se baser sur le contexte pour formuler une question ou un verset pertinent à ce paragraphe.**`;
+      }
+
+    } catch (proxyError) {
+      console.error("Error fetching via proxy. Falling back to Google Search tool:", proxyError);
+      // En cas d'échec total du proxy, on laisse Google Search de Gemini faire le travail
+      modelContents = `Analyse le contenu de ce lien jw.org en utilisant tes outils de recherche : "${cleanedInput}". Extrait les informations pertinentes pour générer le contenu selon les instructions de système. Ne te contente pas du titre, cherche le texte complet de l'article pour extraire chaque paragraphe et sa question associée si possible. Ensuite, génère le contenu selon les instructions de système, en respectant scrupuleusement le format structuré demandé.`;
+      systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'analyser l'information obtenue via l'outil Google Search pour le lien "${cleanedInput}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés pour extraire et analyser l'information. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations ou si les résultats sont ambigus, indiquez-le clairement. **Il est impératif d'extraire et de présenter l'information paragraphe par paragraphe, incluant la question, le verset (avec texte complet) et une réponse détaillée. Si une question de paragraphe ou un verset n'est pas explicitement trouvé, l'IA doit l'indiquer clairement ou se baser sur le contexte pour formuler une question ou un verset pertinent à ce paragraphe.**`;
+    }
+  } else { // C'est une recherche par date/thème, Google Search est la méthode directe
     modelContents = `Utilise l'outil Google Search pour trouver et analyser l'information pertinente pour le sujet/la date/le contexte : "${input}". Ensuite, génère le contenu selon les instructions de système.`;
     systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'analyser l'information obtenue via l'outil Google Search pour le contenu "${input}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés pour extraire et analyser l'information. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations ou si les résultats sont ambigus, indiquez-le clairement.`;
   }
 
+  // --- Instructions spécifiques au type de contenu (WATCHTOWER, MINISTRY, PREDICATION) ---
+  // Ces instructions sont APPENDED aux instructions de base définies ci-dessus
   if (type === 'WATCHTOWER') {
     systemInstruction += `\n\nSubdivisez l'article de manière structurée et très détaillée. Priorise la clarté et la concision tout en étant exhaustif. **Il est impératif d'extraire et de présenter l'information paragraphe par paragraphe, incluant la question, le verset (avec texte complet) et une réponse détaillée. Si une question de paragraphe ou un verset n'est pas explicitement trouvé, l'IA doit l'indiquer clairement ou se baser sur le contexte pour formuler une question ou un verset pertinent à ce paragraphe.**
     
@@ -107,7 +158,7 @@ export default async function handler(req, res) {
         QUESTION: [La première question de la perle spirituelle, textuellement de l'article]
         RÉPONSE: [Réponse détaillée basée sur la publication de référence ou l'article lui-même]
         COMMENTAIRE: [Point d'approfondissement ou idée supplémentaire tirée de l'article]
-        APPLICATION: [Comment appliquer personnellement cette perle tirée de l'article]
+        APPLICATION: (Comment appliquer personnellement cette perle tirée de l'article)
         QUESTION: [La deuxième question sur les leçons à tirer de la lecture biblique de la semaine, textuellement de l'article]
         RÉPONSE: [Réponse détaillée sur les leçons personnelles, pour la prédication, etc., tirée de l'article]
         `;
@@ -132,7 +183,6 @@ export default async function handler(req, res) {
         partInstruction = `**ÉTUDE BIBLIQUE DE L'ASSEMBLÉE**
         En te basant sur le contenu de'l'article (et les références de livre/brochure), fournis les "RÉPONSES :" détaillées aux questions de l'étude.
         `;
-        // Ajoute les questions d'application SEULEMENT pour cette partie
         partInstruction += `\n\n${getApplicationQuestions()}`;
         break;
       case 'tout':
@@ -164,7 +214,7 @@ export default async function handler(req, res) {
     
     ${partInstruction}
     
-    Style: ${settings.answerPreferences || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé. Élabore avec des points pertinents.'}. Réponds en Markdown.`;
+    Style: ${settings.answerPreferences || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé'}. Réponds en Markdown.`;
     temperature = 0.2; 
   } else if (type === 'PREDICATION') {
     let preachingInstruction = '';
@@ -225,8 +275,9 @@ export default async function handler(req, res) {
       previewInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est de fournir un titre et un bref résumé pour une préparation de prédication de type "${preachingType}" avec le sujet "${input}".
       Réponds uniquement avec le format suivant: # [Titre de la préparation] \n Thème: [Bref résumé de l'objectif]. Ne fournis aucun autre détail.`;
     }
-    // Ajoute l'instruction de grounding spécifique au début de l'instruction de prévisualisation si c'est un lien
-    systemInstruction = (isLink ? systemInstruction : '') + '\n\n' + previewInstruction;
+    // Si nous avons utilisé le proxy pour obtenir du contenu, cela fait partie de l'instruction de base.
+    // Sinon, l'instruction de prévisualisation est ajoutée directement.
+    systemInstruction = systemInstruction + '\n\n' + previewInstruction;
   }
 
   try {
@@ -240,7 +291,7 @@ export default async function handler(req, res) {
       },
     });
 
-    const text = response.text || "";
+    const text = response.text || ""; // Fix: Use .text property, not .text() method
     
     if (!text || text.length < 50 || text.toLowerCase().includes('désolé') || text.toLowerCase().includes('impossible de trouver') || text.toLowerCase().includes('ne peut pas accéder à des sites web externes') || text.toLowerCase().includes('erreur') || text.toLowerCase().includes('aucune information')) {
       throw new Error("MODEL_PROCESSING_ERROR_WITH_GOOGLE_SEARCH");
@@ -274,7 +325,8 @@ export default async function handler(req, res) {
     }
 
     if (isSearchToolError || error.message === "MODEL_PROCESSING_ERROR_WITH_GOOGLE_SEARCH") {
-      return res.status(500).json({ message: "L'outil Google Search n'a pas pu analyser le lien ou trouver l'article de jw.org. Le site bloque probablement l'accès même aux outils de Google. Veuillez essayer la 'Recherche par date/thème' comme alternative. (Code: 500-LINK-BLOCKED)" });
+      // Message d'erreur mis à jour pour refléter l'utilisation du proxy
+      return res.status(500).json({ message: "Échec de l'analyse du lien via le proxy AllOrigins ou l'outil Google Search. Le site jw.org est probablement en train de bloquer toutes les requêtes automatiques pour ce lien. Veuillez essayer la 'Recherche par date/thème' comme alternative. (Code: 500-LINK-BLOCKED)" });
     }
     if (error.message === "MODEL_PROCESSING_ERROR") {
         return res.status(500).json({ message: "L'IA n'a pas pu trouver ou analyser l'article. Essayez un lien direct ou une formulation différente. Assurez-vous que le lien est valide et public. (Code: 500-AI)" });

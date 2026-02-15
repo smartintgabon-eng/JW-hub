@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Megaphone, Loader2, Check, AlertTriangle, Timer, BookOpen, Search, Link as LinkIcon, Handshake, CornerRightDown, ChevronRight, ChevronLeft } from 'lucide-react';
-// Fix: Import types from src/utils/storage.ts as src/types.ts was marked for deletion.
-import { AppSettings, GeneratedStudy, PredicationType } from '../utils/storage';
+// Fix: Import types from src/types.ts
+import { AppSettings, GeneratedStudy, PredicationType } from '../types';
 import { callGenerateContentApi } from '../services/apiService'; // Utilisez le nouveau service API
 
 interface Props {

@@ -252,6 +252,21 @@ const updates: UpdateItem[] = [
       "Correction des problèmes persistants de superposition de la barre latérale mobile en affinant les classes CSS pour la rendre complètement invisible lorsqu'elle est fermée.",
       "Suppression de la dépendance `cheerio` qui n'est plus utilisée, résolvant d'éventuels problèmes de compatibilité ou d'empreinte."
     ]
+  },
+  {
+    version: "1.9.9",
+    date: "19 Février 2025",
+    features: [
+      "**Fiabilité maximale de l'analyse des liens jw.org** : Le système utilise désormais un proxy gratuit (AllOrigins) combiné à `cheerio` pour récupérer et nettoyer le contenu des pages jw.org. Ce texte brut est ensuite envoyé à Gemini pour une analyse précise. L'outil Google Search de Gemini reste un filet de sécurité si le proxy échoue.",
+      "**Gestion améliorée des mises à jour** : Les mises à jour de l'application sont désormais plus visibles et contrôlées par l'utilisateur. Un bouton 'Mettre à jour l'App' apparaît quand une nouvelle version est prête, permettant une mise à jour manuelle sans perte de données.",
+      "**Restauration complète de la stabilité de l'application** : Correction des erreurs critiques qui causaient l'écran noir et les problèmes d'affichage. Les fichiers essentiels ont été restaurés et les dépendances inutilisées supprimées pour une application plus propre et plus robuste."
+    ],
+    fixes: [
+      "Résolution de l'écran noir et des erreurs de compilation/exécution en restaurant les fichiers `src/index.tsx` et `src/types.ts`.",
+      "Correction des problèmes de superposition de la barre latérale sur mobile en affinant les classes CSS pour un masquage et un positionnement corrects.",
+      "Suppression définitive des fichiers redondants et inutiles (`index.tsx` à la racine, `types.ts` à la racine, etc.) pour simplifier la structure du projet.",
+      "Mise à jour du Service Worker (`v23`) et de la logique de l'application pour une détection et une application des mises à jour fiables et non-destructrices."
+    ]
   }
 ];
 

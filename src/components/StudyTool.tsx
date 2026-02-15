@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Link as LinkIcon, Calendar, Loader2, Globe, Check, ShieldCheck, AlertTriangle, RefreshCw, Timer } from 'lucide-react';
-// Fix: Import types from src/utils/storage.ts as src/types.ts was marked for deletion.
-import { StudyPart, GeneratedStudy, AppSettings } from '../utils/storage'; 
+// Fix: Import types from src/types.ts
+import { StudyPart, GeneratedStudy, AppSettings } from '../types'; 
 import { callGenerateContentApi } from '../services/apiService'; // Utilisez le nouveau service API
 
 interface Props {

@@ -18,8 +18,8 @@ import {
   ChevronRight, // For sidebar toggle
   RefreshCw // For update button
 } from 'lucide-react';
-// Fix: Import types from src/utils/storage.ts as src/types.ts was marked for deletion.
-import { AppView, GeneratedStudy, AppSettings } from './utils/storage'; 
+// Fix: Import types from src/types.ts
+import { AppView, GeneratedStudy, AppSettings } from './types'; 
 import { getSettings, getHistory, saveToHistory } from './utils/storage'; 
 
 // Sub-components
@@ -34,8 +34,7 @@ const getContrastColor = (hex: string) => {
   if (!hex || hex.length < 6) return 'white';
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
-  // Fix: Declare 'b' using 'const'
-  const b = parseInt(hex.slice(5, 7), 16);
+  const b = parseInt(hex.slice(5, 7), 16); // Fix: Correctly declare b
   const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
   return (yiq >= 128) ? '#09090b' : 'white';
 };
@@ -60,7 +59,6 @@ const App: React.FC = () => {
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null); // New state to hold the waiting SW
 
   useEffect(() => {
-    // Save sidebar expanded state to localStorage
     localStorage.setItem('isSidebarExpanded', JSON.stringify(isSidebarExpanded));
   }, [isSidebarExpanded]);
 
@@ -98,7 +96,7 @@ const App: React.FC = () => {
     };
     checkServiceWorker();
 
-    // Listen for the new controller to be active
+    // Listen for the new controller to be active for automatic reload
     const handleControllerChange = () => {
       console.log('New Service Worker is now active. Reloading page...');
       window.location.reload();
@@ -124,15 +122,16 @@ const App: React.FC = () => {
       window.removeEventListener('online', handleStatus);
       window.removeEventListener('offline', handleStatus);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt); 
+      // Clean up SW listeners
       if (registration) {
-        registration.removeEventListener('updatefound', () => {}); // Remove anonymous listener
+        registration.removeEventListener('updatefound', () => {}); 
         if (registration.installing) {
           registration.installing.removeEventListener('statechange', () => {});
         }
       }
       navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
     };
-  }, [settings]);
+  }, [settings, isReadingModeActive]); // Added isReadingModeActive to dependency array
 
   // Observer le mode lecture de l'historique pour masquer globalement l'UI
   useEffect(() => {
@@ -161,12 +160,14 @@ const App: React.FC = () => {
     if (outcome === 'accepted') setDeferredPrompt(null);
   };
 
-  // New handler for update button
+  // Handler for update button
   const handleUpdateClick = () => {
     if (waitingWorker) {
       // Send a message to the waiting Service Worker to skip waiting
       waitingWorker.postMessage({ type: 'SKIP_WAITING' });
       // The 'controllerchange' listener will handle the reload
+      // A small delay to ensure the message is processed before reload
+      setTimeout(() => window.location.reload(), 100); 
     }
   };
 
@@ -246,15 +247,15 @@ const App: React.FC = () => {
 
       {/* Sidebar */}
       <aside className={`
-        z-40 bg-black/40 backdrop-blur-xl border-r border-white/10 p-6 transform transition-all duration-300 ease-in-out flex-shrink-0 flex-col
+        bg-black/40 backdrop-blur-xl border-r border-white/10 p-6 transform transition-all duration-300 ease-in-out flex-shrink-0 flex-col
         ${isReadingModeActive ? 'hidden' : ''}
         
         // Mobile specific (overlay)
-        ${isSidebarOpen ? 'fixed inset-y-0 left-0 translate-x-0 w-[75vw] max-w-[280px] flex' : 'hidden -translate-x-full w-0'} 
+        ${isSidebarOpen ? 'fixed inset-y-0 left-0 z-50 translate-x-0 w-[75vw] max-w-[280px] flex' : 'hidden -translate-x-full w-0'} 
         
         // Desktop specific (push content, always visible but collapsed/expanded)
         md:static md:flex 
-        md:${isSidebarExpanded ? 'w-72 translate-x-0' : 'w-20 translate-x-0 items-center md:py-8'}
+        md:z-40 md:${isSidebarExpanded ? 'w-72 translate-x-0' : 'w-20 translate-x-0 items-center md:py-8'}
       `}>
         <div className={`mb-10 px-2 flex items-center ${isSidebarExpanded ? 'space-x-3' : 'justify-center'} cursor-pointer`} onClick={() => navigateTo(AppView.HOME)}>
            <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="w-12 h-12 flex items-center justify-center rounded-xl font-black text-xl shadow-lg">JW</div>
@@ -277,7 +278,7 @@ const App: React.FC = () => {
           <NavItem icon={SettingsIcon} label="Paramètres" active={view === AppView.SETTINGS} onClick={() => navigateTo(AppView.SETTINGS)} isExpanded={isSidebarExpanded} />
         </nav>
 
-        {deferredPrompt && (isSidebarExpanded || isSidebarOpen) && ( 
+        {deferredPrompt && (isSidebarExpanded || isSidebarOpen) && ( // Show on desktop expanded or mobile open
           <button 
             onClick={handleInstallClick}
             className="mt-4 w-full bg-blue-600/20 border border-blue-600/30 text-blue-400 py-3 rounded-xl flex items-center justify-center space-x-2 text-xs font-bold uppercase tracking-widest hover:bg-blue-600/30 transition-all"

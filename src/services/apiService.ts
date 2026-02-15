@@ -1,29 +1,6 @@
 // src/services/apiService.ts
-
-// Définitions de types locales, car types.ts est marqué pour suppression
-export type StudyPart =
-  | 'perles_spirituelles' 
-  | 'joyaux_parole_dieu' 
-  | 'applique_ministere' 
-  | 'vie_chretienne' 
-  | 'etude_biblique_assemblee' 
-  | 'tout';
-
-export type PredicationType =
-  | 'porte_en_porte'
-  | 'nouvelle_visite'
-  | 'cours_biblique';
-
-export interface AppSettings {
-  backgroundColor: string;
-  customHex: string;
-  buttonColor: string;
-  customButtonHex: string;
-  autoSave: boolean;
-  modelName: string;
-  answerPreferences: string;
-}
-
+// Fix: Import types from src/types.ts instead of defining them locally
+import { StudyPart, PredicationType, AppSettings } from '../types'; 
 
 export const callGenerateContentApi = async (
   type: 'WATCHTOWER' | 'MINISTRY' | 'PREDICATION',

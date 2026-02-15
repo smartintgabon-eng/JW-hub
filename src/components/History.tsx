@@ -12,8 +12,8 @@ import {
   Download,
   FileSignature
 } from 'lucide-react';
-// Fix: Import types from src/utils/storage.ts as src/types.ts was marked for deletion.
-import { GeneratedStudy, AppSettings, StudyPart } from '../utils/storage'; 
+// Fix: Import types from src/types.ts
+import { GeneratedStudy, AppSettings, StudyPart } from '../types'; 
 // Importation locale pour studyPartOptions pour éviter les conflits de dépendances avec types.ts si types.ts doit importer History
 import { studyPartOptions } from './StudyTool'; // On importe de StudyTool maintenant
 import { deleteFromHistory, saveToHistory } from '../utils/storage'; 
@@ -124,7 +124,6 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
             text: segment.text,
             bold: segment.bold,
             italics: segment.italic,
-            // Fix: Use defaultTextColor instead of defaultColor
             color: defaultTextColor, 
         }));
     }

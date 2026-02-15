@@ -18,22 +18,22 @@ const Tutorial: React.FC = () => {
     },
     {
       title: "Architecture Server-side pour un meilleur grounding",
-      content: "L'application utilise désormais une architecture 'Server-side' avec les API Routes de Vercel. Cela signifie que les appels à l'IA de Gemini sont gérés sur un serveur sécurisé, ce qui permet à l'IA d'accéder *réellement* et de manière plus fiable aux informations de jw.org (via l'outil Google Search) pour générer des réponses plus précises et fidèles. Ce 'grounding' est maintenant appliqué à TOUTES les requêtes de contenu, y compris les liens directs.",
+      content: "L'application utilise désormais une architecture 'Server-side' avec les API Routes de Vercel. Cela signifie que les appels à l'IA de Gemini sont gérés sur un serveur sécurisé, ce qui permet à l'IA d'accéder *réellement* et de manière plus fiable aux informations de jw.org (via un proxy gratuit ou l'outil Google Search) pour générer des réponses plus précises et fidèles. Ce 'grounding' est maintenant appliqué à TOUTES les requêtes de contenu, y compris les liens directs.",
       icon: <Server className="text-gray-400" size={48} />
     },
     {
       title: "Masquer/Afficher la barre latérale (Desktop & Mobile)",
-      content: "Sur ordinateur, vous pouvez masquer ou afficher la barre latérale avec le bouton en haut à gauche. Sur mobile, la barre latérale en superposition a été améliorée pour s'adapter parfaitement aux petits écrans en mode portrait, occupant une largeur optimale de votre appareil. Elle disparaît totalement quand elle est fermée et le contenu principal prend toute la largeur de l'écran. L'état est sauvegardé.",
+      content: "Sur ordinateur, vous pouvez masquer ou afficher la barre latérale avec le bouton en haut à gauche. Sur mobile, la barre latérale en superposition a été améliorée pour s'adapter parfaitement aux petits écrans en mode portrait, occupant une largeur optimale de votre appareil. Elle disparaît totalement (et n'affecte plus le contenu principal) quand elle est fermée et le contenu principal prend toute la largeur de l'écran. L'état est sauvegardé.",
       icon: <ChevronLeft className="text-gray-400" size={48} />
     },
     {
       title: "Préparation de la Tour de Garde : Lecture Profonde des Liens",
-      content: "Dans l'onglet 'Tour de Garde', si vous collez le lien direct d'un article de jw.org, l'application utilisera directement l'outil Google Search de Gemini pour analyser le lien. L'IA est instruite de rechercher le texte **intégral** et sa structure par paragraphes et questions. C'est notre meilleure chance de surmonter les blocages et d'obtenir des réponses précises et structurées.",
+      content: "Dans l'onglet 'Tour de Garde', si vous collez le lien direct d'un article de jw.org, l'application tentera d'abord de récupérer le contenu via un proxy gratuit (AllOrigins) pour lire le texte réel. Si cela ne fonctionne pas ou si le contenu est insuffisant, l'outil Google Search de Gemini prendra le relais pour analyser le lien. L'IA est instruite de rechercher le texte **intégral** et sa structure par paragraphes et questions. C'est notre meilleure chance de surmonter les blocages et d'obtenir des réponses précises et structurées.",
       icon: <BookOpen className="text-emerald-500" size={48} />
     },
     {
       title: "Préparation du Cahier Vie et Ministère : Lecture Profonde des Liens",
-      content: "Comme pour la Tour de Garde, si vous entrez un lien direct vers l'article du Cahier, l'outil Google Search de Gemini prendra le relais pour analyser le lien avec une instruction stricte de recherche du texte intégral. Cette approche vise à maximiser la fiabilité pour l'analyse des liens directs et à obtenir une structure par paragraphe. **Cependant, la 'Recherche par date/thème' reste la méthode la plus fiable en cas de blocage persistant par jw.org.**",
+      content: "Comme pour la Tour de Garde, si vous entrez un lien direct vers l'article du Cahier, l'application tentera d'abord de récupérer le contenu via le proxy. Si cela échoue, l'outil Google Search de Gemini prendra le relais pour analyser le lien avec une instruction stricte de recherche du texte intégral. Cette approche vise à maximiser la fiabilité pour l'analyse des liens directs et à obtenir une structure par paragraphe. **Cependant, la 'Recherche par date/thème' reste la méthode la plus fiable en cas de blocage persistant par jw.org.**",
       icon: <LinkIcon className="text-orange-500" size={48} />
     },
     {
@@ -98,7 +98,7 @@ const Tutorial: React.FC = () => {
     },
     {
       title: "Installation de l'application (PWA) & Mises à jour automatiques",
-      content: "Pour profiter pleinement de JW Study Pro et l'utiliser hors ligne, installez-la comme une application web progressive (PWA). Un bouton 'Installer l'App' apparaîtra (généralement dans Chrome) vous permettant de l'ajouter à votre écran d'accueil. **Désormais, l'application se mettra à jour automatiquement** en rechargeant la page si une nouvelle version est détectée, sans perte de votre historique ou de vos paramètres. En cas de problème persistant, désinstallez la PWA et videz le cache du navigateur pour `jw-hub.vercel.app` avant de la réinstaller.",
+      content: "Pour profiter pleinement de JW Study Pro et l'utiliser hors ligne, installez-la comme une application web progressive (PWA). Un bouton 'Installer l'App' apparaîtra (généralement dans Chrome) vous permettant de l'ajouter à votre écran d'accueil. **Désormais, l'application se mettra à jour automatiquement** en rechargeant la page si une nouvelle version est détectée (ou via un bouton explicite), sans perte de votre historique ou de vos paramètres. En cas de problème persistant, désinstallez la PWA et videz le cache du navigateur pour `jw-hub.vercel.app` avant de la réinstaller.",
       icon: <Download className="text-green-400" size={48} />
     },
     {
