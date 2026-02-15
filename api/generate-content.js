@@ -63,6 +63,8 @@ export default async function handler(req, res) {
     initialScrapeAttempted = true;
     try {
       console.log(`Attempting direct scrape from URL: ${cleanedInput}`);
+      await sleep(500); // Add a 500ms delay to appear more human
+
       const responseHtml = await fetch(cleanedInput, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36', // User-Agent Android/Chrome
@@ -77,17 +79,38 @@ export default async function handler(req, res) {
       if (responseHtml.ok) {
         const html = await responseHtml.text();
         const $ = cheerio.load(html);
-        const extractedText = $('body').text().replace(/\s\s+/g, ' ').trim();
+        
+        let articleContent = '';
+        // Target main article content and specific text elements within it
+        const mainArticle = $('article#article, .bodyTxt'); 
+        if (mainArticle.length > 0) {
+            mainArticle.find('p, h1, h2, h3, h4, ul, ol').each((i, el) => {
+                const text = $(el).text().trim();
+                if (text) {
+                    // Add a separator to distinguish paragraphs/sections
+                    if ($(el).is('h1, h2, h3, h4')) {
+                        articleContent += `\n# ${text}\n\n`; // Use Markdown headers for clarity
+                    } else if ($(el).is('p')) {
+                        articleContent += text + '\n\n';
+                    } else if ($(el).is('li')) { // List items
+                        articleContent += `- ${text}\n`;
+                    }
+                }
+            });
+        }
+        
+        const extractedText = articleContent.replace(/\s\s+/g, ' ').trim(); // Further clean up spaces
+
         if (extractedText && extractedText.length >= 100) {
           modelContents = [
-            { text: `Voici le contenu complet de la page à l'URL : ${cleanedInput} \n\n` },
+            { text: `Voici le contenu complet (textes, titres, listes) extrait de la page à l'URL : ${cleanedInput} \n\n` },
             { text: extractedText }
           ];
           systemInstruction = `Vous agissez en tant qu'Assistant JW expert en publications. Vous avez reçu le texte brut d'une page web. Votre tâche est d'analyser ce texte. La réponse doit être **impérativement basée** et strictement fidèle aux informations et références (bibliques complètes, publications jw.org) trouvées *directement* dans le texte fourni. Ne pas inventer d'informations.`;
           initialScrapeSuccess = true;
-          console.log("Direct scrape successful.");
+          console.log("Direct scrape successful with refined content extraction.");
         } else {
-          console.warn("Direct scrape resulted in insufficient content. Falling back to Google Search tool.");
+          console.warn("Direct scrape resulted in insufficient content or no main article found. Falling back to Google Search tool.");
           initialScrapeSuccess = false; // Not a full success if content is bad
         }
       } else {
@@ -283,6 +306,9 @@ export default async function handler(req, res) {
 
 
   try {
+    // Utiliser generateContentStream si l'on veut vraiment streamer le contenu de l'API.
+    // Pour l'instant, on reste sur generateContent pour retourner une réponse complète
+    // et on s'appuie sur la réduction du texte scrapé pour éviter le timeout.
     const response = await ai.models.generateContent({
       model: modelToUse,
       contents: modelContents, // Now intelligently set as scraped text or search prompt / direct URL analysis

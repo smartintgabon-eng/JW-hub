@@ -133,7 +133,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
     if (loading || cooldown > 0 || !preview) return;
 
     setLoading(true);
-    setGlobalLoadingMessage('Génération des réponses en cours...');
+    setGlobalLoadingMessage('Analyse en cours...'); // Updated loading message
     setError(null);
 
     try {
@@ -347,7 +347,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
                         className="flex-1 py-5 rounded-xl font-black text-sm uppercase tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center space-x-2"
                         >
                         {loading ? <Loader2 size={18} className="animate-spin" /> : <ShieldCheck size={18} />}
-                        <span>Générer les réponses</span>
+                        <span>{loading ? 'Analyse en cours...' : 'Générer les réponses'}</span>
                         </button>
                         <button onClick={() => resetState(true)} className="flex-1 bg-white/5 border border-white/10 py-5 rounded-xl font-black text-sm uppercase tracking-widest">Recommencer la recherche</button>
                     </div>

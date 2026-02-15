@@ -28,12 +28,12 @@ const Tutorial: React.FC = () => {
     },
     {
       title: "Préparation de la Tour de Garde : Lecture Profonde des Liens",
-      content: "Dans l'onglet 'Tour de Garde', si vous collez le lien direct d'un article de jw.org, l'application va d'abord tenter d'extraire tout le texte de la page avec des en-têtes de navigateur avancés. En cas de blocage ou de contenu insuffisant, elle basculera automatiquement sur l'outil Google Search de Gemini pour analyser le lien. C'est notre meilleure chance de surmonter les blocages et d'obtenir des réponses précises.",
+      content: "Dans l'onglet 'Tour de Garde', si vous collez le lien direct d'un article de jw.org, l'application va d'abord tenter d'extraire tout le texte pertinent (paragraphes, titres, listes) de la page avec des en-têtes de navigateur avancés et un court délai pour paraître plus humain. En cas de blocage ou de contenu insuffisant, elle basculera automatiquement sur l'outil Google Search de Gemini pour analyser le lien. C'est notre meilleure chance de surmonter les blocages et d'obtenir des réponses précises.",
       icon: <BookOpen className="text-emerald-500" size={48} />
     },
     {
       title: "Préparation du Cahier Vie et Ministère : Lecture Profonde des Liens",
-      content: "Comme pour la Tour de Garde, si vous entrez un lien direct vers l'article du Cahier, l'application tentera d'abord un scraping direct robuste. Si cela échoue, l'outil Google Search de Gemini prendra le relais pour analyser le lien. Cette double approche vise à maximiser la fiabilité pour l'analyse des liens directs. **Cependant, la 'Recherche par date/thème' reste la méthode la plus fiable en cas de blocage persistant.**",
+      content: "Comme pour la Tour de Garde, si vous entrez un lien direct vers l'article du Cahier, l'application tentera d'abord un scraping direct robuste et ciblé. Si cela échoue, l'outil Google Search de Gemini prendra le relais pour analyser le lien. Cette double approche vise à maximiser la fiabilité pour l'analyse des liens directs. **Cependant, la 'Recherche par date/thème' reste la méthode la plus fiable en cas de blocage persistant.**",
       icon: <LinkIcon className="text-orange-500" size={48} />
     },
     {

@@ -196,6 +196,19 @@ const updates: UpdateItem[] = [
       "Correction de l'erreur 'Erreur de connexion lors de l'extraction de l'URL' en implémentant une stratégie de scraping en deux phases (direct puis via Gemini Google Search) et en affinant les messages d'erreur.",
       "Mise à jour de la version du Service Worker (`v18`) pour assurer la distribution des dernières améliorations de manière fiable."
     ]
+  },
+  {
+    version: "1.9.5",
+    date: "16 Février 2025",
+    features: [
+      "**Optimisation du 'Deep Research' pour les liens directs de jw.org** : Le scraping du contenu est désormais ciblé sur les éléments clés (<p>, titres, listes) pour réduire la taille des données et accélérer le traitement. Un délai de 500ms est introduit avant le scraping pour une meilleure simulation humaine.",
+      "**Feedback utilisateur amélioré** : Le bouton 'Générer les réponses' affiche 'Analyse en cours...' pendant que l'IA traite le contenu, offrant un meilleur indicateur de progression."
+    ],
+    fixes: [
+      "Correction des problèmes de `FUNCTION_INVOCATION_TIMEOUT` ou `500-LINK-BLOCKED` sur Vercel en réduisant drastiquement le volume de texte scrapé et en ajoutant un délai, ce qui devrait permettre aux fonctions serverless de terminer leur exécution dans les temps.",
+      "Messages d'erreur API affinés pour mieux informer l'utilisateur des blocages potentiels par jw.org et recommander la 'Recherche par date/thème' comme solution de repli.",
+      "La version du Service Worker a été incrémentée (`v19`) pour garantir la distribution fiable de ces améliorations."
+    ]
   }
 ];
 
