@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Settings as SettingsIcon, 
   Palette, 
@@ -7,10 +7,12 @@ import {
   MousePointer2, 
   Trash2, 
   RotateCcw, 
-  AlertTriangle 
+  AlertTriangle,
+  CheckCircle
 } from 'lucide-react';
 import { AppSettings } from '../types'; 
 import { saveSettings, clearHistory, totalReset } from '../utils/storage'; 
+import { isEqual } from 'lodash'; // Using lodash for deep comparison
 
 interface Props {
   settings: AppSettings;
@@ -18,48 +20,60 @@ interface Props {
 }
 
 const Settings: React.FC<Props> = ({ settings, setSettings }) => {
-  const updateSetting = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
-    const newSettings = { ...settings };
-    // Clear custom hex if a preset is chosen
-    if (key === 'backgroundColor' && value !== newSettings.customHex) newSettings.customHex = '';
-    if (key === 'buttonColor' && value !== newSettings.customButtonHex) newSettings.customButtonHex = '';
-    
-    // Update the actual setting
-    (newSettings as any)[key] = value; 
+  const [draftSettings, setDraftSettings] = useState<AppSettings>(settings);
+  const [showSavedMessage, setShowSavedMessage] = useState(false);
 
-    setSettings(newSettings);
-    saveSettings(newSettings);
+  // Synchronize draftSettings with global settings if settings prop changes externally
+  // This is important if settings are loaded/reset from other parts of the app
+  useEffect(() => {
+    setDraftSettings(settings);
+  }, [settings]);
+
+  // Handle changes in draft settings
+  const handleDraftChange = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
+    const newDraft = { ...draftSettings };
+    // Logic for custom hex: if a preset is selected, clear custom hex
+    if (key === 'backgroundColor' && value !== newDraft.customHex) newDraft.customHex = '';
+    if (key === 'buttonColor' && value !== newDraft.customButtonHex) newDraft.customButtonHex = '';
+    
+    // Update the draft setting
+    (newDraft as any)[key] = value; 
+    setDraftSettings(newDraft);
   };
 
   const handleCustomHexChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'background' | 'button') => {
     const value = e.target.value.trim();
-    const newSettings = { ...settings };
+    const newDraft = { ...draftSettings };
     
-    // Regex simple pour valider un hex valide (3 ou 6 caractères après #)
     const isValidHex = /^#([0-9A-F]{3}){1,2}$/i.test(value);
 
     if (type === 'background') {
-      newSettings.customHex = value;
+      newDraft.customHex = value;
       if (isValidHex) {
-        newSettings.backgroundColor = value;
-      } else if (value === '' || value === '#') { // Allow empty or just '#' to fallback to default
-        newSettings.backgroundColor = '#09090b'; 
+        newDraft.backgroundColor = value;
+      } else if (value === '' || value === '#') { 
+        newDraft.backgroundColor = '#09090b'; // Fallback to default
       } else {
-        // If invalid but not empty/hash, keep the current actual background color, don't break the UI
-        newSettings.backgroundColor = settings.backgroundColor; 
+        newDraft.backgroundColor = draftSettings.backgroundColor; // Keep current if invalid
       }
     } else { // type === 'button'
-      newSettings.customButtonHex = value;
+      newDraft.customButtonHex = value;
       if (isValidHex) {
-        newSettings.buttonColor = value;
-      } else if (value === '' || value === '#') { // Allow empty or just '#' to fallback to default
-        newSettings.buttonColor = '#4a70b5';
+        newDraft.buttonColor = value;
+      } else if (value === '' || value === '#') {
+        newDraft.buttonColor = '#4a70b5'; // Fallback to default
       } else {
-        newSettings.buttonColor = settings.buttonColor;
+        newDraft.buttonColor = draftSettings.buttonColor; // Keep current if invalid
       }
     }
-    setSettings(newSettings);
-    saveSettings(newSettings);
+    setDraftSettings(newDraft);
+  };
+
+  const handleSaveSettings = () => {
+    setSettings(draftSettings); // Apply to global settings
+    saveSettings(draftSettings); // Save to localStorage
+    setShowSavedMessage(true);
+    setTimeout(() => setShowSavedMessage(false), 3000); // Hide after 3 seconds
   };
 
   const handleClearHistory = () => {
@@ -79,6 +93,9 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
       await totalReset();
     }
   };
+
+  // Check if draft settings are different from current settings
+  const hasChanges = !isEqual(settings, draftSettings);
 
   const bgOptions = [
     { name: 'Nuit', value: '#09090b' },
@@ -117,9 +134,9 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
           {bgOptions.map((opt) => (
             <button
               key={opt.value}
-              onClick={() => updateSetting('backgroundColor', opt.value)}
+              onClick={() => handleDraftChange('backgroundColor', opt.value)}
               className={`p-4 rounded-xl border-2 transition-all ${
-                (settings.backgroundColor === opt.value && !settings.customHex) ? 'border-[var(--btn-color)] bg-white/5' : 'border-white/5 hover:border-white/10'
+                (draftSettings.backgroundColor === opt.value && !draftSettings.customHex) ? 'border-[var(--btn-color)] bg-white/5' : 'border-white/5 hover:border-white/10'
               }`}
             >
               <div className="w-full h-8 rounded-lg mb-2" style={{ backgroundColor: opt.value }} />
@@ -131,12 +148,12 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
           <label className="text-[10px] font-bold uppercase opacity-40 block mb-2">Code couleur personnalisé (Hex)</label>
           <input
             type="text"
-            value={settings.customHex}
+            value={draftSettings.customHex}
             onChange={(e) => handleCustomHexChange(e, 'background')}
             placeholder="Ex: #09090b"
             className="w-full bg-black/20 border border-white/10 rounded-xl py-3 px-4 font-mono text-sm focus:border-[var(--btn-color)] outline-none"
           />
-          <div className="w-full h-10 rounded-lg mt-2 border-2 border-white/10" style={{ backgroundColor: settings.customHex || settings.backgroundColor }} />
+          <div className="w-full h-10 rounded-lg mt-2 border-2 border-white/10" style={{ backgroundColor: draftSettings.customHex || draftSettings.backgroundColor }} />
           <p className="text-[10px] opacity-30 text-center font-bold italic mt-2">La prévisualisation en direct s'affichera ci-dessus.</p>
         </div>
       </section>
@@ -148,8 +165,8 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
         </div>
         <div className="space-y-4">
           <textarea
-            value={settings.answerPreferences}
-            onChange={(e) => updateSetting('answerPreferences', e.target.value)}
+            value={draftSettings.answerPreferences}
+            onChange={(e) => handleDraftChange('answerPreferences', e.target.value)}
             placeholder="Ex: Sois bref dans les réponses, utilise un ton simple pour les enfants..."
             className="w-full h-32 bg-black/20 border border-white/10 rounded-2xl py-4 px-5 focus:border-[var(--btn-color)] outline-none resize-none text-sm leading-relaxed"
           />
@@ -169,9 +186,9 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
           {btnOptions.map((opt) => (
             <button
               key={opt.value}
-              onClick={() => updateSetting('buttonColor', opt.value)}
+              onClick={() => handleDraftChange('buttonColor', opt.value)}
               className={`p-4 rounded-xl border-2 transition-all ${
-                (settings.buttonColor === opt.value && !settings.customButtonHex) ? 'border-white bg-white/5' : 'border-white/5'
+                (draftSettings.buttonColor === opt.value && !draftSettings.customButtonHex) ? 'border-white bg-white/5' : 'border-white/5'
               }`}
             >
               <div className="w-full h-8 rounded-lg mb-2" style={{ backgroundColor: opt.value }} />
@@ -182,15 +199,34 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
         <div className="flex items-center space-x-4 pt-4 border-t border-white/5">
           <input
             type="text"
-            value={settings.customButtonHex}
+            value={draftSettings.customButtonHex}
             onChange={(e) => handleCustomHexChange(e, 'button')}
             placeholder="Ex: #4a70b5"
             className="flex-1 bg-black/20 border border-white/10 rounded-xl py-3 px-4 font-mono text-sm focus:border-[var(--btn-color)] outline-none"
           />
-          <div className="w-12 h-12 rounded-xl shadow-lg border-2 border-white/10" style={{ backgroundColor: settings.customButtonHex || settings.buttonColor }} />
+          <div className="w-12 h-12 rounded-xl shadow-lg border-2 border-white/10" style={{ backgroundColor: draftSettings.customButtonHex || draftSettings.buttonColor }} />
         </div>
         <p className="text-[10px] opacity-30 text-center font-bold italic mt-2">La prévisualisation en direct s'affichera à droite.</p>
       </section>
+
+      {hasChanges && (
+        <div className="bg-white/10 border border-white/20 rounded-3xl p-6 text-center animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <button 
+            onClick={handleSaveSettings}
+            style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
+            className="py-4 px-8 rounded-xl font-black uppercase text-sm tracking-widest shadow-lg hover:brightness-110 transition-all active:scale-95 flex items-center justify-center mx-auto space-x-2"
+          >
+            <CheckCircle size={20} />
+            <span>Confirmer les modifications</span>
+          </button>
+          {showSavedMessage && (
+            <p className="mt-3 text-emerald-400 text-xs font-bold uppercase tracking-widest flex items-center justify-center space-x-2 animate-in fade-in duration-300">
+              <CheckCircle size={14} />
+              <span>Enregistré !</span>
+            </p>
+          )}
+        </div>
+      )}
 
       {/* ZONE DE DANGER */}
       <section className="bg-red-500/5 border border-red-500/10 rounded-3xl p-8 space-y-6 shadow-xl">

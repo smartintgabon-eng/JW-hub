@@ -157,6 +157,19 @@ const updates: UpdateItem[] = [
       "Correction de l'erreur 'fetch failed' lors de l'extraction de contenu : ajout d'en-têtes HTTP (User-Agent, Referer) aux requêtes de scraping pour simuler un navigateur et améliorer la compatibilité avec les sites web. Les messages d'erreur ont été affinés pour mieux diagnostiquer les problèmes de connexion.",
       "La version du Service Worker a été incrémentée (`v15`) pour garantir la mise à jour des dernières règles et améliorations chez tous les utilisateurs."
     ]
+  },
+  {
+    version: "1.9.2",
+    date: "16 Février 2025",
+    features: [
+      "**Amélioration de la compatibilité mobile** pour la barre latérale de navigation : elle s'adapte mieux aux petits écrans de téléphone en mode portrait.",
+      "**Ajout d'un bouton 'Confirmer les modifications'** dans les paramètres : vos préférences (couleurs, préférences de l'IA) ne sont appliquées et sauvegardées qu'après avoir cliqué sur ce bouton, avec un retour visuel 'Enregistré !' temporaire.",
+      "Amélioration de la robustesse du 'Deep Research' (scraping) des liens directs, avec des en-têtes de requête HTTP plus complets pour mieux simuler un navigateur."
+    ],
+    fixes: [
+      "Correction de l'erreur 'Erreur de connexion lors de l'extraction de l'URL' en optimisant les en-têtes HTTP du `fetch` de scraping. Les messages d'erreur ont été rendus plus spécifiques pour aider à diagnostiquer les problèmes de blocage réseau ou les réponses HTTP du serveur cible.",
+      "La version du Service Worker a été incrémentée (`v16`) pour garantir la mise à jour des dernières règles et améliorations chez tous les utilisateurs."
+    ]
   }
 ];
 

@@ -197,7 +197,7 @@ const App: React.FC = () => {
         ${isReadingModeActive ? 'hidden' : ''}
         
         // Mobile specific (overlay)
-        ${isSidebarOpen ? 'translate-x-0 w-72' : '-translate-x-full w-0'} 
+        ${isSidebarOpen ? 'translate-x-0 w-[calc(100vw-4rem)] max-w-sm' : '-translate-x-full w-0'} 
         
         // Desktop specific (push content)
         md:static // Makes it part of the normal flow on desktop

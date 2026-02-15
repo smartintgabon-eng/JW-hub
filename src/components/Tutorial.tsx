@@ -22,18 +22,18 @@ const Tutorial: React.FC = () => {
       icon: <Server className="text-gray-400" size={48} />
     },
     {
-      title: "Masquer/Afficher la barre latérale (Desktop)",
-      content: "Sur ordinateur, vous pouvez désormais masquer ou afficher la barre latérale de navigation. Un bouton en haut à gauche de l'écran vous permet de passer d'une vue détaillée (texte + icônes) à une vue compacte (icônes seulement), pour maximiser l'espace de lecture. L'état est sauvegardé pour vos futures sessions.",
+      title: "Masquer/Afficher la barre latérale (Desktop & Mobile)",
+      content: "Sur ordinateur, vous pouvez masquer ou afficher la barre latérale avec le bouton en haut à gauche. Sur mobile, la barre latérale en superposition a été améliorée pour s'adapter parfaitement aux petits écrans en mode portrait, occupant une largeur optimale de votre appareil. L'état est sauvegardé.",
       icon: <ChevronLeft className="text-gray-400" size={48} />
     },
     {
       title: "Préparation de la Tour de Garde : Lecture Profonde des Liens",
-      content: "Dans l'onglet 'Tour de Garde', si vous collez le lien direct d'un article de jw.org, l'application va maintenant 'scraper' (extraire) tout le texte de cette page côté serveur et le fournir directement à l'IA. L'IA lira ce texte brut pour vous fournir des réponses ultra-précises, des versets clés (texte complet, Traduction du Monde Nouveau), des commentaires et des applications, sans jamais inventer d'informations. Pour la recherche par date/thème, l'IA utilise l'outil Google Search pour trouver des réponses fiables.",
+      content: "Dans l'onglet 'Tour de Garde', si vous collez le lien direct d'un article de jw.org, l'application va maintenant 'scraper' (extraire) tout le texte de cette page côté serveur et le fournir directement à l'IA. Pour une meilleure fiabilité, des en-têtes de navigateur complets sont envoyés, mais des blocages par le site cible peuvent toujours survenir. L'IA lira ce texte brut pour vous fournir des réponses ultra-précises, des versets clés (texte complet, Traduction du Monde Nouveau), des commentaires et des applications, sans jamais inventer d'informations. Pour la recherche par date/thème, l'IA utilise l'outil Google Search pour trouver des réponses fiables.",
       icon: <BookOpen className="text-emerald-500" size={48} />
     },
     {
       title: "Préparation du Cahier Vie et Ministère : Lecture Profonde des Liens",
-      content: "Comme pour la Tour de Garde, si vous entrez un lien direct vers l'article du Cahier de la semaine, le serveur va en extraire tout le texte. L'IA analysera alors ce contenu en profondeur pour générer des réponses détaillées et fidèles aux publications. Pour la recherche par date/thème, l'IA utilise l'outil Google Search.",
+      content: "Comme pour la Tour de Garde, si vous entrez un lien direct vers l'article du Cahier de la semaine, le serveur va en extraire tout le texte. L'IA analysera alors ce contenu en profondeur pour générer des réponses détaillées et fidèles aux publications. Des en-têtes HTTP complets sont utilisés pour la robustesse du scraping. Pour la recherche par date/thème, l'IA utilise l'outil Google Search.",
       icon: <LinkIcon className="text-orange-500" size={48} />
     },
     {
@@ -87,8 +87,8 @@ const Tutorial: React.FC = () => {
       icon: <BellRing className="text-indigo-400" size={48} />
     },
     {
-      title: "Personnalisation de l'Apparence",
-      content: "Dans les 'Paramètres', vous pouvez changer la couleur de fond et des boutons de l'application. Choisissez parmi nos propositions ou entrez un code hexadécimal personnalisé pour une expérience visuelle unique avec prévisualisation en direct.",
+      title: "Personnalisation de l'Apparence et Préférences (Sauvegarde explicite)",
+      content: "Dans les 'Paramètres', vous pouvez changer la couleur de fond et des boutons de l'application, ainsi que vos préférences pour les réponses de l'IA. Toutes ces modifications sont désormais appliquées et sauvegardées uniquement après avoir cliqué sur le bouton 'Confirmer les modifications'. Un message 'Enregistré !' apparaîtra pour confirmer la sauvegarde.",
       icon: <SettingsIcon className="text-gray-200" size={48} />
     },
     {
@@ -103,7 +103,7 @@ const Tutorial: React.FC = () => {
     },
     {
       title: "Vérification et Réinitialisation des logs API sur Vercel",
-      content: "Si vous rencontrez toujours des erreurs API (comme 'is not valid JSON' ou 'Cannot find module'), il est **essentiel** de vérifier les logs de votre fonction `generate-content` sur Vercel après avoir forcé un déploiement avec cache vide. Effectuez une requête, puis examinez les logs du déploiement Vercel pour voir si le message 'API Route /api/generate-content hit!' apparaît. Si l'erreur 'Cannot find module' persiste, assurez-vous d'avoir bien vidé le cache de build sur Vercel lors du redéploiement. Les erreurs de scraping peuvent indiquer des problèmes de réseau ou que l'URL fournie n'est pas accessible au serveur.",
+      content: "Si vous rencontrez toujours des erreurs API (comme 'is not valid JSON' ou 'Cannot find module'), il est **essentiel** de vérifier les logs de votre fonction `generate-content` sur Vercel après avoir forcé un déploiement avec cache vide. Effectuez une requête, puis examinez les logs du déploiement Vercel pour voir si le message 'API Route /api/generate-content hit!' apparaît. Si l'erreur 'Cannot find module' persiste, assurez-vous d'avoir bien vidé le cache de build sur Vercel lors du redéploiement. Les erreurs de scraping peuvent indiquer des problèmes de réseau, que l'URL fournie n'est pas accessible au serveur, ou un blocage actif de la part du site cible (comme `jw.org`).",
       icon: <AlertTriangle className="text-red-500" size={48} />
     }
   ];
