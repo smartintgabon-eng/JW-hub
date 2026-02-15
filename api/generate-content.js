@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import * as cheerio from 'cheerio'; // Import cheerio
 
 // Fix: setTimeout expects a function as its first argument
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -45,36 +46,63 @@ export default async function handler(req, res) {
   const ai = new GoogleGenAI({ apiKey });
   
   const cleanedInput = cleanUrl(input);
-  // Even if it's a link, we'll use googleSearch tool to "read" it reliably.
-  // The 'isLink' variable is still useful for constructing the prompt.
   const isLink = cleanedInput.startsWith('http'); 
 
   let modelToUse = 'gemini-2.5-flash'; // Unified to gemini-2.5-flash as requested
   
-  // ALWAYS include googleSearch tool if external web content is involved for reliable grounding
-  let toolsConfig = [{ googleSearch: {} }]; 
-  
+  let toolsConfig = undefined; // Default to no tools
   let systemInstruction = '';
   let temperature = 0.2; 
   
-  // New combined grounding approach for modelContent and groundingInstruction
-  let specificGroundingPromptForContents = ''; // This goes into 'contents'
-  let groundingInstructionForSystem = '';    // This goes into 'systemInstruction'
+  let modelContents; // This will hold the actual 'contents' payload for Gemini
 
+  // --- NEW: Conditional content preparation based on input type (link vs search) ---
   if (isLink) {
-    specificGroundingPromptForContents = `Utilise l'outil Google Search pour trouver et analyser le contenu de l'article à l'URL suivante : "${cleanedInput}".`;
-    groundingInstructionForSystem = `Le contenu à analyser se trouve à l'URL suivante : "${cleanedInput}". Vous devez agir comme si vous aviez lu l'intégralité de cette page web, y compris les références bibliques complètes (avec le texte entre parenthèses) et les mentions de publications (ex: wXX XX/X p.XX §X). Extrayez toutes les informations pertinentes *directement* de ce contenu via l'outil de recherche. Soyez très fidèle à toutes les informations trouvées et n'inventez rien.`;
+    // SCRIBING MODE: Fetch and scrape the content directly from the URL
+    try {
+      console.log(`Scraping content from URL: ${cleanedInput}`);
+      const responseHtml = await fetch(cleanedInput);
+      if (!responseHtml.ok) {
+        throw new Error(`Failed to fetch URL: ${responseHtml.statusText} (${responseHtml.status})`);
+      }
+      const html = await responseHtml.text();
+      const $ = cheerio.load(html);
+      // Extract text from body, clean multiple spaces and trim
+      const texteComplet = $('body').text().replace(/\s\s+/g, ' ').trim(); 
+      
+      if (!texteComplet || texteComplet.length < 100) { // Basic check for minimal content
+        throw new Error("Contenu extrait insuffisant ou page vide.");
+      }
+
+      // Gemini's contents will directly include the scraped text
+      modelContents = [
+        { text: `Voici le contenu complet de la page à l'URL : ${cleanedInput} \n\n` },
+        { text: texteComplet }
+      ];
+      // No search tool needed as content is provided directly
+      toolsConfig = undefined; 
+
+      // Update grounding instruction for system to reflect direct content provision
+      systemInstruction = `Vous agissez en tant qu'Assistant JW expert en publications. Vous avez reçu le texte brut d'une page web. Votre tâche est d'analyser ce texte. La réponse doit être **impérativement basée** et strictement fidèle aux informations et références (bibliques complètes, publications jw.org) trouvées *directement* dans le texte fourni. Ne pas inventer d'informations.`;
+
+    } catch (scrapeError) {
+      console.error("Scraping error:", scrapeError);
+      return res.status(500).json({ message: `Erreur lors de l'extraction du contenu de la page : ${scrapeError.message}. Vérifiez l'URL ou réessayez. (Code: 500-SCRAPE)` });
+    }
+
   } else {
-    specificGroundingPromptForContents = `Utilise l'outil Google Search pour trouver et analyser l'information pertinente pour le sujet/la date/le contexte : "${input}".`;
-    groundingInstructionForSystem = `Vous avez effectué une recherche pour le contenu "${input}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés via l'outil Google Search pour extraire et analyser l'information. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations ou si les résultats sont ambigus, indiquez-le clairement.`;
+    // SEARCH MODE: Use Google Search tool for queries by date/theme
+    toolsConfig = [{ googleSearch: {} }]; 
+    modelContents = `Utilise l'outil Google Search pour trouver et analyser l'information pertinente pour le sujet/la date/le contexte : "${input}". Ensuite, génère le contenu selon les instructions de système.`;
+    
+    // Update grounding instruction for system to reflect Google Search usage
+    systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'analyser l'information obtenue via l'outil Google Search pour le contenu "${input}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés pour extraire et analyser l'information. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations ou si les résultats sont ambigus, indiquez-le clairement.`;
   }
+  // --- END NEW CONTENT PREPARATION ---
 
 
   if (type === 'WATCHTOWER') {
-    systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'analyser l'article de la Tour de Garde.
-    ${groundingInstructionForSystem}
-    
-    Subdivisez l'article de manière structurée et très détaillée. La réponse doit être **impérativement basée** et strictement fidèle aux publications officielles de jw.org et à la Bible Traduction du Monde Nouveau. Ne pas inventer d'informations. Priorise la clarté et la concision tout en étant exhaustif.
+    systemInstruction += `\n\nSubdivisez l'article de manière structurée et très détaillée. Priorise la clarté et la concision tout en étant exhaustif.
     
     Structure: 
     # [Titre de l'article] 
@@ -153,7 +181,7 @@ export default async function handler(req, res) {
         (Suit le format détaillé des Joyaux de la Parole de Dieu, y compris Thème, Introduction, Points principaux avec références bibliques complètes (Traduction du Monde Nouveau) et Conclusion.)
         
         **PERLES SPIRITUELLES**
-        (Suit le format détaillé des Perles Spirituelles, y compris Verset (Traduction du Monde Nouveau), Q1, R1, Commentaire, Application, Q2, R2.)
+        (Follows the detailed format for Spiritual Gems, including Verse (New World Translation), Q1, R1, Comment, Application, Q2, R2.)
         
         **APPLIQUE-TOI AU MINISTÈRE**
         (Suit le format détaillé de Applique-toi au Ministère, listant tous les exposés avec Introduction, Points à développer (avec références bibliques complètes Traduction du Monde Nouveau) et Conclusion pour chacun.)
@@ -168,10 +196,7 @@ export default async function handler(req, res) {
         break;
     }
 
-    systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'analyser l'article du Cahier Vie et Ministère.
-    ${groundingInstructionForSystem}
-    
-    Structure: 
+    systemInstruction += `\n\nStructure: 
     # [Titre de l'article du Cahier] 
     Thème: [Thème général de la semaine] 
     
@@ -184,9 +209,9 @@ export default async function handler(req, res) {
     
     switch (preachingType) {
       case 'porte_en_porte':
-        preachingInstruction = `Préparer une présentation de porte-en-porte. Le sujet est "${input}". ${groundingInstructionForSystem}
+        preachingInstruction = `Préparer une présentation de porte-en-porte. Le sujet est "${input}".`;
         
-        Structure:
+        systemInstruction += `\n\nStructure:
         # SUJET: [Titre concis et accrocheur basé sur le sujet et la publication]
         ENTRÉE EN MATIÈRE: [Une introduction simple et naturelle pour engager la conversation, basée sur l'actualité si fournie ou sur des préoccupations courantes. Inclure une question pour lancer la discussion.]
         VERSETS CLÉS: (Verset biblique complet entre parenthèses, Traduction du Monde Nouveau, adapté au sujet. Expliquer brièvement le lien avec le sujet.)
@@ -197,9 +222,9 @@ export default async function handler(req, res) {
         Style: Simple, facile à retenir, pratique. Utilise un langage courant.`;
         break;
       case 'nouvelle_visite':
-        preachingInstruction = `Préparer une nouvelle visite. ${input}. ${groundingInstructionForSystem}
+        preachingInstruction = `Préparer une nouvelle visite. ${input}.`;
         
-        Structure:
+        systemInstruction += `\n\nStructure:
         # MANIÈRE DE FAIRE: [Une approche naturelle pour la nouvelle visite, reprenant le fil de la discussion précédente ou la question en suspens.]
         ${input.includes('Question en suspens:') ? 
           `RÉPONSE À LA QUESTION: [Réponse claire et basée sur la Bible (versets complets Traduction du Monde Nouveau entre parenthèses) à la question laissée en suspens "${input.split('Question en suspens: ')[1]?.split(',')[0] || ''}".]` 
@@ -210,9 +235,9 @@ export default async function handler(req, res) {
         Style: Simple, facile à retenir, pratique. Axé sur la progression de l'intérêt.`;
         break;
       case 'cours_biblique':
-        preachingInstruction = `Préparer un cours biblique. ${input}. ${groundingInstructionForSystem}
+        preachingInstruction = `Préparer un cours biblique. ${input}.`;
         
-        Structure:
+        systemInstruction += `\n\nStructure:
         # MANIÈRE DE FAIRE: [Plan détaillé pour conduire le cours biblique. Expliquer comment aborder le chapitre/leçon, souligner les points clés, utiliser les versets bibliques (complets Traduction du Monde Nouveau entre parenthèses) et les questions.]
         POINTS CLÉS À SOULIGNER: [Liste de 3-4 points importants du chapitre/leçon, avec des références aux publications si possibles.]
         QUESTIONS À POSER: [Quelques questions de compréhension ou d'application à poser pendant l'étude.]
@@ -220,16 +245,11 @@ export default async function handler(req, res) {
         Style: Clair, pédagogique, encourageant la participation de l'étudiant.`;
         break;
       default:
-        preachingInstruction = `Générer une préparation de prédication pour le sujet: ${input}. ${groundingInstructionForSystem}`;
+        preachingInstruction = `Générer une préparation de prédication pour le sujet: ${input}.`;
         break;
     }
 
-    systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est de préparer du matériel de prédication. La réponse doit être **impérativement basée** et strictement fidèle aux publications officielles de jw.org et à la Bible Traduction du Monde Nouveau. Ne pas inventer d'informations.
-    ${groundingInstructionForSystem}
-    
-    ${preachingInstruction}
-    
-    Style: ${settings.answerPreferences || 'Simple, facile à retenir, pratique. Utilise un langage courant et des versets bibliques complets Traduction du Monde Nouveau.'}. Réponds en Markdown.`;
+    systemInstruction += `\n\nStyle: ${settings.answerPreferences || 'Simple, facile à retenir, pratique. Utilise un langage courant et des versets bibliques complets Traduction du Monde Nouveau.'}. Réponds en Markdown.`;
     temperature = 0.5; 
   }
 
@@ -237,28 +257,25 @@ export default async function handler(req, res) {
   if (isInitialSearchForPreview) {
     let previewInstruction = '';
     if (type === 'WATCHTOWER' || type === 'MINISTRY') {
-      previewInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'identifier le titre et le thème principal de l'article lié à "${input}" (qu'il soit un lien ou un sujet/date de Tour de Garde ou Cahier Vie et Ministère).
-      ${groundingInstructionForSystem}
+      previewInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'identifier le titre et le thème principal de l'article lié à "${input}".
       Réponds uniquement avec le format suivant: # [Titre de l'article] \n Thème: [Thème de l'article]. Ne fournis aucun autre détail ou contenu de l'article.`;
     } else if (type === 'PREDICATION') {
       previewInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est de fournir un titre et un bref résumé pour une préparation de prédication de type "${preachingType}" avec le sujet "${input}".
-      ${groundingInstructionForSystem}
       Réponds uniquement avec le format suivant: # [Titre de la préparation] \n Thème: [Bref résumé de l'objectif]. Ne fournis aucun autre détail.`;
     }
-    systemInstruction = previewInstruction;
+    // Prepend the specific grounding instruction to the preview instruction
+    systemInstruction = (isLink ? systemInstruction : '') + '\n\n' + previewInstruction;
   }
 
-  try {
-    // The 'contents' field should clearly instruct the model to use the tool first
-    const modelContents = `${specificGroundingPromptForContents} Ensuite, génère le contenu selon les instructions de système.`;
 
+  try {
     const response = await ai.models.generateContent({
       model: modelToUse,
-      contents: modelContents, // Pass the explicit instruction to use the tool
+      contents: modelContents, // Now intelligently set as scraped text or search prompt
       config: {
         systemInstruction,
         temperature,
-        tools: toolsConfig, // toolsConfig is now always present
+        tools: toolsConfig, // Now intelligently set (undefined for scrape, googleSearch for search)
       },
     });
 

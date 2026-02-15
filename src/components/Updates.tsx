@@ -132,6 +132,20 @@ const updates: UpdateItem[] = [
       "Stabilisation des requêtes API en forçant l'utilisation de l'outil Google Search pour toutes les requêtes basées sur des contenus externes (liens ou recherches par mots-clés) pour assurer une meilleure fidélité des réponses de l'IA.",
       "La version du Service Worker a été incrémentée (`v13`) pour garantir la mise à jour des dernières règles de cache et fonctionnalités chez tous les utilisateurs."
     ]
+  },
+  {
+    version: "1.9.0",
+    date: "15 Février 2025",
+    features: [
+      "**Correction majeure du 'Deep Research' pour les liens directs** dans 'Cahier Vie et Ministère' et 'Tour de Garde' : l'application scrape désormais directement le texte des URLs fournies côté serveur (utilisant Cheerio) et envoie ce contenu brut à Gemini. Cela garantit que l'IA ne 'devine' plus, mais lit et répond strictement à partir de la publication originale.",
+      "Amélioration de la fiabilité des réponses : suppression de l'invention de contenu et garantie de la fidélité aux sources, pour les requêtes basées sur des liens.",
+      "Affinement de la logique de recherche : l'outil Google Search est désormais utilisé uniquement pour les recherches par mots-clés/thèmes, tandis que les liens sont lus directement."
+    ],
+    fixes: [
+      "Correction du problème où l'IA 'inventait' les réponses pour les liens directs dans les onglets 'Cahier' et 'Tour de Garde', en mettant en place un mécanisme de scraping de contenu côté serveur.",
+      "Amélioration des messages d'erreur en cas d'échec de l'extraction de contenu (scraping) depuis une URL.",
+      "La version du Service Worker a été incrémentée (`v14`) pour garantir la mise à jour des dernières règles de cache et fonctionnalités chez tous les utilisateurs."
+    ]
   }
 ];
 

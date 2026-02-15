@@ -18,7 +18,7 @@ const Tutorial: React.FC = () => {
     },
     {
       title: "Architecture Server-side pour un meilleur grounding",
-      content: "L'application utilise désormais une architecture 'Server-side' avec les API Routes de Vercel. Cela signifie que les appels à l'IA de Gemini sont gérés sur un serveur sécurisé, ce qui permet à l'IA d'accéder *réellement* et de manière plus fiable aux informations de jw.org (via l'outil Google Search) pour générer des réponses plus précises et fidèles. Ce 'grounding' est maintenant appliqué à TOUTES les requêtes de contenu.",
+      content: "L'application utilise désormais une architecture 'Server-side' avec les API Routes de Vercel. Cela signifie que les appels à l'IA de Gemini sont gérés sur un serveur sécurisé, ce qui permet à l'IA d'accéder *réellement* et de manière plus fiable aux informations de jw.org (via l'outil Google Search ou par scraping direct) pour générer des réponses plus précises et fidèles. Ce 'grounding' est maintenant appliqué à TOUTES les requêtes de contenu.",
       icon: <Server className="text-gray-400" size={48} />
     },
     {
@@ -27,18 +27,18 @@ const Tutorial: React.FC = () => {
       icon: <ChevronLeft className="text-gray-400" size={48} />
     },
     {
-      title: "Préparation de la Tour de Garde",
-      content: "Dans l'onglet 'Tour de Garde', vous pouvez coller le lien direct de l'article de jw.org ou utiliser la nouvelle recherche combinée par date et thème. L'IA analysera le texte avec l'outil Google Search et vous fournira des questions, des versets clés (avec leur texte complet, Traduction du Monde Nouveau), des réponses, des commentaires et des applications, ainsi que les questions de révision. L'IA s'efforcera de 'lire' l'article pour des réponses précises.",
+      title: "Préparation de la Tour de Garde : Lecture Profonde des Liens",
+      content: "Dans l'onglet 'Tour de Garde', si vous collez le lien direct d'un article de jw.org, l'application va maintenant 'scraper' (extraire) tout le texte de cette page côté serveur et le fournir directement à l'IA. L'IA lira ce texte brut pour vous fournir des réponses ultra-précises, des versets clés (texte complet, Traduction du Monde Nouveau), des commentaires et des applications, sans jamais inventer d'informations. Pour la recherche par date/thème, l'IA utilise l'outil Google Search pour trouver des réponses fiables.",
       icon: <BookOpen className="text-emerald-500" size={48} />
     },
     {
-      title: "Préparation du Cahier Vie et Ministère : Lien ou Recherche",
-      content: "Comme pour la Tour de Garde, vous pouvez entrer un lien direct vers l'article du Cahier de la semaine ou effectuer une recherche combinée par date et thème pour trouver le bon article sur jw.org. Grâce à la nouvelle architecture et à l'outil Google Search, l'IA analyse le contenu de manière plus approfondie et fidèle aux sources.",
+      title: "Préparation du Cahier Vie et Ministère : Lecture Profonde des Liens",
+      content: "Comme pour la Tour de Garde, si vous entrez un lien direct vers l'article du Cahier de la semaine, le serveur va en extraire tout le texte. L'IA analysera alors ce contenu en profondeur pour générer des réponses détaillées et fidèles aux publications. Pour la recherche par date/thème, l'IA utilise l'outil Google Search.",
       icon: <LinkIcon className="text-orange-500" size={48} />
     },
     {
       title: "Recherche par date/thème améliorée",
-      content: "Lorsque vous choisissez la 'Recherche par date/thème', vous disposez maintenant de deux champs distincts : 'Date de début de semaine (JJ/MM/AAAA)' et 'Thème principal (facultatif)'. Utilisez-les pour affiner votre recherche et aider l'IA à trouver le contenu le plus pertinent sur jw.org.",
+      content: "Lorsque vous choisissez la 'Recherche par date/thème' (pour Cahier ou Tour de Garde), vous disposez maintenant de deux champs distincts : 'Date de début de semaine (JJ/MM/AAAA)' et 'Thème principal (facultatif)'. Utilisez-les pour affiner votre recherche et aider l'IA (via l'outil Google Search) à trouver le contenu le plus pertinent sur jw.org.",
       icon: <Search className="text-indigo-500" size={48} />
     },
     {

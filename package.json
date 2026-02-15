@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.41.0",
+    "cheerio": "^1.0.0-rc.12",
     "docx": "^9.5.1",
     "file-saver": "^2.0.5",
     "jspdf": "^2.5.1",
