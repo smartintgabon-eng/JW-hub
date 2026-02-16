@@ -205,7 +205,7 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
             placeholder="Ex: #4a70b5"
             className="flex-1 bg-black/20 border border-white/10 rounded-xl py-3 px-4 font-mono text-sm focus:border-[var(--btn-color)] outline-none"
           />
-          <div className="w-12 h-12 rounded-xl shadow-lg border-2 border-white/10" style={{ backgroundColor: draftSettings.customHex || draftSettings.buttonColor }} />
+          <div className="w-12 h-12 rounded-xl shadow-lg border-2 border-white/10" style={{ backgroundColor: draftSettings.customButtonHex || draftSettings.buttonColor }} />
         </div>
         <p className="text-[10px] opacity-30 text-center font-bold italic mt-2">La prévisualisation en direct s'affichera à droite.</p>
       </section>

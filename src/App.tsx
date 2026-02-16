@@ -103,6 +103,20 @@ const App: React.FC = () => {
     };
     navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
 
+    // Trigger update check when app gains focus
+    const handleFocus = () => {
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.getRegistration().then(reg => {
+          if (reg && reg.waiting) {
+            setNewWorkerReady(true);
+            setWaitingWorker(reg.waiting);
+          }
+          reg?.update(); // Trigger an update check
+        });
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+
     // --- END Service Worker Update Logic ---
 
     const bgColor = settings.customHex || settings.backgroundColor || '#09090b';
@@ -130,8 +144,9 @@ const App: React.FC = () => {
         }
       }
       navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+      window.removeEventListener('focus', handleFocus);
     };
-  }, [settings, isReadingModeActive]); // Added isReadingModeActive to dependency array
+  }, [settings, isReadingModeActive]); 
 
   // Observer le mode lecture de l'historique pour masquer globalement l'UI
   useEffect(() => {
@@ -214,6 +229,15 @@ const App: React.FC = () => {
         </div>
       )}
 
+      {/* Semi-transparent overlay when sidebar is open on mobile */}
+      {isSidebarOpen && !isReadingModeActive && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-[9998] md:hidden" 
+          onClick={() => setIsSidebarOpen(false)}
+          aria-hidden="true"
+        ></div>
+      )}
+
       {!isOnline && (
         <div className="fixed top-0 inset-x-0 bg-amber-500 text-black text-[10px] font-bold py-1 text-center z-[100] flex items-center justify-center space-x-2">
           <WifiOff size={12} />
@@ -240,23 +264,29 @@ const App: React.FC = () => {
           className={`hidden md:flex items-center justify-center p-2 rounded-full shadow-lg fixed top-6 z-50 transition-all duration-300 ease-in-out hover:brightness-110 active:scale-90 
             ${isSidebarExpanded ? 'left-[calc(18rem+40px)]' : 'left-[calc(5rem+40px)]'} 
           `}
+          aria-expanded={isSidebarExpanded}
+          aria-controls="main-sidebar"
         >
           {isSidebarExpanded ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
         </button>
       )}
 
       {/* Sidebar */}
-      <aside className={`
-        bg-black/40 backdrop-blur-xl border-r border-white/10 p-6 transform transition-all duration-300 ease-in-out flex-shrink-0 flex-col
-        ${isReadingModeActive ? 'hidden' : ''}
-        
-        // Mobile specific (overlay)
-        ${isSidebarOpen ? 'fixed inset-y-0 left-0 z-50 translate-x-0 w-[75vw] max-w-[280px] flex' : 'hidden -translate-x-full w-0'} 
-        
-        // Desktop specific (push content, always visible but collapsed/expanded)
-        md:static md:flex 
-        md:z-40 md:${isSidebarExpanded ? 'w-72 translate-x-0' : 'w-20 translate-x-0 items-center md:py-8'}
-      `}>
+      <aside 
+        id="main-sidebar"
+        className={`
+          p-6 transform transition-transform duration-300 ease-in-out flex-shrink-0 flex-col
+          bg-black/90 backdrop-blur-xl border-r border-white/10 
+          ${isReadingModeActive ? 'hidden' : ''}
+          
+          // Mobile specific (overlay)
+          ${isSidebarOpen ? 'fixed inset-y-0 left-0 h-screen w-[80vw] max-w-[280px] z-[9999] flex translate-x-0' : 'fixed -translate-x-full w-0 h-screen z-[9999] hidden'} 
+          
+          // Desktop specific (push content, always visible but collapsed/expanded)
+          md:static md:flex md:z-40 
+          md:${isSidebarExpanded ? 'w-72 translate-x-0' : 'w-20 translate-x-0 items-center md:py-8'}
+        `}
+      >
         <div className={`mb-10 px-2 flex items-center ${isSidebarExpanded ? 'space-x-3' : 'justify-center'} cursor-pointer`} onClick={() => navigateTo(AppView.HOME)}>
            <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="w-12 h-12 flex items-center justify-center rounded-xl font-black text-xl shadow-lg">JW</div>
            {isSidebarExpanded && ( // Only show text when expanded
@@ -267,7 +297,7 @@ const App: React.FC = () => {
            )}
         </div>
 
-        <nav className="space-y-1 flex-1">
+        <nav className="space-y-1 flex-1" aria-label="Main navigation">
           <NavItem icon={HomeIcon} label="Accueil" active={view === AppView.HOME} onClick={() => navigateTo(AppView.HOME)} isExpanded={isSidebarExpanded} />
           <NavItem icon={Calendar} label="Cahier" active={view === AppView.MINISTRY} onClick={() => navigateTo(AppView.MINISTRY)} isExpanded={isSidebarExpanded} />
           <NavItem icon={BookOpen} label="Tour de Garde" active={view === AppView.WATCHTOWER} onClick={() => navigateTo(AppView.WATCHTOWER)} isExpanded={isSidebarExpanded} />
@@ -282,6 +312,7 @@ const App: React.FC = () => {
           <button 
             onClick={handleInstallClick}
             className="mt-4 w-full bg-blue-600/20 border border-blue-600/30 text-blue-400 py-3 rounded-xl flex items-center justify-center space-x-2 text-xs font-bold uppercase tracking-widest hover:bg-blue-600/30 transition-all"
+            aria-label="Installer l'application"
           >
             <Download size={16} />
             <span>Installer l'App</span>
@@ -292,6 +323,7 @@ const App: React.FC = () => {
           <button
             onClick={handleUpdateClick}
             className="mt-4 w-full bg-emerald-600/20 border border-emerald-600/30 text-emerald-400 py-3 rounded-xl flex items-center justify-center space-x-2 text-xs font-bold uppercase tracking-widest hover:bg-emerald-600/30 transition-all"
+            aria-label="Mettre à jour l'application"
           >
             <RefreshCw size={16} />
             <span>Mettre à jour l'App</span>
@@ -308,6 +340,8 @@ const App: React.FC = () => {
                    style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
                    className="w-24 h-24 text-4xl rounded-2xl flex items-center justify-center font-black shadow-2xl hover:scale-105 transition-transform cursor-pointer"
                    onClick={() => navigateTo(AppView.TUTORIAL)}
+                   role="button"
+                   aria-label="Accéder au tutoriel via le logo"
                  >JW</div>
                  
                  <div className="space-y-4">

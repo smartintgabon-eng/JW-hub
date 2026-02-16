@@ -54,7 +54,9 @@ export default async function handler(req, res) {
   if (isLink) {
     try {
       console.log(`Attempting to fetch content via AllOrigins proxy for URL: ${cleanedInput}`);
-      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(cleanedInput)}`;
+      // Ajout de ?incLocale=fr pour tenter de forcer le contenu en français
+      const urlToProxy = cleanedInput.includes('incLocale=') ? cleanedInput : `${cleanedInput}?incLocale=fr`;
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(urlToProxy)}`;
       const proxyResponse = await fetch(proxyUrl);
       
       if (!proxyResponse.ok) {
@@ -68,17 +70,28 @@ export default async function handler(req, res) {
       let articleContent = '';
       
       // Cibler les éléments de contenu principaux pour extraire le texte
-      const mainArticle = $('article#article, .bodyTxt'); 
-      if (mainArticle.length > 0) {
-          mainArticle.find('p, h1, h2, h3, h4, ul, ol').each((i, el) => {
+      // On cherche les questions (.qu), les paragraphes (.pGroup), les titres de section (h2, h3)
+      const mainArticleContainer = $('article#article, .bodyTxt'); 
+      if (mainArticleContainer.length > 0) {
+          mainArticleContainer.find('.qu, .pGroup, h2, h3, ul, ol').each((i, el) => {
               const text = $(el).text().trim();
               if (text) {
-                  if ($(el).is('h1, h2, h3, h4')) {
+                  if ($(el).is('h2, h3')) {
                       articleContent += `\n# ${text}\n\n`; 
-                  } else if ($(el).is('p')) {
-                      articleContent += text + '\n\n';
+                  } else if ($(el).is('.qu')) {
+                      // C'est une question de paragraphe, souvent en gras
+                      articleContent += `QUESTION: ${text}\n`;
+                  } else if ($(el).is('.pGroup')) {
+                      // C'est un groupe de paragraphe, souvent numéroté
+                      const paragraphNumber = $(el).find('.marker').text().trim();
+                      if (paragraphNumber) {
+                          articleContent += `PARAGRAPHE ${paragraphNumber}:\n`;
+                      }
+                      articleContent += text.replace(paragraphNumber, '').trim() + '\n\n';
                   } else if ($(el).is('li')) { 
                       articleContent += `- ${text}\n`;
+                  } else {
+                      articleContent += text + '\n\n';
                   }
               }
           });
@@ -86,10 +99,24 @@ export default async function handler(req, res) {
       
       contextTextFromProxy = articleContent.replace(/\s\s+/g, ' ').trim(); 
 
-      if (contextTextFromProxy && contextTextFromProxy.length > 100) {
+      if (contextTextFromProxy && contextTextFromProxy.length > 200) { // Augmentation du seuil pour un contenu plus significatif
         // Si le proxy a réussi à récupérer du contenu, on l'utilise directement
         modelContents = [
-          { text: `Voici le contenu TEXTE BRUT (sans design) extrait de la page à l'URL via un proxy : ${cleanedInput} \n\n` },
+          { text: `Le texte suivant est une extraction brute de l'article jw.org. 
+            Même si le texte semble mélangé, cherche les numéros de paragraphes et les questions. 
+            
+            TA MISSION :
+            1. Tu DOIS générer les réponses pour chaque paragraphe présent dans le texte.
+            2. Si tu vois une question (souvent précédée par 'QUESTION:'), c'est le début d'un paragraphe.
+            3. Ne dis JAMAIS que tu ne peux pas accéder au texte. Utilise ce que tu as pour reconstruire l'étude.
+            4. Si vraiment une partie manque, utilise tes connaissances générales sur cet article précis (ex: Tour de Garde, Cahier Vie et Ministère de la semaine) pour compléter fidèlement.
+            
+            FORMAT :
+            § [Numéro]
+            Question : [Texte de la question]
+            Réponse : [Ta réponse basée sur l'article]
+            Versets : [Citations bibliques complètes, Traduction du Monde Nouveau]
+            \n\n` },
           { text: contextTextFromProxy }
         ];
         systemInstruction = `Vous agissez en tant qu'Assistant JW expert en publications. Vous avez reçu le texte brut d'une page web (pré-traité par un proxy). Votre tâche est d'analyser ce texte. La réponse doit être **impérativement basée** et strictement fidèle aux informations et références (bibliques complètes, publications jw.org) trouvées *directement* dans le texte fourni. Ne pas inventer d'informations.`;
@@ -115,7 +142,7 @@ export default async function handler(req, res) {
   // --- Instructions spécifiques au type de contenu (WATCHTOWER, MINISTRY, PREDICATION) ---
   // Ces instructions sont APPENDED aux instructions de base définies ci-dessus
   if (type === 'WATCHTOWER') {
-    systemInstruction += `\n\nSubdivisez l'article de manière structurée et très détaillée. Priorise la clarté et la concision tout en étant exhaustif. **Il est impératif d'extraire et de présenter l'information paragraphe par paragraphe, incluant la question, le verset (avec texte complet) et une réponse détaillée. Si une question de paragraphe ou un verset n'est pas explicitement trouvé, l'IA doit l'indiquer clairement ou se baser sur le contexte pour formuler une question ou un verset pertinent à ce paragraphe.**
+    systemInstruction += `\n\nSubdivisez l'article de manière structurée et très détaillée. Priorise la clarté et la concision tout en étant exhaustif. ${isLink ? '' : '**Il est impératif d\'extraire et de présenter l\'information paragraphe par paragraphe, incluant la question, le verset (avec texte complet) et une réponse détaillée. Si une question de paragraphe ou un verset n\'est pas explicitement trouvé, l\'IA doit l\'indiquer clairement ou se baser sur le contexte pour formuler une question ou un verset pertinent à ce paragraphe.**'}
     
     Structure: 
     # [Titre de l'article] 
@@ -275,8 +302,6 @@ export default async function handler(req, res) {
       previewInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est de fournir un titre et un bref résumé pour une préparation de prédication de type "${preachingType}" avec le sujet "${input}".
       Réponds uniquement avec le format suivant: # [Titre de la préparation] \n Thème: [Bref résumé de l'objectif]. Ne fournis aucun autre détail.`;
     }
-    // Si nous avons utilisé le proxy pour obtenir du contenu, cela fait partie de l'instruction de base.
-    // Sinon, l'instruction de prévisualisation est ajoutée directement.
     systemInstruction = systemInstruction + '\n\n' + previewInstruction;
   }
 
