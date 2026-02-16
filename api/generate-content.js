@@ -14,6 +14,18 @@ const cleanUrl = (url) => {
   }
 };
 
+// Fonction pour détecter le type d'article à partir de l'URL
+function detectArticleType(url) {
+  if (url.includes("/w") && !url.includes("/w_")) return "TOUR DE GARDE"; // w pour Tour de Garde
+  if (url.includes("/mwb")) return "CAHIER VIE ET MINISTÈRE"; // mwb pour Cahier Vie et Ministère
+  if (url.includes("/lp")) return "LIVRE/BROCHURE"; // lp pour Livres/Brochures (ex: bible study)
+  if (url.includes("/sn")) return "ARTICLE GÉNÉRAL/NEWS"; // sn pour articles de nouvelles
+  if (url.includes("/finder")) return "OUTIL DE RECHERCHE JW"; // finder pour l'outil de recherche
+  if (url.includes("/pub-index")) return "INDEX DE PUBLICATIONS"; // index de publications
+  return "ARTICLE GÉNÉRAL";
+}
+
+
 const getApplicationQuestions = () => `
 - Quelle leçon pouvons-nous tirer pour nous?
 - Quelle leçon pour la prédication?
@@ -21,6 +33,57 @@ const getApplicationQuestions = () => `
 - Quelle leçon pour l'assemblée ou la salle du royaume?
 - Quelle leçon sur Jéhovah et Jésus?
 `;
+
+// Nouvelle fonction pour récupérer et combiner le contenu de plusieurs URLs
+async function fetchAndCombineContent(urls) {
+  let combinedText = "";
+  const filteredUrls = Array.isArray(urls) ? urls.filter(Boolean) : [urls].filter(Boolean);
+
+  for (const url of filteredUrls) {
+    try {
+      const articleType = detectArticleType(url);
+      const urlToProxy = url.includes('incLocale=') ? url : `${url}?incLocale=fr`;
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(urlToProxy)}`;
+      
+      const response = await fetch(proxyUrl);
+      const data = await response.json();
+      
+      const $ = cheerio.load(data.contents);
+      let extractedContent = '';
+      
+      // Ciblage spécifique pour les articles JW
+      const targetContainer = $('#article, .bodyTxt'); 
+      if (targetContainer.length > 0) {
+          targetContainer.find('.qu, .pGroup, h2, h3, ul, ol, p, strong').each((i, el) => { 
+              const text = $(el).text().trim();
+              if (text) {
+                  if ($(el).is('h2, h3')) { extractedContent += `\n# ${text}\n\n`; } 
+                  else if ($(el).is('.qu')) { extractedContent += `QUESTION: ${text}\n`; } 
+                  else if ($(el).is('.pGroup')) {
+                      const paragraphNumber = $(el).find('.marker').text().trim();
+                      if (paragraphNumber) { extractedContent += `PARAGRAPHE ${paragraphNumber}:\n`; }
+                      extractedContent += text.replace(paragraphNumber, '').trim() + '\n\n';
+                  } else if ($(el).is('li')) { extractedContent += `- ${text}\n`; } 
+                  else if ($(el).is('strong')) { extractedContent += `**${text}**\n`; } // Conserver le gras
+                  else if ($(el).is('p')) { extractedContent += text + '\n\n'; }
+              }
+          });
+      } else {
+        // Fallback si pas de conteneur d'article spécifique trouvé
+        extractedContent = $.text();
+      }
+      
+      const cleanedText = extractedContent.replace(/\s\s+/g, ' ').trim();
+      combinedText += `\n--- DÉBUT DE LA SOURCE (${articleType}) : ${url} ---\n${cleanedText}\n--- FIN DE LA SOURCE ---\n`;
+
+    } catch (e) {
+      console.error(`Erreur de lecture via proxy pour l'URL ${url}:`, e);
+      combinedText += `\n[Erreur de lecture du contenu pour l'URL : ${url}]`;
+    }
+  }
+  return combinedText;
+}
+
 
 export default async function handler(req, res) {
   console.log("API Route /api/generate-content hit!");
@@ -40,105 +103,75 @@ export default async function handler(req, res) {
 
   const ai = new GoogleGenAI({ apiKey });
 
-  const cleanedInput = cleanUrl(input);
-  const isLink = cleanedInput.startsWith('http');
+  let cleanedInput = Array.isArray(input) ? input.map(cleanUrl) : cleanUrl(input);
+  const isLinkInput = Array.isArray(cleanedInput) ? cleanedInput.some(url => url.startsWith('http')) : cleanedInput.startsWith('http');
 
   let modelToUse = 'gemini-2.5-flash';
-  let toolsConfig = [{ googleSearch: {} }];
+  let toolsConfig = [{ googleSearch: {} }]; // googleSearch est toujours activé pour la "Hybrid Intelligence"
   let systemInstruction = '';
   let temperature = 0.2;
 
   let modelContents;
-  let contextTextFromProxy = "";
-  
-  // Définit le titre de l'article pour les connaissances internes si besoin
-  const articleTitleForKnowledge = type === 'WATCHTOWER' ? `Tour de Garde ${input}` : `Cahier Vie et Ministère ${input}`;
+  let combinedTextFromSources = "";
+
+  // Définit un titre générique pour les connaissances internes si besoin
+  const knowledgeContextTitle = Array.isArray(input) ? `Publications JW (${input.join(', ')})` : `Publication JW (${input})`;
 
   // --- Core Authoritative Prompting for Gemini ---
   // Cette fonction construit l'instruction principale pour Gemini, incluant les directives autoritaires.
-  const buildAuthoritativeSystemInstruction = (sourceType) => `
+  const buildAuthoritativeSystemInstruction = (sourceType, articleTypeDetected = "ARTICLE GÉNÉRAL") => `
     Tu es un assistant expert pour l'étude de la Bible et les publications des Témoins de Jéhovah.
     
-    ${sourceType === 'proxy' ? `Le texte suivant est une extraction brute de l'article jw.org. Même si le texte semble mélangé, cherche les numéros de paragraphes et les questions.` : ''}
-    ${sourceType === 'googleSearch' ? `Tu as utilisé l'outil Google Search pour trouver et analyser l'article jw.org. ` : ''}
+    ${sourceType === 'proxy' ? `Le texte suivant provient d'une extraction brute de ${Array.isArray(cleanedInput) ? 'plusieurs articles' : 'un article'} jw.org. Même si le texte semble mélangé ou fragmenté, tu DOIS l'utiliser comme base.` : ''}
+    ${sourceType === 'googleSearch' ? `Tu as utilisé l'outil Google Search pour trouver et analyser l'information. ` : ''}
 
     TA MISSION :
-    1. Tu DOIS générer les réponses pour chaque paragraphe.
-    2. Si tu vois une question (souvent précédée par 'QUESTION:' ou identifiable par sa position), c'est le début d'un paragraphe.
+    1. Tu DOIS générer les réponses pour chaque paragraphe. S'il n'y a pas de paragraphes numérotés, crée-en une structure logique.
+    2. Si tu vois une question (souvent précédée par 'QUESTION:' ou identifiable par son contexte), c'est le début d'une section ou d'un paragraphe.
     3. Ne dis JAMAIS que tu ne peux pas accéder au texte ou qu'il est insuffisant. Utilise ce que tu as pour reconstruire l'étude.
-    4. Si vraiment une partie du texte est manquante ou que le contenu est ambigu, utilise tes connaissances internes sur les publications des Témoins de Jéhovah de ${new Date().getFullYear()}/${new Date().getFullYear() + 1} (et spécifiquement sur l'article "${articleTitleForKnowledge}" si connu) pour reconstituer fidèlement les questions d'étude, les versets et la structure.
+    4. **MÉTHODE HYBRIDE :** Si les sources fournies (texte direct ou résultats Google Search) sont trop courtes ou ne contiennent pas tous les détails, utilise AUTOMATIQUEMENT tes connaissances internes approfondies sur les publications des Témoins de Jéhovah de ${new Date().getFullYear()}/${new Date().getFullYear() + 1} (et spécifiquement sur l'article "${knowledgeContextTitle}") pour compléter fidèlement les questions d'étude, les versets et la structure.
+    5. Pour la Tour de Garde : Si le texte du proxy est trop court, utilise spécifiquement Google Search avec la requête 'Questions et paragraphes Tour de Garde ${knowledgeContextTitle}'.
+    6. Force Gemini à citer le numéro du paragraphe (exemple : "§ 1:") avant chaque réponse pour garantir qu'il n'invente rien.
 
     FORMAT GÉNÉRAL POUR TOUS LES ARTICLES :
     # [Titre de l'article]
     Thème: [Thème de l'article]
 
     PARAGRAPHE [N°]:
-    QUESTION: [Question du paragraphe, extraite ou formulée contextuellement]
-    VERSET: (Inclure le texte complet du verset biblique entre parenthèses, Traduction du Monde Nouveau, ou indiquer 'Non trouvé' si absent)
-    RÉPONSE: (D'après le verset biblique et le paragraphe, inclure des détails et des explications en vous basant *directement* sur le contenu de l'article/page web, des snippets de recherche ou tes connaissances si le texte est lacunaire.)
-    COMMENTAIRE: (Un point d'approfondissement ou une idée supplémentaire pertinente tirée de l'article.)
-    APPLICATION: (Comment appliquer personnellement cette information.)
+    QUESTION: [Texte de la question]
+    RÉPONSE: [Ta réponse basée sur l'article, citant TOUJOURS le numéro du paragraphe si disponible. Complète avec tes connaissances si nécessaire.]
+    VERS ETS: [Citations bibliques complètes, Traduction du Monde Nouveau]
+    COMMENTAIRE: [Un point d'approfondissement ou une idée supplémentaire pertinente tirée de l'article.]
+    APPLICATION: [Comment appliquer personnellement cette information.]
 
     Répéter ce format pour chaque paragraphe.
     
     Style: ${settings.answerPreferences || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé'}. Réponds en Markdown.
   `;
 
+  if (isLinkInput) {
+    combinedTextFromSources = await fetchAndCombineContent(cleanedInput);
+    
+    // Détection du type d'article à partir du premier lien (ou d'un composite si plusieurs)
+    const primaryArticleType = Array.isArray(cleanedInput) && cleanedInput.length > 0 
+      ? detectArticleType(cleanedInput[0]) 
+      : (typeof cleanedInput === 'string' ? detectArticleType(cleanedInput) : "ARTICLE GÉNÉRAL");
 
-  if (isLink) {
-    try {
-      console.log(`Attempting to fetch content via AllOrigins proxy for URL: ${cleanedInput}`);
-      // Ajout de ?incLocale=fr pour tenter de forcer le contenu en français
-      const urlToProxy = cleanedInput.includes('incLocale=') ? cleanedInput : `${cleanedInput}?incLocale=fr`;
-      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(urlToProxy)}`;
-      const proxyResponse = await fetch(proxyUrl);
-      
-      if (!proxyResponse.ok) {
-        throw new Error(`Failed to fetch via proxy with status: ${proxyResponse.status}`);
-      }
-      
-      const proxyData = await proxyResponse.json();
-      const htmlContent = proxyData.contents;
-
-      const $ = cheerio.load(htmlContent);
-      let extractedContent = '';
-      
-      // Cheerio: Cibler spécifiquement <div id="article"> ou .pGroup pour la Tour de Garde
-      const targetContainer = $('#article, .bodyTxt'); // Cibler le conteneur principal de l'article
-      if (targetContainer.length > 0) {
-          targetContainer.find('.qu, .pGroup, h2, h3, ul, ol, p').each((i, el) => { // Inclure p pour le texte général
-              const text = $(el).text().trim();
-              if (text) {
-                  if ($(el).is('h2, h3')) { extractedContent += `\n# ${text}\n\n`; } 
-                  else if ($(el).is('.qu')) { extractedContent += `QUESTION: ${text}\n`; } 
-                  else if ($(el).is('.pGroup')) {
-                      const paragraphNumber = $(el).find('.marker').text().trim();
-                      if (paragraphNumber) { extractedContent += `PARAGRAPHE ${paragraphNumber}:\n`; }
-                      extractedContent += text.replace(paragraphNumber, '').trim() + '\n\n';
-                  } else if ($(el).is('li')) { extractedContent += `- ${text}\n`; } 
-                  else if ($(el).is('p')) { extractedContent += text + '\n\n'; }
-              }
-          });
-      }
-      
-      contextTextFromProxy = extractedContent.replace(/\s\s+/g, ' ').trim(); 
-
-      if (contextTextFromProxy && contextTextFromProxy.length > 200) { 
-        modelContents = [{ text: contextTextFromProxy }];
-        systemInstruction = buildAuthoritativeSystemInstruction('proxy');
-        console.log("Content successfully fetched via proxy and will be used by Gemini.");
-      } else {
+    if (combinedTextFromSources && combinedTextFromSources.length > 200) { // Seuil de 200 caractères minimum pour juger le texte "suffisant" pour le proxy
+        if (combinedTextFromSources.length < 2000) { // Si le texte est court, activer l'intelligence hybride
+            modelContents = [{ text: `Voici le texte brut extrait via proxy, qui peut être incomplet:\n${combinedTextFromSources}\n\nEn plus de cela, utilise Google Search pour compléter les informations manquantes.` }];
+            systemInstruction = buildAuthoritativeSystemInstruction('proxy', primaryArticleType);
+        } else { // Si le texte est long, l'utiliser comme source principale
+            modelContents = [{ text: combinedTextFromSources }];
+            systemInstruction = buildAuthoritativeSystemInstruction('proxy', primaryArticleType);
+        }
+        console.log("Content successfully fetched via proxy and will be used by Gemini. Length:", combinedTextFromSources.length);
+    } else {
         console.warn("Proxy fetch resulted in insufficient content. Falling back to Google Search tool for link analysis.");
-        modelContents = [{ text: `Recherche de l'article jw.org à l'adresse: ${cleanedInput}` }]; // Utiliser l'input original pour la recherche Google
-        systemInstruction = buildAuthoritativeSystemInstruction('googleSearch');
-      }
-
-    } catch (proxyError) {
-      console.error("Error fetching via proxy. Falling back to Google Search tool:", proxyError);
-      modelContents = [{ text: `Recherche de l'article jw.org à l'adresse: ${cleanedInput}` }];
-      systemInstruction = buildAuthoritativeSystemInstruction('googleSearch');
+        modelContents = [{ text: `Recherche d'informations sur jw.org concernant: ${Array.isArray(cleanedInput) ? cleanedInput.join(', ') : cleanedInput}` }];
+        systemInstruction = buildAuthoritativeSystemInstruction('googleSearch', primaryArticleType);
     }
-  } else { // C'est une recherche par date/thème, Google Search est la méthode directe
+  } else { // C'est une recherche par date/thème
     modelContents = [{ text: `Recherche d'informations sur jw.org pour: "${input}".` }];
     systemInstruction = buildAuthoritativeSystemInstruction('googleSearch');
   }
@@ -148,8 +181,7 @@ export default async function handler(req, res) {
   // Elles ajoutent les formats spécifiques à chaque section.
 
   if (type === 'WATCHTOWER') {
-    systemInstruction += `\n\n${(isLink && contextTextFromProxy && contextTextFromProxy.length > 200) ? '' : `// Si le texte est insuffisant, utilise la recherche Google pour 'Questions et paragraphes Tour de Garde ${input}'\n`}
-    // Ajout spécifique pour la Tour de Garde:
+    systemInstruction += `\n\n// Ajout spécifique pour la Tour de Garde:
     À la fin de l'article, inclure toutes les QUESTIONS DE RÉVISION:
     QUESTION: [Question de révision]
     RÉPONSE: [Réponse détaillée basée sur le contenu de l'article/page web, des snippets de recherche ou tes connaissances si le texte est lacunaire]
@@ -278,25 +310,25 @@ export default async function handler(req, res) {
 
   // Si c'est une recherche initiale pour l'aperçu, cette instruction écrase toutes les précédentes.
   if (isInitialSearchForPreview) {
+    let previewInput = Array.isArray(input) ? input.join(', ') : input; // Préparer l'input pour la prévisualisation
     let previewInstruction = '';
     if (type === 'WATCHTOWER' || type === 'MINISTRY') {
-      previewInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'identifier le titre et le thème principal de l'article lié à "${input}".
+      previewInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'identifier le titre et le thème principal de l'article lié à "${previewInput}".
       Réponds uniquement avec le format suivant: # [Titre de l'article] \n Thème: [Thème de l'article]. Ne fournis aucun autre détail ou contenu de l'article.`;
     } else if (type === 'PREDICATION') {
-      previewInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est de fournir un titre et un bref résumé pour une préparation de prédication de type "${preachingType}" avec le sujet "${input}".
+      previewInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est de fournir un titre et un bref résumé pour une préparation de prédication de type "${preachingType}" avec le sujet "${previewInput}".
       Réponds uniquement avec le format suivant: # [Titre de la préparation] \n Thème: [Bref résumé de l'objectif]. Ne fournis aucun autre détail.`;
     }
     systemInstruction = previewInstruction; // Écrase tout pour le mode prévisualisation
+    // Pour la prévisualisation, modelContents doit être une chaîne pour la recherche initiale
+    modelContents = [{ text: `Cherche le titre et le thème de: "${previewInput}"` }];
   }
 
-  try {
-    // Si modelContents est un tableau avec le texte extrait par proxy, il est envoyé tel quel.
-    // Sinon, c'est une recherche Google, et le `input` original est utilisé.
-    const actualModelContents = Array.isArray(modelContents) ? modelContents : [{text: modelContents}];
 
+  try {
     const response = await ai.models.generateContent({
       model: modelToUse,
-      contents: actualModelContents,
+      contents: modelContents, // modelContents est déjà un tableau de {text: string}
       config: {
         systemInstruction,
         temperature,
@@ -337,7 +369,7 @@ export default async function handler(req, res) {
     }
 
     if (isSearchToolError || error.message === "MODEL_PROCESSING_ERROR_WITH_GOOGLE_SEARCH") {
-      return res.status(500).json({ message: "Échec de l'analyse du lien via le proxy AllOrigins ou l'outil Google Search. Le site jw.org est probablement en train de bloquer toutes les requêtes automatiques pour ce lien ou le contenu est insuffisant. Veuillez essayer la 'Recherche par date/thème' comme alternative. (Code: 500-LINK-BLOCKED)" });
+      return res.status(500).json({ message: "Échec de l'analyse du contenu via le proxy AllOrigins ou l'outil Google Search. Le site jw.org est probablement en train de bloquer toutes les requêtes automatiques ou le contenu est insuffisant. Veuillez essayer la 'Recherche par date/thème' comme alternative. (Code: 500-LINK-BLOCKED)" });
     }
     if (error.message === "MODEL_PROCESSING_ERROR") {
         return res.status(500).json({ message: "L'IA n'a pas pu trouver ou analyser l'article. Essayez un lien direct ou une formulation différente. Assurez-vous que le lien est valide et public. (Code: 500-AI)" });

@@ -4,7 +4,7 @@ import { StudyPart, PredicationType, AppSettings } from '../types';
 
 export const callGenerateContentApi = async (
   type: 'WATCHTOWER' | 'MINISTRY' | 'PREDICATION',
-  input: string,
+  input: string | string[], // Modified to accept string or string[]
   part: StudyPart = 'tout',
   settings: AppSettings,
   isInitialSearchForPreview: boolean = false,

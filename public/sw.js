@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jw-study-pro-cache-v23'; // Incrément de la version du cache
+const CACHE_NAME = 'jw-study-pro-cache-v24'; // Incrément de la version du cache
 const ASSETS = [
   './',
   './index.html',
@@ -27,17 +27,36 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   // Ignore les requêtes vers l'API Gemini ou notre API Route pour éviter de les mettre en cache
-  if (event.request.url.includes('generativelanguage.googleapis.com') || event.request.url.includes('/api/generate-content')) return;
+  if (event.request.url.includes('generativelanguage.googleapis.com') || event.request.url.includes('/api/generate-content') || event.request.method !== 'GET') {
+    return event.respondWith(fetch(event.request));
+  }
 
   event.respondWith(
     caches.match(event.request).then((cached) => {
-      return cached || fetch(event.request).then((response) => {
-        if (!response || response.status !== 200 || response.type !== 'basic') return response;
-        
-        const toCache = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, toCache));
+      // Si l'actif est en cache, le retourner
+      if (cached) return cached;
+
+      // Sinon, tenter de récupérer l'actif du réseau
+      return fetch(event.request).then((response) => {
+        // Vérifier si la réponse est valide
+        if (!response || response.status !== 200 || response.type !== 'basic') {
+          return response;
+        }
+
+        // Mettre en cache les polices et les CSS pour l'expérience hors ligne
+        const url = new URL(event.request.url);
+        if (url.origin === self.location.origin || url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com' || url.pathname.endsWith('.css')) {
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseToCache);
+          });
+        }
         return response;
-      }).catch(() => null);
+      }).catch((error) => {
+        // En cas d'échec du réseau, tenter de trouver une version hors ligne
+        console.error('Fetch failed:', error);
+        return caches.match('./index.html'); // Fallback to index.html for navigation
+      });
     })
   );
 });

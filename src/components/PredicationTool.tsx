@@ -73,7 +73,7 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
 
   const handleGenerateContent = async (
     title: string,
-    inputDetails: string,
+    inputDetails: string | string[], // Modified to accept string or string[]
     preachingType: PredicationType
   ) => {
     if (loading || cooldown > 0) return;
@@ -93,7 +93,7 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
         date: new Date().toLocaleDateString('fr-FR'),
         content: result.text,
         timestamp: Date.now(),
-        url: pepPublicationLink || nvStudyLink || cbPublicationLink, // Use appropriate link
+        url: (Array.isArray(inputDetails) ? inputDetails.join('\n') : inputDetails) || '', // Store as string
         preachingType: preachingType,
         category: `predication_${preachingType}`
       };

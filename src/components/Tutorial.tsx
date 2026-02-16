@@ -13,7 +13,7 @@ const Tutorial: React.FC = () => {
     },
     {
       title: "Navigation simple et rapide",
-      content: "Utilisez le menu latéral pour passer de l'Accueil aux sections 'Cahier Vie et Ministère' ou 'Tour de Garde', consulter votre 'Historique', accéder aux 'Mises à jour', au 'Tutoriel' ou ajuster les 'Paramètres' de l'application. Sur mobile, le menu se trouve en haut à droite.",
+      content: "Utilisez le menu latéral pour passer de l'Accueil aux sections 'Cahier Vie et Ministère' ou 'Tour de Garde', consulter votre 'Historique', accéder aux 'Mises à jour', au 'Tutoriel' ou ajuster les 'Paramètres' de l'application. Sur mobile, le menu se trouve en haut à gauche.",
       icon: <Lightbulb className="text-cyan-500" size={48} />
     },
     {
@@ -28,12 +28,12 @@ const Tutorial: React.FC = () => {
     },
     {
       title: "Préparation de la Tour de Garde : Lecture Profonde des Liens",
-      content: "Dans l'onglet 'Tour de Garde', si vous collez le lien direct d'un article de jw.org, l'application tentera d'abord de récupérer le contenu via un proxy gratuit (AllOrigins) pour lire le texte réel. Si cela ne fonctionne pas ou si le contenu est insuffisant, l'outil Google Search de Gemini prendra le relais pour analyser le lien. L'IA est instruite de rechercher le texte **intégral** et sa structure par paragraphes et questions. C'est notre meilleure chance de surmonter les blocages et d'obtenir des réponses précises et structurées.",
+      content: "Dans l'onglet 'Tour de Garde', si vous collez le(s) lien(s) direct(s) d'un article de jw.org, l'application tentera d'abord de récupérer le contenu via un proxy gratuit (AllOrigins) pour lire le texte réel. Si le texte récupéré est jugé insuffisant (< 2000 caractères), l'outil Google Search de Gemini prendra le relais pour compléter les informations manquantes. L'IA est instruite de rechercher le texte **intégral** et sa structure par paragraphes et questions. C'est notre meilleure chance de surmonter les blocages et d'obtenir des réponses précises et structurées.",
       icon: <BookOpen className="text-emerald-500" size={48} />
     },
     {
-      title: "Préparation du Cahier Vie et Ministère : Lecture Profonde des Liens",
-      content: "Comme pour la Tour de Garde, si vous entrez un lien direct vers l'article du Cahier, l'application tentera d'abord de récupérer le contenu via le proxy. Si cela échoue, l'outil Google Search de Gemini prendra le relais pour analyser le lien avec une instruction stricte de recherche du texte intégral. Cette approche vise à maximiser la fiabilité pour l'analyse des liens directs et à obtenir une structure par paragraphe. **Cependant, la 'Recherche par date/thème' reste la méthode la plus fiable en cas de blocage persistant par jw.org.**",
+      title: "Préparation du Cahier Vie et Ministère : Lecture Profonde des Liens (Multi-liens)",
+      content: "Comme pour la Tour de Garde, si vous entrez un ou plusieurs liens directs vers les articles du Cahier (1 par ligne), l'application tentera d'abord de récupérer le contenu via le proxy pour chaque lien. Si le texte combiné est insuffisant, l'outil Google Search de Gemini prendra le relais pour analyser les liens avec une instruction stricte de recherche du texte intégral. Cette approche vise à maximiser la fiabilité pour l'analyse des liens directs et à obtenir une structure par paragraphe. **Cependant, la 'Recherche par date/thème' reste la méthode la plus fiable en cas de blocage persistant par jw.org.**",
       icon: <LinkIcon className="text-orange-500" size={48} />
     },
     {

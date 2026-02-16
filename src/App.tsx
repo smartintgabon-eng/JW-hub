@@ -63,11 +63,15 @@ const App: React.FC = () => {
   }, [isSidebarExpanded]);
 
   useEffect(() => {
+    // --- PWA Install Prompt Logic (moved to top for earlier detection) ---
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
+      console.log('beforeinstallprompt fired'); // Debugging
       setDeferredPrompt(e);
     };
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    // --- END PWA Install Prompt Logic ---
+
 
     const handleStatus = () => setIsOnline(navigator.onLine);
     window.addEventListener('online', handleStatus);
@@ -169,10 +173,19 @@ const App: React.FC = () => {
 
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
+    if (!deferredPrompt) {
+      console.warn("Deferred prompt is not available. PWA installation might not be supported or event not fired.");
+      alert("L'installation de l'application n'est pas disponible pour le moment. Veuillez utiliser le menu de votre navigateur (souvent 'Ajouter à l'écran d'accueil').");
+      return;
+    }
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') setDeferredPrompt(null);
+    if (outcome === 'accepted') {
+      console.log('User accepted the PWA install prompt');
+      setDeferredPrompt(null);
+    } else {
+      console.log('User dismissed the PWA install prompt');
+    }
   };
 
   // Handler for update button
@@ -207,9 +220,9 @@ const App: React.FC = () => {
         backgroundColor: active ? 'var(--btn-color)' : 'transparent',
         color: active ? 'var(--btn-text)' : 'inherit'
       }}
-      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-        active ? 'shadow-lg font-bold' : 'opacity-50 hover:opacity-100 hover:bg-white/5'
-      } ${!isExpanded ? 'justify-center px-0' : ''}`} // Center icon if collapsed
+      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 
+        ${active ? 'shadow-lg font-bold' : 'opacity-50 hover:opacity-100 hover:bg-white/5'} 
+        ${!isExpanded ? 'justify-center px-0' : ''}`} // Center icon if collapsed
     >
       <Icon size={20} />
       {isExpanded && <span className="text-sm uppercase tracking-wider">{label}</span>}
@@ -247,13 +260,13 @@ const App: React.FC = () => {
 
       {/* Mobile Header (for hamburger menu) */}
       <header className={`md:hidden flex items-center justify-between p-4 border-b border-white/10 sticky top-0 z-50 bg-[var(--bg-color)] ${isReadingModeActive ? 'hidden' : ''}`}>
-        <div className="flex items-center space-x-2" onClick={() => navigateTo(AppView.HOME)}>
+        <div className="flex items-center space-x-2"> {/* Removed onClick from here for mobile to prevent accidental navigation */}
+           <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 bg-white/5 rounded-lg mr-2"> {/* Added margin-right */}
+              {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+           </button>
            <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="w-8 h-8 flex items-center justify-center rounded-lg font-black text-sm">JW</div>
            <span className="font-bold text-lg tracking-tight uppercase">Study</span>
         </div>
-        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 bg-white/5 rounded-lg">
-          {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
       </header>
 
       {/* Desktop Sidebar Toggle Button */}

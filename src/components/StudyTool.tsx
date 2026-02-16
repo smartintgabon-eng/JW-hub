@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Link as LinkIcon, Calendar, Loader2, Globe, Check, ShieldCheck, AlertTriangle, RefreshCw, Timer } from 'lucide-react';
+import { Search, Link as LinkIcon, Calendar, Loader2, Globe, Check, ShieldCheck, AlertTriangle, RefreshCw, Timer, Plus, Minus } from 'lucide-react'; // Added Plus and Minus icons
 // Fix: Import types from src/types.ts
 import { StudyPart, GeneratedStudy, AppSettings } from '../types'; 
 import { callGenerateContentApi } from '../services/apiService'; // Utilisez le nouveau service API
@@ -21,15 +21,14 @@ export const studyPartOptions: { value: StudyPart; label: string }[] = [
   { value: 'tout', label: 'Toutes les parties' },
 ];
 
-
 const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoadingMessage }) => {
   const [mode, setMode] = useState<'link' | 'date'>(() => {
-    // Restaurer le mode depuis localStorage
     return localStorage.getItem(`study_mode_${type}`) as 'link' | 'date' || 'link';
   });
-  const [input, setInput] = useState(() => {
-    // Restaurer l'input (pour le mode 'link') depuis localStorage au chargement initial
-    return localStorage.getItem(`draft_${type}_link`) || '';
+  // Changed input to urls (array of strings) for link mode
+  const [urls, setUrls] = useState<string[]>(() => {
+    const savedUrls = localStorage.getItem(`draft_${type}_urls`);
+    return savedUrls ? JSON.parse(savedUrls) : [''];
   });
   const [startDateInput, setStartDateInput] = useState(() => localStorage.getItem(`draft_${type}_startDate`) || '');
   const [themeInput, setThemeInput] = useState(() => localStorage.getItem(`draft_${type}_theme`) || '');
@@ -38,26 +37,25 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
     return localStorage.getItem(`selected_part_${type}`) as StudyPart || 'tout';
   });
   const [loading, setLoading] = useState(false);
-  const [preview, setPreview] = useState<{title: string, theme?: string, url?: string} | null>(null);
+  const [preview, setPreview] = useState<{title: string, theme?: string, url?: string | string[]} | null>(null); // url can be string or string[]
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
 
-  // Charger/sauvegarder l'input du brouillon à partir/vers le localStorage quand le type ou le mode change
+  // Charger/sauvegarder les inputs du brouillon à partir/vers le localStorage
   useEffect(() => {
-    // For 'link' mode
     if (mode === 'link') {
-      setInput(localStorage.getItem(`draft_${type}_link`) || '');
-    } else { // For 'date' mode
+      const savedUrls = localStorage.getItem(`draft_${type}_urls`);
+      setUrls(savedUrls ? JSON.parse(savedUrls) : ['']);
+    } else {
       setStartDateInput(localStorage.getItem(`draft_${type}_startDate`) || '');
       setThemeInput(localStorage.getItem(`draft_${type}_theme`) || '');
     }
     localStorage.setItem(`study_mode_${type}`, mode);
   }, [type, mode]);
 
-  // Sauvegarder les inputs du brouillon dans le localStorage à chaque modification
   useEffect(() => {
-    localStorage.setItem(`draft_${type}_link`, input);
-  }, [input, type]);
+    localStorage.setItem(`draft_${type}_urls`, JSON.stringify(urls));
+  }, [urls, type]);
   useEffect(() => {
     localStorage.setItem(`draft_${type}_startDate`, startDateInput);
   }, [startDateInput, type]);
@@ -65,8 +63,6 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
     localStorage.setItem(`draft_${type}_theme`, themeInput);
   }, [themeInput, type]);
 
-
-  // Sauvegarder la partie sélectionnée
   useEffect(() => {
     localStorage.setItem(`selected_part_${type}`, selectedPart);
   }, [selectedPart, type]);
@@ -78,55 +74,59 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
     }
   }, [cooldown]);
 
-  const handleInputChange = (val: string, inputType: 'link' | 'startDate' | 'theme') => {
-    if (inputType === 'link') setInput(val);
-    else if (inputType === 'startDate') setStartDateInput(val);
-    else if (inputType === 'theme') setThemeInput(val);
+  const handleUrlChange = (val: string, index: number) => {
+    const newUrls = [...urls];
+    newUrls[index] = val;
+    setUrls(newUrls);
   };
 
-  const resetState = (clearAllInputs: boolean = true) => {
-    setLoading(false);
-    setError(null);
-    setPreview(null);
-    setGlobalLoadingMessage(null); // Clear loading message on reset
-    if (clearAllInputs) {
-      setInput('');
-      setStartDateInput('');
-      setThemeInput('');
-      localStorage.removeItem(`draft_${type}_link`);
-      localStorage.removeItem(`draft_${type}_startDate`);
-      localStorage.removeItem(`draft_${type}_theme`);
+  const addUrlField = () => {
+    if (urls.length < 8) { // Limite à 8 liens
+      setUrls([...urls, '']);
     }
-    // selectedPart is not reset here as it's part of the user's preference for MINISTRY
   };
+
+  const removeUrlField = (indexToRemove: number) => {
+    if (urls.length > 1) { // Toujours au moins un champ de lien
+      setUrls(urls.filter((_, index) => index !== indexToRemove));
+    }
+  };
+
+  const handleDateChange = (val: string) => setStartDateInput(val);
+  const handleThemeChange = (val: string) => setThemeInput(val);
 
   const currentCombinedInput = mode === 'date' 
     ? `${startDateInput.trim()} ${themeInput.trim()}`.trim()
-    : input.trim();
+    : urls.filter(Boolean).join('\n'); // Concaténer les URLs pour l'aperçu/la recherche
 
   const handleInitialSearch = async () => {
     if (loading || cooldown > 0 || !currentCombinedInput) return;
 
     setLoading(true);
-    setGlobalLoadingMessage(mode === 'link' ? 'Analyse du lien...' : 'Recherche de l\'article...');
+    setGlobalLoadingMessage(mode === 'link' ? 'Analyse des liens...' : 'Recherche de l\'article...');
     setError(null);
 
     try {
-      // Uniquement pour obtenir le titre/thème pour l'aperçu, pas la génération complète
+      // Pour l'aperçu, on envoie soit le texte combiné (date/thème) soit le tableau d'URLs
+      const inputForApi = mode === 'link' ? urls.filter(Boolean) : currentCombinedInput;
       const result = await callGenerateContentApi(
         type, 
-        currentCombinedInput, // Use the combined input
+        inputForApi, 
         'tout', 
         settings, 
         true, 
         undefined
       ); 
-      setPreview({ title: result.title, theme: result.theme, url: mode === 'link' && currentCombinedInput.startsWith('http') ? currentCombinedInput : undefined });
+      setPreview({ 
+        title: result.title, 
+        theme: result.theme, 
+        url: mode === 'link' ? urls.filter(Boolean) : undefined // Stocker le tableau d'URLs
+      });
     } catch (err: any) {
       handleError(err);
     } finally {
       setLoading(false);
-      setGlobalLoadingMessage(null); // Clear loading message
+      setGlobalLoadingMessage(null); 
     }
   };
 
@@ -134,13 +134,16 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
     if (loading || cooldown > 0 || !preview) return;
 
     setLoading(true);
-    setGlobalLoadingMessage('Analyse en cours...'); // Updated loading message
+    setGlobalLoadingMessage('Analyse en cours...'); 
     setError(null);
 
     try {
+      // Pour la génération complète, on envoie soit le tableau d'URLs (si mode link) soit le texte combiné (si mode date)
+      const inputForApi = mode === 'link' ? (preview.url || urls.filter(Boolean)) : currentCombinedInput;
+
       const result = await callGenerateContentApi(
         type, 
-        preview.url || currentCombinedInput, // Use the URL from the preview or the combined input
+        inputForApi, 
         selectedPart, 
         settings, 
         false, 
@@ -155,40 +158,52 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
         date: new Date().toLocaleDateString('fr-FR'),
         content: result.text,
         timestamp: Date.now(),
-        url: preview.url || (mode === 'link' && currentCombinedInput.startsWith('http') ? currentCombinedInput : undefined), // Use the URL from the preview or the original link input
+        url: (mode === 'link' && Array.isArray(inputForApi) ? inputForApi.join('\n') : undefined) || (typeof inputForApi === 'string' ? inputForApi : undefined), // Sauvegarder l'input sous forme de string
         part: type === 'MINISTRY' ? selectedPart : undefined ,
         category: type === 'WATCHTOWER' ? 'tour_de_garde' : 'cahier_vie_et_ministere'
       };
-      onGenerated(newStudy); // This will also navigate to history and clear loading message
-      resetState(true); // Clear input after successful generation
+      onGenerated(newStudy); 
+      resetState(true); 
     } catch (err: any) {
       handleError(err);
     } finally {
       setLoading(false);
-      // Global loading message is cleared by onGenerated on success.
-      // If error occurs, it's cleared by handleError
     }
   };
 
   const handleError = (err: any) => {
-    // La réponse de l'API contient déjà des messages d'erreur formatés
-    setGlobalLoadingMessage(null); // Always clear global loading on error
+    setGlobalLoadingMessage(null); 
     setError(err.message || "Une erreur inconnue est survenue.");
     
-    // Si l'erreur vient du cooldown, mettez à jour le compteur
     if (err.message && err.message.includes('patienter')) {
-      // Extraire le nombre de secondes si le message contient "Veuillez patienter Xs"
       const match = err.message.match(/patienter (\d+)s/);
       if (match && match[1]) {
         setCooldown(parseInt(match[1]));
       } else {
-        setCooldown(90); // Fallback si le format n'est pas celui attendu
+        setCooldown(90); 
       }
+    }
+  };
+
+  const resetState = (clearAllInputs: boolean = true) => {
+    setLoading(false);
+    setError(null);
+    setPreview(null);
+    setGlobalLoadingMessage(null); 
+    if (clearAllInputs) {
+      setUrls(['']); // Reset to one empty URL field
+      setStartDateInput('');
+      setThemeInput('');
+      localStorage.removeItem(`draft_${type}_urls`);
+      localStorage.removeItem(`draft_${type}_startDate`);
+      localStorage.removeItem(`draft_${type}_theme`);
     }
   };
 
   const getCommonFormStyles = () => `w-full bg-black/40 border border-white/10 rounded-xl py-5 pl-14 pr-4 focus:border-[var(--btn-color)] outline-none transition-all font-medium ${cooldown > 0 || loading || preview !== null ? 'opacity-30 cursor-not-allowed' : ''}`;
   const getCommonLabelStyles = () => "text-[10px] font-black uppercase opacity-40 ml-1 tracking-[0.2em]";
+  const isSearchDisabled = loading || cooldown > 0 || (mode === 'link' && urls.filter(Boolean).length === 0) || (mode === 'date' && !currentCombinedInput);
+
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 md:max-w-5xl md:mx-auto"> 
@@ -208,20 +223,51 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
       <div className="bg-white/5 border border-white/10 rounded-[2rem] p-8 space-y-8 shadow-2xl relative">
         {mode === 'link' && (
           <div className="space-y-3">
-            <label className={getCommonLabelStyles()}>Lien de l'article JW.ORG</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={input}
-                disabled={cooldown > 0 || loading || preview !== null} 
-                onChange={(e) => handleInputChange(e.target.value, 'link')}
-                placeholder="https://www.jw.org/..."
-                className={getCommonFormStyles()}
-              />
-              <div className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30">
-                <LinkIcon size={22} />
+            <label className={getCommonLabelStyles()}>Liens des articles JW.ORG (1 par ligne, max 8)</label>
+            {urls.map((url, index) => (
+              <div key={index} className="flex items-center space-x-2">
+                <div className="relative flex-1">
+                  <textarea
+                    value={url}
+                    disabled={cooldown > 0 || loading || preview !== null} 
+                    onChange={(e) => handleUrlChange(e.target.value, index)}
+                    placeholder="https://www.jw.org/..."
+                    className={`
+                      w-full bg-black/40 border border-white/10 rounded-xl py-3 pl-14 pr-4 
+                      focus:border-[var(--btn-color)] outline-none transition-all font-medium text-base leading-relaxed
+                      ${cooldown > 0 || loading || preview !== null ? 'opacity-30 cursor-not-allowed' : ''}
+                    `}
+                    rows={1} // Adjusted to 1 initially, but will grow
+                  />
+                  <div className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30">
+                    <LinkIcon size={22} />
+                  </div>
+                </div>
+                <div className="flex space-x-2">
+                  {urls.length < 8 && index === urls.length - 1 && (
+                    <button 
+                      onClick={addUrlField} 
+                      className="w-10 h-10 flex items-center justify-center rounded-full bg-emerald-600 text-white shadow-md active:scale-95 transition-transform"
+                      title="Ajouter un lien"
+                      disabled={cooldown > 0 || loading || preview !== null}
+                    >
+                      <Plus size={20} />
+                    </button>
+                  )}
+                  {urls.length > 1 && (
+                    <button 
+                      onClick={() => removeUrlField(index)} 
+                      className="w-10 h-10 flex items-center justify-center rounded-full bg-red-600 text-white shadow-md active:scale-95 transition-transform"
+                      title="Supprimer ce lien"
+                      disabled={cooldown > 0 || loading || preview !== null}
+                    >
+                      <Minus size={20} />
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
+            ))}
+            <p className="text-[10px] opacity-30 text-center font-bold italic mt-2">Collez chaque lien sur une nouvelle ligne. Maximum 8 liens.</p>
           </div>
         )}
 
@@ -234,7 +280,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
                   type="text"
                   value={startDateInput}
                   disabled={cooldown > 0 || loading || preview !== null} 
-                  onChange={(e) => handleInputChange(e.target.value, 'startDate')}
+                  onChange={(e) => handleDateChange(e.target.value)}
                   placeholder="Ex: 25/11/2025"
                   className={getCommonFormStyles()}
                 />
@@ -248,7 +294,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
                   type="text"
                   value={themeInput}
                   disabled={cooldown > 0 || loading || preview !== null} 
-                  onChange={(e) => handleInputChange(e.target.value, 'theme')}
+                  onChange={(e) => handleThemeChange(e.target.value)}
                   placeholder="Ex: Soyez courageux !"
                   className={getCommonFormStyles()}
                 />
@@ -288,15 +334,15 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
         {!preview ? (
             <button
                 onClick={() => handleInitialSearch()}
-                disabled={loading || cooldown > 0 || !currentCombinedInput}
-                style={{ backgroundColor: cooldown > 0 ? '#1f2937' : 'var(--btn-color)', color: 'var(--btn-text)' }}
+                disabled={isSearchDisabled}
+                style={{ backgroundColor: isSearchDisabled && cooldown > 0 ? '#1f2937' : 'var(--btn-color)', color: 'var(--btn-text)' }}
                 className="w-full py-6 rounded-xl font-black uppercase tracking-widest flex flex-col items-center justify-center space-y-1 shadow-2xl active:scale-95 disabled:opacity-50 transition-all min-h-[100px]"
             >
                 {loading ? (
                     <div className="flex flex-col items-center space-y-2">
                     <Loader2 className="animate-spin" size={28} />
                     <span className="text-[10px] opacity-70 font-bold tracking-widest uppercase">{
-                      mode === 'link' ? 'Analyse du lien...' : 'Recherche de l\'article...'
+                      mode === 'link' ? 'Analyse des liens...' : 'Recherche de l\'article...'
                     }</span>
                     </div>
                 ) : (
@@ -317,12 +363,13 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
                     <h3 className="text-3xl font-black mb-3 uppercase tracking-tighter">{preview.title}</h3>
                     <p className="text-lg opacity-60 mb-8 font-serif italic">{preview.theme || "Prêt pour l'analyse"}</p>
                     
-                    {type === 'MINISTRY' && ( // Show part selection AFTER preview
+                    {type === 'MINISTRY' && ( 
                       <div className="space-y-3 pt-4 border-t border-white/5 animate-in fade-in duration-300">
                           <label className="text-[10px] font-black uppercase opacity-40 ml-1 tracking-[0.2em]">
                           Choisir une partie de l'étude (Cahier)
                           </label>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {/* Responsive grid for study parts */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                           {studyPartOptions.map(option => (
                               <button
                               key={option.value}

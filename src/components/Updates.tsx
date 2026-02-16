@@ -279,6 +279,22 @@ const updates: UpdateItem[] = [
       "Correction de l'affichage en mode portrait sur mobile : la barre latérale ne pousse plus le contenu et s'affiche correctement en superposition, occupant une largeur optimale.",
       "Amélioration de la résilience de l'IA face au texte fragmenté : les instructions strictes dans le prompt réduisent les messages d'erreur de 'texte non accessible' et forcent la génération de réponses structurées."
     ]
+  },
+  {
+    version: "2.0.1",
+    date: "21 Février 2025",
+    features: [
+      "**Saisie multi-liens (Tour de Garde et Cahier)** : Le champ URL unique a été remplacé par une zone de texte permettant de coller jusqu'à 8 liens d'articles JW.ORG (1 par ligne). L'API les scrape tous via le proxy AllOrigins et combine le texte pour l'analyse par Gemini.",
+      "**Détection automatique du type d'article** : L'API détecte désormais automatiquement le type d'article (Tour de Garde, Cahier Vie et Ministère, etc.) à partir des liens. Gemini adapte sa structure de réponse et son ton en conséquence, offrant des réponses plus pertinentes.",
+      "**Amélioration de la 'Hybrid Intelligence'** : Le serveur scrape le texte via AllOrigins. Si le contenu est court (< 2000 caractères), Gemini active automatiquement l'outil Google Search pour compléter les informations manquantes, garantissant des réponses complètes et fidèles.",
+      "**Affichage des résultats responsif** : Les résultats et l'historique utilisent une grille CSS adaptative (1 à 3 colonnes) pour un affichage optimal sur mobile, tablette et desktop.",
+      "**PWA améliorée** : L'installation PWA est plus fiable avec une détection précoce du prompt. Le mode hors-ligne est visuellement identique au mode en ligne grâce à un meilleur cache du Service Worker."
+    ],
+    fixes: [
+      "Correction de la barre latérale mobile : elle ne masque plus le titre 'JW Study' et s'affiche comme un menu burger en haut à gauche.",
+      "Résolution des problèmes d'installation PWA : le `manifest.json` est vérifié et la détection du prompt d'installation est optimisée.",
+      "Amélioration du cache du Service Worker pour inclure toutes les feuilles de style et polices de caractères, garantissant un design cohérent hors ligne."
+    ]
   }
 ];
 

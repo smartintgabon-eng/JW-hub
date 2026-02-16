@@ -61,7 +61,15 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
     setIsRegenerating(true);
     try {
       // Pour la régénération, on utilise le type et l'input original, et la partie si elle était définie
-      const result = await callGenerateContentApi(study.type, study.url || study.title, study.part || 'tout', settings, false, study.preachingType);
+      // Note: study.url peut être un string ou un tableau de string maintenant
+      const result = await callGenerateContentApi(
+        study.type, 
+        study.url || study.title, // Pass string or string[]
+        study.part || 'tout', 
+        settings, 
+        false, 
+        study.preachingType
+      );
       const updatedStudy = { ...study, content: result.text, timestamp: Date.now() };
       saveToHistory(updatedStudy); // Met à jour l'historique
       setHistory(prev => prev.map(h => h.id === study.id ? updatedStudy : h));
@@ -462,7 +470,8 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
           <p className="text-sm font-black opacity-20 uppercase tracking-[0.3em]">Aucune archive disponible</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        // Responsive grid for history items
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"> 
           {history.map((study) => (
             <div key={study.id} onClick={() => setSelectedStudy(study)} className="bg-white/5 border border-white/10 rounded-3xl p-8 hover:bg-white/10 hover:border-white/20 transition-all cursor-pointer group relative overflow-hidden shadow-xl active:scale-[0.98]">
               <div className="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-opacity">
