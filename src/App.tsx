@@ -279,7 +279,7 @@ const App: React.FC = () => {
           bg-black/90 backdrop-blur-xl border-r border-white/10 
           ${isReadingModeActive ? 'hidden' : ''}
           
-          // Mobile specific (overlay)
+          // Mobile specific (overlay with xgest styling)
           ${isSidebarOpen ? 'fixed inset-y-0 left-0 h-screen w-[80vw] max-w-[280px] z-[9999] flex translate-x-0' : 'fixed -translate-x-full w-0 h-screen z-[9999] hidden'} 
           
           // Desktop specific (push content, always visible but collapsed/expanded)

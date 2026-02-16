@@ -1,5 +1,5 @@
-import { GoogleGenAI } from "@google/genai"; // Fix: Correct import for GoogleGenAI
-import * as cheerio from 'cheerio'; // Réintroduction de cheerio pour le parsing HTML
+import { GoogleGenAI } from "@google/genai";
+import * as cheerio from 'cheerio';
 
 const cleanUrl = (url) => {
   try {
@@ -32,24 +32,58 @@ export default async function handler(req, res) {
 
   const { type, input, part, settings, isInitialSearchForPreview, preachingType } = req.body;
 
-  const apiKey = process.env.GEMINI_API_KEY; 
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     console.error("API Key is missing in environment variables.");
     return res.status(500).json({ message: "Clé API absente. Vérifiez votre configuration sur Vercel." });
   }
 
   const ai = new GoogleGenAI({ apiKey });
-  
-  const cleanedInput = cleanUrl(input);
-  const isLink = cleanedInput.startsWith('http'); 
 
-  let modelToUse = 'gemini-2.5-flash'; // Fix: Use gemini-2.5-flash
-  let toolsConfig = [{ googleSearch: {} }]; // googleSearch est toujours activé pour les liens et les recherches
+  const cleanedInput = cleanUrl(input);
+  const isLink = cleanedInput.startsWith('http');
+
+  let modelToUse = 'gemini-2.5-flash';
+  let toolsConfig = [{ googleSearch: {} }];
   let systemInstruction = '';
-  let temperature = 0.2; 
-  
-  let modelContents; 
+  let temperature = 0.2;
+
+  let modelContents;
   let contextTextFromProxy = "";
+  
+  // Définit le titre de l'article pour les connaissances internes si besoin
+  const articleTitleForKnowledge = type === 'WATCHTOWER' ? `Tour de Garde ${input}` : `Cahier Vie et Ministère ${input}`;
+
+  // --- Core Authoritative Prompting for Gemini ---
+  // Cette fonction construit l'instruction principale pour Gemini, incluant les directives autoritaires.
+  const buildAuthoritativeSystemInstruction = (sourceType) => `
+    Tu es un assistant expert pour l'étude de la Bible et les publications des Témoins de Jéhovah.
+    
+    ${sourceType === 'proxy' ? `Le texte suivant est une extraction brute de l'article jw.org. Même si le texte semble mélangé, cherche les numéros de paragraphes et les questions.` : ''}
+    ${sourceType === 'googleSearch' ? `Tu as utilisé l'outil Google Search pour trouver et analyser l'article jw.org. ` : ''}
+
+    TA MISSION :
+    1. Tu DOIS générer les réponses pour chaque paragraphe.
+    2. Si tu vois une question (souvent précédée par 'QUESTION:' ou identifiable par sa position), c'est le début d'un paragraphe.
+    3. Ne dis JAMAIS que tu ne peux pas accéder au texte ou qu'il est insuffisant. Utilise ce que tu as pour reconstruire l'étude.
+    4. Si vraiment une partie du texte est manquante ou que le contenu est ambigu, utilise tes connaissances internes sur les publications des Témoins de Jéhovah de ${new Date().getFullYear()}/${new Date().getFullYear() + 1} (et spécifiquement sur l'article "${articleTitleForKnowledge}" si connu) pour reconstituer fidèlement les questions d'étude, les versets et la structure.
+
+    FORMAT GÉNÉRAL POUR TOUS LES ARTICLES :
+    # [Titre de l'article]
+    Thème: [Thème de l'article]
+
+    PARAGRAPHE [N°]:
+    QUESTION: [Question du paragraphe, extraite ou formulée contextuellement]
+    VERSET: (Inclure le texte complet du verset biblique entre parenthèses, Traduction du Monde Nouveau, ou indiquer 'Non trouvé' si absent)
+    RÉPONSE: (D'après le verset biblique et le paragraphe, inclure des détails et des explications en vous basant *directement* sur le contenu de l'article/page web, des snippets de recherche ou tes connaissances si le texte est lacunaire.)
+    COMMENTAIRE: (Un point d'approfondissement ou une idée supplémentaire pertinente tirée de l'article.)
+    APPLICATION: (Comment appliquer personnellement cette information.)
+
+    Répéter ce format pour chaque paragraphe.
+    
+    Style: ${settings.answerPreferences || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé'}. Réponds en Markdown.
+  `;
+
 
   if (isLink) {
     try {
@@ -67,108 +101,66 @@ export default async function handler(req, res) {
       const htmlContent = proxyData.contents;
 
       const $ = cheerio.load(htmlContent);
-      let articleContent = '';
+      let extractedContent = '';
       
-      // Cibler les éléments de contenu principaux pour extraire le texte
-      // On cherche les questions (.qu), les paragraphes (.pGroup), les titres de section (h2, h3)
-      const mainArticleContainer = $('article#article, .bodyTxt'); 
-      if (mainArticleContainer.length > 0) {
-          mainArticleContainer.find('.qu, .pGroup, h2, h3, ul, ol').each((i, el) => {
+      // Cheerio: Cibler spécifiquement <div id="article"> ou .pGroup pour la Tour de Garde
+      const targetContainer = $('#article, .bodyTxt'); // Cibler le conteneur principal de l'article
+      if (targetContainer.length > 0) {
+          targetContainer.find('.qu, .pGroup, h2, h3, ul, ol, p').each((i, el) => { // Inclure p pour le texte général
               const text = $(el).text().trim();
               if (text) {
-                  if ($(el).is('h2, h3')) {
-                      articleContent += `\n# ${text}\n\n`; 
-                  } else if ($(el).is('.qu')) {
-                      // C'est une question de paragraphe, souvent en gras
-                      articleContent += `QUESTION: ${text}\n`;
-                  } else if ($(el).is('.pGroup')) {
-                      // C'est un groupe de paragraphe, souvent numéroté
+                  if ($(el).is('h2, h3')) { extractedContent += `\n# ${text}\n\n`; } 
+                  else if ($(el).is('.qu')) { extractedContent += `QUESTION: ${text}\n`; } 
+                  else if ($(el).is('.pGroup')) {
                       const paragraphNumber = $(el).find('.marker').text().trim();
-                      if (paragraphNumber) {
-                          articleContent += `PARAGRAPHE ${paragraphNumber}:\n`;
-                      }
-                      articleContent += text.replace(paragraphNumber, '').trim() + '\n\n';
-                  } else if ($(el).is('li')) { 
-                      articleContent += `- ${text}\n`;
-                  } else {
-                      articleContent += text + '\n\n';
-                  }
+                      if (paragraphNumber) { extractedContent += `PARAGRAPHE ${paragraphNumber}:\n`; }
+                      extractedContent += text.replace(paragraphNumber, '').trim() + '\n\n';
+                  } else if ($(el).is('li')) { extractedContent += `- ${text}\n`; } 
+                  else if ($(el).is('p')) { extractedContent += text + '\n\n'; }
               }
           });
       }
       
-      contextTextFromProxy = articleContent.replace(/\s\s+/g, ' ').trim(); 
+      contextTextFromProxy = extractedContent.replace(/\s\s+/g, ' ').trim(); 
 
-      if (contextTextFromProxy && contextTextFromProxy.length > 200) { // Augmentation du seuil pour un contenu plus significatif
-        // Si le proxy a réussi à récupérer du contenu, on l'utilise directement
-        modelContents = [
-          { text: `Le texte suivant est une extraction brute de l'article jw.org. 
-            Même si le texte semble mélangé, cherche les numéros de paragraphes et les questions. 
-            
-            TA MISSION :
-            1. Tu DOIS générer les réponses pour chaque paragraphe présent dans le texte.
-            2. Si tu vois une question (souvent précédée par 'QUESTION:'), c'est le début d'un paragraphe.
-            3. Ne dis JAMAIS que tu ne peux pas accéder au texte. Utilise ce que tu as pour reconstruire l'étude.
-            4. Si vraiment une partie manque, utilise tes connaissances générales sur cet article précis (ex: Tour de Garde, Cahier Vie et Ministère de la semaine) pour compléter fidèlement.
-            
-            FORMAT :
-            § [Numéro]
-            Question : [Texte de la question]
-            Réponse : [Ta réponse basée sur l'article]
-            Versets : [Citations bibliques complètes, Traduction du Monde Nouveau]
-            \n\n` },
-          { text: contextTextFromProxy }
-        ];
-        systemInstruction = `Vous agissez en tant qu'Assistant JW expert en publications. Vous avez reçu le texte brut d'une page web (pré-traité par un proxy). Votre tâche est d'analyser ce texte. La réponse doit être **impérativement basée** et strictement fidèle aux informations et références (bibliques complètes, publications jw.org) trouvées *directement* dans le texte fourni. Ne pas inventer d'informations.`;
+      if (contextTextFromProxy && contextTextFromProxy.length > 200) { 
+        modelContents = [{ text: contextTextFromProxy }];
+        systemInstruction = buildAuthoritativeSystemInstruction('proxy');
         console.log("Content successfully fetched via proxy and will be used by Gemini.");
       } else {
-        // Si le proxy n'a pas pu obtenir de contenu suffisant, on tombe sur le googleSearch de Gemini
         console.warn("Proxy fetch resulted in insufficient content. Falling back to Google Search tool for link analysis.");
-        modelContents = `Analyse le contenu de ce lien jw.org en utilisant tes outils de recherche : "${cleanedInput}". Extrait les informations pertinentes pour générer le contenu selon les instructions de système. Ne te contente pas du titre, cherche le texte complet de l'article pour extraire chaque paragraphe et sa question associée si possible. Ensuite, génère le contenu selon les instructions de système, en respectant scrupuleusement le format structuré demandé.`;
-        systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'analyser l'information obtenue via l'outil Google Search pour le lien "${cleanedInput}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés pour extraire et analyser l'information. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations ou si les résultats sont ambigus, indiquez-le clairement. **Il est impératif d'extraire et de présenter l'information paragraphe par paragraphe, incluant la question, le verset (avec texte complet) et une réponse détaillée. Si une question de paragraphe ou un verset n'est pas explicitement trouvé, l'IA doit l'indiquer clairement ou se baser sur le contexte pour formuler une question ou un verset pertinent à ce paragraphe.**`;
+        modelContents = [{ text: `Recherche de l'article jw.org à l'adresse: ${cleanedInput}` }]; // Utiliser l'input original pour la recherche Google
+        systemInstruction = buildAuthoritativeSystemInstruction('googleSearch');
       }
 
     } catch (proxyError) {
       console.error("Error fetching via proxy. Falling back to Google Search tool:", proxyError);
-      // En cas d'échec total du proxy, on laisse Google Search de Gemini faire le travail
-      modelContents = `Analyse le contenu de ce lien jw.org en utilisant tes outils de recherche : "${cleanedInput}". Extrait les informations pertinentes pour générer le contenu selon les instructions de système. Ne te contente pas du titre, cherche le texte complet de l'article pour extraire chaque paragraphe et sa question associée si possible. Ensuite, génère le contenu selon les instructions de système, en respectant scrupuleusement le format structuré demandé.`;
-      systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'analyser l'information obtenue via l'outil Google Search pour le lien "${cleanedInput}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés pour extraire et analyser l'information. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations ou si les résultats sont ambigus, indiquez-le clairement. **Il est impératif d'extraire et de présenter l'information paragraphe par paragraphe, incluant la question, le verset (avec texte complet) et une réponse détaillée. Si une question de paragraphe ou un verset n'est pas explicitement trouvé, l'IA doit l'indiquer clairement ou se baser sur le contexte pour formuler une question ou un verset pertinent à ce paragraphe.**`;
+      modelContents = [{ text: `Recherche de l'article jw.org à l'adresse: ${cleanedInput}` }];
+      systemInstruction = buildAuthoritativeSystemInstruction('googleSearch');
     }
   } else { // C'est une recherche par date/thème, Google Search est la méthode directe
-    modelContents = `Utilise l'outil Google Search pour trouver et analyser l'information pertinente pour le sujet/la date/le contexte : "${input}". Ensuite, génère le contenu selon les instructions de système.`;
-    systemInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est d'analyser l'information obtenue via l'outil Google Search pour le contenu "${input}" sur jw.org. Utilisez les résultats de recherche que vous avez trouvés pour extraire et analyser l'information. Soyez très fidèle et ne pas inventer d'informations. Si vous ne trouvez pas assez d'informations ou si les résultats sont ambigus, indiquez-le clairement.`;
+    modelContents = [{ text: `Recherche d'informations sur jw.org pour: "${input}".` }];
+    systemInstruction = buildAuthoritativeSystemInstruction('googleSearch');
   }
 
   // --- Instructions spécifiques au type de contenu (WATCHTOWER, MINISTRY, PREDICATION) ---
-  // Ces instructions sont APPENDED aux instructions de base définies ci-dessus
+  // Ces instructions APPENDENT aux instructions de base (autoritaires) définies ci-dessus.
+  // Elles ajoutent les formats spécifiques à chaque section.
+
   if (type === 'WATCHTOWER') {
-    systemInstruction += `\n\nSubdivisez l'article de manière structurée et très détaillée. Priorise la clarté et la concision tout en étant exhaustif. ${isLink ? '' : '**Il est impératif d\'extraire et de présenter l\'information paragraphe par paragraphe, incluant la question, le verset (avec texte complet) et une réponse détaillée. Si une question de paragraphe ou un verset n\'est pas explicitement trouvé, l\'IA doit l\'indiquer clairement ou se baser sur le contexte pour formuler une question ou un verset pertinent à ce paragraphe.**'}
-    
-    Structure: 
-    # [Titre de l'article] 
-    Thème: [Thème de l'article] 
-    
-    PARAGRAPHE [N°]: 
-    QUESTION: [Question du paragraphe, extraite ou formulée contextuellement]
-    VERSET: (Inclure le texte complet du verset biblique entre parenthèses, Traduction du Monde Nouveau, ou indiquer 'Non trouvé' si absent)
-    RÉPONSE: (D'après le verset biblique et le paragraphe, inclure des détails et des explications en vous basant *directement* sur le contenu de l'article/page web ou des snippets de recherche.)
-    COMMENTAIRE: (Un point d'approfondissement ou une idée supplémentaire pertinente tirée de l'article.)
-    APPLICATION: (Comment appliquer personnellement cette information, en vous basant *directement* sur le contenu de l'article/page web ou des snippets de recherche.)
-    
-    Répéter ce format pour chaque paragraphe.
-    
+    systemInstruction += `\n\n${(isLink && contextTextFromProxy && contextTextFromProxy.length > 200) ? '' : `// Si le texte est insuffisant, utilise la recherche Google pour 'Questions et paragraphes Tour de Garde ${input}'\n`}
+    // Ajout spécifique pour la Tour de Garde:
     À la fin de l'article, inclure toutes les QUESTIONS DE RÉVISION:
     QUESTION: [Question de révision]
-    RÉPONSE: [Réponse détaillée basée sur le contenu de l'article/page web ou des snippets de recherche]
-    
-    Style: ${settings.answerPreferences || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé'}. Réponds en Markdown.`;
-    temperature = 0.1; 
+    RÉPONSE: [Réponse détaillée basée sur le contenu de l'article/page web, des snippets de recherche ou tes connaissances si le texte est lacunaire]
+    `;
+    temperature = 0.1;
   } else if (type === 'MINISTRY') {
     let partInstruction = '';
-    
+
     switch (part) {
       case 'joyaux_parole_dieu':
-        partInstruction = `**JOYAUX DE LA PAROLE DE DIEU**
+        partInstruction = `\n\n**JOYAUX DE LA PAROLE DE DIEU**
         Fournis une proposition d'exposé détaillée pour le discours principal de cette section, en te basant sur le contenu de l'article. L'exposé doit inclure:
         Thème: [Thème clair pour l'exposé, basé sur l'article]
         INTRODUCTION: [Une introduction engageante basée sur l'article]
@@ -179,7 +171,7 @@ export default async function handler(req, res) {
         `;
         break;
       case 'perles_spirituelles':
-        partInstruction = `**PERLES SPIRITUELLES**
+        partInstruction = `\n\n**PERLES SPIRITUELLES**
         Pour chaque perle spirituelle, en te basant sur le contenu de l'article et de ses références, suis le format suivant:
         VERSET: (Verset biblique complet entre parenthèses, Traduction du Monde Nouveau, lié à la perle)
         QUESTION: [La première question de la perle spirituelle, textuellement de l'article]
@@ -191,7 +183,7 @@ export default async function handler(req, res) {
         `;
         break;
       case 'applique_ministere':
-        partInstruction = `**APPLIQUE-TOI AU MINISTÈRE**
+        partInstruction = `\n\n**APPLIQUE-TOI AU MINISTÈRE**
         En te basant sur le contenu de l'article, liste tous les exposés proposés dans le programme de la semaine. Pour CHAQUE exposé, fournis une proposition détaillée:
         [Nom de l'exposé - Ex: Visite initiale]
         INTRODUCTION: [Une introduction adaptée, basée sur l'article]
@@ -202,19 +194,19 @@ export default async function handler(req, res) {
         `;
         break;
       case 'vie_chretienne':
-        partInstruction = `**VIE CHRÉTIENNE**
+        partInstruction = `\n\n**VIE CHRÉTIENNE**
         En te basant sur le contenu de l'article (et en simulant l'analyse d'une vidéo si elle est mentionnée dans le texte), fournis des "RÉPONSES :" détaillées aux questions de discussion et des "POINTS DE DISCUSSION :" pratiques. Ces réponses et points doivent être basés sur les principes bibliques et les publications de jw.org mentionnées dans l'article.
         `;
         break;
       case 'etude_biblique_assemblee':
-        partInstruction = `**ÉTUDE BIBLIQUE DE L'ASSEMBLÉE**
+        partInstruction = `\n\n**ÉTUDE BIBLIQUE DE L'ASSEMBLÉE**
         En te basant sur le contenu de'l'article (et les références de livre/brochure), fournis les "RÉPONSES :" détaillées aux questions de l'étude.
         `;
         partInstruction += `\n\n${getApplicationQuestions()}`;
         break;
       case 'tout':
       default:
-        partInstruction = `Fournis des réponses et exemples d'exposés détaillés pour **Toutes les parties** du Cahier, dans l'ordre suivant, en te basant sur le contenu de l'article principal et de ses références:
+        partInstruction = `\n\nFournis des réponses et exemples d'exposés détaillés pour **Toutes les parties** du Cahier, dans l'ordre suivant, en te basant sur le contenu de l'article principal et de ses références:
         
         **JOYAUX DE LA PAROLE DE DIEU**
         (Suit le format détaillé des Joyaux de la Parole de Dieu, y compris Thème, Introduction, Points principaux avec références bibliques complètes (Traduction du Monde Nouveau) et Conclusion.)
@@ -234,21 +226,14 @@ export default async function handler(req, res) {
         `;
         break;
     }
-
-    systemInstruction += `\n\nStructure: 
-    # [Titre de l'article du Cahier] 
-    Thème: [Thème général de la semaine] 
-    
-    ${partInstruction}
-    
-    Style: ${settings.answerPreferences || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé'}. Réponds en Markdown.`;
-    temperature = 0.2; 
+    systemInstruction += partInstruction;
+    temperature = 0.2;
   } else if (type === 'PREDICATION') {
     let preachingInstruction = '';
     
     switch (preachingType) {
       case 'porte_en_porte':
-        preachingInstruction = `Préparer une présentation de porte-en-porte. Le sujet est "${input}".`;
+        preachingInstruction = `\n\nPréparer une présentation de porte-en-porte. Le sujet est "${input}".`;
         
         systemInstruction += `\n\nStructure:
         # SUJET: [Titre concis et accrocheur basé sur le sujet et la publication]
@@ -261,7 +246,7 @@ export default async function handler(req, res) {
         Style: Simple, facile à retenir, pratique. Utilise un langage courant.`;
         break;
       case 'nouvelle_visite':
-        preachingInstruction = `Préparer une nouvelle visite. ${input}.`;
+        preachingInstruction = `\n\nPréparer une nouvelle visite. ${input}.`;
         
         systemInstruction += `\n\nStructure:
         # MANIÈRE DE FAIRE: [Une approche naturelle pour la nouvelle visite, reprenant le fil de la discussion précédente ou la question en suspens.]
@@ -274,7 +259,7 @@ export default async function handler(req, res) {
         Style: Simple, facile à retenir, pratique. Axé sur la progression de l'intérêt.`;
         break;
       case 'cours_biblique':
-        preachingInstruction = `Préparer un cours biblique. ${input}.`;
+        preachingInstruction = `\n\nPréparer un cours biblique. ${input}.`;
         
         systemInstruction += `\n\nStructure:
         # MANIÈRE DE FAIRE: [Plan détaillé pour conduire le cours biblique. Expliquer comment aborder le chapitre/leçon, souligner les points clés, utiliser les versets bibliques (complets Traduction du Monde Nouveau entre parenthèses) et les questions.]
@@ -284,15 +269,14 @@ export default async function handler(req, res) {
         Style: Clair, pédagogique, encourageant la participation de l'étudiant.`;
         break;
       default:
-        preachingInstruction = `Générer une préparation de prédication pour le sujet: ${input}.`;
+        preachingInstruction = `\n\nGénérer une préparation de prédication pour le sujet: ${input}.`;
         break;
     }
-
-    systemInstruction += `\n\nStyle: ${settings.answerPreferences || 'Simple, facile à retenir, pratique. Utilise un langage courant et des versets bibliques complets Traduction du Monde Nouveau.'}. Réponds en Markdown.`;
-    temperature = 0.5; 
+    systemInstruction += preachingInstruction;
+    temperature = 0.5;
   }
 
-  // Si c'est une recherche initiale pour l'aperçu, on utilise un prompt plus court et moins exigeant.
+  // Si c'est une recherche initiale pour l'aperçu, cette instruction écrase toutes les précédentes.
   if (isInitialSearchForPreview) {
     let previewInstruction = '';
     if (type === 'WATCHTOWER' || type === 'MINISTRY') {
@@ -302,23 +286,27 @@ export default async function handler(req, res) {
       previewInstruction = `En tant qu'Assistant JW expert en publications, votre tâche est de fournir un titre et un bref résumé pour une préparation de prédication de type "${preachingType}" avec le sujet "${input}".
       Réponds uniquement avec le format suivant: # [Titre de la préparation] \n Thème: [Bref résumé de l'objectif]. Ne fournis aucun autre détail.`;
     }
-    systemInstruction = systemInstruction + '\n\n' + previewInstruction;
+    systemInstruction = previewInstruction; // Écrase tout pour le mode prévisualisation
   }
 
   try {
+    // Si modelContents est un tableau avec le texte extrait par proxy, il est envoyé tel quel.
+    // Sinon, c'est une recherche Google, et le `input` original est utilisé.
+    const actualModelContents = Array.isArray(modelContents) ? modelContents : [{text: modelContents}];
+
     const response = await ai.models.generateContent({
       model: modelToUse,
-      contents: modelContents, 
+      contents: actualModelContents,
       config: {
         systemInstruction,
         temperature,
-        tools: toolsConfig, 
+        tools: toolsConfig,
       },
     });
 
-    const text = response.text || ""; // Fix: Use .text property, not .text() method
+    const text = response.text || "";
     
-    if (!text || text.length < 50 || text.toLowerCase().includes('désolé') || text.toLowerCase().includes('impossible de trouver') || text.toLowerCase().includes('ne peut pas accéder à des sites web externes') || text.toLowerCase().includes('erreur') || text.toLowerCase().includes('aucune information')) {
+    if (!text || text.length < 50 || text.toLowerCase().includes('désolé') || text.toLowerCase().includes('impossible de trouver') || text.toLowerCase().includes('ne peut pas accéder à des sites web externes') || text.toLowerCase().includes('erreur') || text.toLowerCase().includes('aucune information') || text.toLowerCase().includes('aucun résultat de recherche')) {
       throw new Error("MODEL_PROCESSING_ERROR_WITH_GOOGLE_SEARCH");
     }
 
@@ -329,12 +317,11 @@ export default async function handler(req, res) {
     return res.status(200).json({ text, title, theme });
 
   } catch (error) {
-    console.error("Gemini API Error (in serverless function):", error); 
+    console.error("Gemini API Error (in serverless function):", error);
     
-    const errorStr = JSON.stringify(error); 
-    const status = error.status || (error.response && error.response.status); 
+    const errorStr = JSON.stringify(error);
+    const status = error.status || (error.response && error.response.status);
 
-    // Erreurs spécifiques à la clé API/facturation
     if (status === 401 || errorStr.includes('Unauthorized') || errorStr.includes('invalid API key')) {
         return res.status(401).json({ message: "Clé API invalide. Vérifiez que votre clé est correcte et configurée dans votre projet Google Cloud (et Vercel si déployé)." });
     }
@@ -350,14 +337,12 @@ export default async function handler(req, res) {
     }
 
     if (isSearchToolError || error.message === "MODEL_PROCESSING_ERROR_WITH_GOOGLE_SEARCH") {
-      // Message d'erreur mis à jour pour refléter l'utilisation du proxy
-      return res.status(500).json({ message: "Échec de l'analyse du lien via le proxy AllOrigins ou l'outil Google Search. Le site jw.org est probablement en train de bloquer toutes les requêtes automatiques pour ce lien. Veuillez essayer la 'Recherche par date/thème' comme alternative. (Code: 500-LINK-BLOCKED)" });
+      return res.status(500).json({ message: "Échec de l'analyse du lien via le proxy AllOrigins ou l'outil Google Search. Le site jw.org est probablement en train de bloquer toutes les requêtes automatiques pour ce lien ou le contenu est insuffisant. Veuillez essayer la 'Recherche par date/thème' comme alternative. (Code: 500-LINK-BLOCKED)" });
     }
     if (error.message === "MODEL_PROCESSING_ERROR") {
         return res.status(500).json({ message: "L'IA n'a pas pu trouver ou analyser l'article. Essayez un lien direct ou une formulation différente. Assurez-vous que le lien est valide et public. (Code: 500-AI)" });
     }
 
-    // Erreur générique
     return res.status(500).json({ message: `Une erreur de communication est survenue avec l'API Gemini. Statut: ${status || 'inconnu'}. Détails: ${error.message}. (Code: 500-GENERIC)` });
   }
 }

@@ -267,6 +267,18 @@ const updates: UpdateItem[] = [
       "Suppression définitive des fichiers redondants et inutiles (`index.tsx` à la racine, `types.ts` à la racine, etc.) pour simplifier la structure du projet.",
       "Mise à jour du Service Worker (`v23`) et de la logique de l'application pour une détection et une application des mises à jour fiables et non-destructrices."
     ]
+  },
+  {
+    version: "2.0.0",
+    date: "20 Février 2025",
+    features: [
+      "**Amélioration majeure du 'Grounding' de l'IA (Tour de Garde)** : Le prompt de Gemini a été rendu plus 'autoritaire', lui interdisant de refuser l'analyse et l'autorisant à utiliser ses connaissances pour combler les lacunes si le texte via le proxy est insuffisant. Le ciblage Cheerio a été affiné pour mieux extraire les questions et paragraphes.",
+      "**Design Mobile 'XGest' appliqué** : La barre latérale sur mobile se comporte désormais comme l'interface 'xgest' : elle est totalement cachée par défaut en mode portrait, glisse par-dessus le contenu en s'ouvrant, et un fond semi-transparent bloque le reste de l'écran. Les icônes sans texte sont affichées lorsque la barre est réduite sur desktop et lorsque l'écran est plus grand."
+    ],
+    fixes: [
+      "Correction de l'affichage en mode portrait sur mobile : la barre latérale ne pousse plus le contenu et s'affiche correctement en superposition, occupant une largeur optimale.",
+      "Amélioration de la résilience de l'IA face au texte fragmenté : les instructions strictes dans le prompt réduisent les messages d'erreur de 'texte non accessible' et forcent la génération de réponses structurées."
+    ]
   }
 ];
 
