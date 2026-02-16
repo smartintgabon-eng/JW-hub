@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Link as LinkIcon, Calendar, Loader2, Globe, Check, ShieldCheck, AlertTriangle, RefreshCw, Timer, Plus, Minus } from 'lucide-react'; // Added Plus and Minus icons
+import { Search, Link as LinkIcon, Calendar, Loader2, Globe, Check, ShieldCheck, AlertTriangle, RefreshCw, Timer, Plus, Minus, HelpCircle } from 'lucide-react'; // Added Plus and Minus icons, HelpCircle
 // Fix: Import types from src/types.ts
 import { StudyPart, GeneratedStudy, AppSettings } from '../types'; 
 import { callGenerateContentApi } from '../services/apiService'; // Utilisez le nouveau service API
@@ -28,6 +28,10 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
   // Changed input to urls (array of strings) for link mode
   const [urls, setUrls] = useState<string[]>(() => {
     const savedUrls = localStorage.getItem(`draft_${type}_urls`);
+    // Ensure that if type is WATCHTOWER, there's only one URL field
+    if (type === 'WATCHTOWER') {
+      return savedUrls ? [JSON.parse(savedUrls)[0] || ''] : [''];
+    }
     return savedUrls ? JSON.parse(savedUrls) : [''];
   });
   const [startDateInput, setStartDateInput] = useState(() => localStorage.getItem(`draft_${type}_startDate`) || '');
@@ -45,7 +49,11 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
   useEffect(() => {
     if (mode === 'link') {
       const savedUrls = localStorage.getItem(`draft_${type}_urls`);
-      setUrls(savedUrls ? JSON.parse(savedUrls) : ['']);
+      if (type === 'WATCHTOWER') {
+        setUrls(savedUrls ? [JSON.parse(savedUrls)[0] || ''] : ['']);
+      } else {
+        setUrls(savedUrls ? JSON.parse(savedUrls) : ['']);
+      }
     } else {
       setStartDateInput(localStorage.getItem(`draft_${type}_startDate`) || '');
       setThemeInput(localStorage.getItem(`draft_${type}_theme`) || '');
@@ -191,7 +199,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
     setPreview(null);
     setGlobalLoadingMessage(null); 
     if (clearAllInputs) {
-      setUrls(['']); // Reset to one empty URL field
+      setUrls(type === 'WATCHTOWER' ? [''] : ['']); // Reset to one empty URL field
       setStartDateInput('');
       setThemeInput('');
       localStorage.removeItem(`draft_${type}_urls`);
@@ -223,8 +231,21 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
       <div className="bg-white/5 border border-white/10 rounded-[2rem] p-8 space-y-8 shadow-2xl relative">
         {mode === 'link' && (
           <div className="space-y-3">
-            <label className={getCommonLabelStyles()}>Liens des articles JW.ORG (1 par ligne, max 8)</label>
-            {urls.map((url, index) => (
+            <label className={getCommonLabelStyles()}>
+              {type === 'WATCHTOWER' 
+                ? 'Lien de l\'article de la Tour de Garde (jw.org)'
+                : <><div className='flex items-center space-x-2'>
+                  <span>Liens des articles en référence (pour l'Étude Biblique de l'Assemblée)</span>
+                  <div className="relative group">
+                    <HelpCircle size={16} className="opacity-50 cursor-help" />
+                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 rounded-lg bg-black/80 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      Collez ici les articles de référence du livre ou de la brochure.
+                    </span>
+                  </div>
+                </div></>
+              }
+            </label>
+            {(type === 'WATCHTOWER' ? [urls[0]] : urls).map((url, index) => (
               <div key={index} className="flex items-center space-x-2">
                 <div className="relative flex-1">
                   <textarea
@@ -243,31 +264,33 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
                     <LinkIcon size={22} />
                   </div>
                 </div>
-                <div className="flex space-x-2">
-                  {urls.length < 8 && index === urls.length - 1 && (
-                    <button 
-                      onClick={addUrlField} 
-                      className="w-10 h-10 flex items-center justify-center rounded-full bg-emerald-600 text-white shadow-md active:scale-95 transition-transform"
-                      title="Ajouter un lien"
-                      disabled={cooldown > 0 || loading || preview !== null}
-                    >
-                      <Plus size={20} />
-                    </button>
-                  )}
-                  {urls.length > 1 && (
-                    <button 
-                      onClick={() => removeUrlField(index)} 
-                      className="w-10 h-10 flex items-center justify-center rounded-full bg-red-600 text-white shadow-md active:scale-95 transition-transform"
-                      title="Supprimer ce lien"
-                      disabled={cooldown > 0 || loading || preview !== null}
-                    >
-                      <Minus size={20} />
-                    </button>
-                  )}
-                </div>
+                {type === 'MINISTRY' && (
+                  <div className="flex space-x-2">
+                    {urls.length < 8 && index === urls.length - 1 && (
+                      <button 
+                        onClick={addUrlField} 
+                        className="w-10 h-10 flex items-center justify-center rounded-full bg-emerald-600 text-white shadow-md active:scale-95 transition-transform"
+                        title="Ajouter un lien"
+                        disabled={cooldown > 0 || loading || preview !== null}
+                      >
+                        <Plus size={20} />
+                      </button>
+                    )}
+                    {urls.length > 1 && (
+                      <button 
+                        onClick={() => removeUrlField(index)} 
+                        className="w-10 h-10 flex items-center justify-center rounded-full bg-red-600 text-white shadow-md active:scale-95 transition-transform"
+                        title="Supprimer ce lien"
+                        disabled={cooldown > 0 || loading || preview !== null}
+                      >
+                        <Minus size={20} />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
-            <p className="text-[10px] opacity-30 text-center font-bold italic mt-2">Collez chaque lien sur une nouvelle ligne. Maximum 8 liens.</p>
+            {type === 'MINISTRY' && <p className="text-[10px] opacity-30 text-center font-bold italic mt-2">Collez chaque lien sur une nouvelle ligne. Maximum 8 liens.</p>}
           </div>
         )}
 

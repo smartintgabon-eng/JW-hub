@@ -10,18 +10,61 @@ interface TutorialProps {
   navigateTo: (view: AppView) => void;
 }
 
+// Reusable Demo components
+const DemoMultiLinkInput: React.FC<{ demoUrls: string[], addDemoUrl: () => void, removeDemoUrl: (index: number) => void }> = ({ demoUrls, addDemoUrl, removeDemoUrl }) => (
+  <div className="space-y-4 pt-4">
+    <label className="text-[10px] font-black uppercase opacity-40 ml-1 tracking-[0.2em]">Liens des articles (démo)</label>
+    {demoUrls.map((url, index) => (
+      <div key={index} className="flex items-center space-x-2 link-group">
+        <textarea
+          className="w-full bg-black/40 border border-white/10 rounded-xl py-2 pl-4 pr-10 focus:border-[var(--btn-color)] outline-none text-base resize-none"
+          rows={1}
+          placeholder="https://www.jw.org/..."
+          value={url}
+          readOnly
+        />
+        <button 
+          onClick={addDemoUrl} 
+          className={`w-8 h-8 flex items-center justify-center rounded-full bg-emerald-600 text-white shadow-md btn-action btn-plus ${index === demoUrls.length - 1 && demoUrls.length < 3 ? 'animate-bounce' : ''}`}
+          title="Ajouter un lien (démo)"
+          disabled={demoUrls.length >= 3}
+        >
+          <Plus size={16} />
+        </button>
+        {demoUrls.length > 1 && (
+          <button 
+            onClick={() => removeDemoUrl(index)} 
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-red-600 text-white shadow-md btn-action btn-moins"
+            title="Supprimer ce lien (démo)"
+          >
+            <Minus size={16} />
+          </button>
+        )}
+      </div>
+    ))}
+    <p className="text-[10px] opacity-30 text-center font-bold italic mt-2">Cliquez sur le '+' pour ajouter des liens démo.</p>
+  </div>
+);
+
+const DemoGenerateButton: React.FC = () => (
+  <button 
+    style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
+    className="w-full py-4 rounded-xl font-black uppercase tracking-widest shadow-xl flex items-center justify-center space-x-2 animate-pulse"
+  >
+    <Search size={18} />
+    <span>Générer les réponses (Démo)</span>
+  </button>
+);
+
 const Tutorial: React.FC<TutorialProps> = ({ deferredPrompt, handleInstallClick, navigateTo }) => {
   const [step, setStep] = useState(0);
   const [tourActive, setTourActive] = useState(false);
-  const [pwaHelpVisible, setPwaHelpVisible] = useState(false);
   const [demoUrls, setDemoUrls] = useState<string[]>(['']);
   const isMobile = window.innerWidth < 768;
 
   useEffect(() => {
-    // Reset demo URLs if tutorial is exited/re-entered
     setDemoUrls(['']);
     setTourActive(false);
-    setPwaHelpVisible(false);
   }, []);
 
   const addDemoUrl = () => {
@@ -33,14 +76,6 @@ const Tutorial: React.FC<TutorialProps> = ({ deferredPrompt, handleInstallClick,
       setDemoUrls(demoUrls.filter((_, i) => i !== index));
     }
   };
-
-  const demoLinks = [
-    { target: 'multi-link-input', content: "Ici, collez jusqu'à 8 liens d'articles JW.ORG (1 par ligne). L'IA les analysera tous !", icon: <LinkIcon size={24} /> },
-    { target: 'add-link-button', content: "Cliquez sur '+' pour ajouter plus de champs de liens.", icon: <Plus size={24} /> },
-    { target: 'generate-button', content: "Lancez la recherche pour que l'IA analyse les liens et génère les réponses.", icon: <Search size={24} /> },
-    { target: 'sidebar-menu', content: "Le menu latéral vous permet de naviguer entre les sections principales de l'application.", icon: <Menu size={24} /> },
-    { target: 'reading-mode-toggle', content: "Une fois l'étude générée, activez le mode lecture pour une expérience immersive et sans distraction.", icon: <Maximize2 size={24} /> },
-  ];
 
   const pwaInstallationSteps = {
     android: [
@@ -79,49 +114,8 @@ const Tutorial: React.FC<TutorialProps> = ({ deferredPrompt, handleInstallClick,
         <p className="text-white/70 text-lg leading-relaxed font-serif">{currentStepData.content}</p>
         
         {/* Render interactive demos or specific content based on step */}
-        {currentStepData.democode === 'multi-link-demo' && (
-          <div className="space-y-4 pt-4">
-            <label className="text-[10px] font-black uppercase opacity-40 ml-1 tracking-[0.2em]">Liens des articles (démo)</label>
-            {demoUrls.map((url, index) => (
-              <div key={index} className="flex items-center space-x-2 link-group"> {/* Added link-group class for consistent styling */}
-                <textarea
-                  className="w-full bg-black/40 border border-white/10 rounded-xl py-2 pl-4 pr-10 focus:border-[var(--btn-color)] outline-none text-base resize-none"
-                  rows={1}
-                  placeholder="https://www.jw.org/..."
-                  value={url}
-                  readOnly
-                />
-                <button 
-                  onClick={addDemoUrl} 
-                  className={`w-8 h-8 flex items-center justify-center rounded-full bg-emerald-600 text-white shadow-md btn-action btn-plus ${index === demoUrls.length - 1 && demoUrls.length < 3 ? 'animate-bounce' : ''}`}
-                  title="Ajouter un lien (démo)"
-                  disabled={demoUrls.length >= 3}
-                >
-                  <Plus size={16} />
-                </button>
-                {demoUrls.length > 1 && (
-                  <button 
-                    onClick={() => removeDemoUrl(index)} 
-                    className="w-8 h-8 flex items-center justify-center rounded-full bg-red-600 text-white shadow-md btn-action btn-moins"
-                    title="Supprimer ce lien (démo)"
-                  >
-                    <Minus size={16} />
-                  </button>
-                )}
-              </div>
-            ))}
-             <p className="text-[10px] opacity-30 text-center font-bold italic mt-2">Cliquez sur le '+' pour ajouter des liens démo.</p>
-          </div>
-        )}
-        {currentStepData.democode === 'generate-demo' && (
-           <button 
-             style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
-             className="w-full py-4 rounded-xl font-black uppercase tracking-widest shadow-xl flex items-center justify-center space-x-2 animate-pulse"
-           >
-             <Search size={18} />
-             <span>Générer les réponses (Démo)</span>
-           </button>
-        )}
+        {currentStepData.democode === 'multi-link-demo' && <DemoMultiLinkInput demoUrls={demoUrls} addDemoUrl={addDemoUrl} removeDemoUrl={removeDemoUrl} />}
+        {currentStepData.democode === 'generate-demo' && <DemoGenerateButton />}
         {currentStepData.democode === 'pwa-install-help' && (
           <div className="space-y-4 pt-4 border-t border-white/5">
             <h3 className="text-xl font-bold uppercase tracking-tight">Installation PWA sur {getOs() === 'android' ? 'Android' : getOs() === 'ios' ? 'iOS' : 'votre appareil'} :</h3>
@@ -158,36 +152,67 @@ const Tutorial: React.FC<TutorialProps> = ({ deferredPrompt, handleInstallClick,
     },
     {
       title: "Saisie Multi-Liens Intelligente",
-      content: "Collez plusieurs liens d'articles jw.org (un par ligne) dans cette zone. Notre IA les combinera pour une analyse complète.",
+      content: "Collez plusieurs liens d'articles jw.org (un par ligne) dans cette zone. Notre IA les combinera pour une analyse complète. (Cahier Vie et Ministère)",
       icon: <LinkIcon size={48} />,
-      democode: 'multi-link-demo'
+      democode: 'multi-link-demo',
+      featureId: 'multi-link-input'
+    },
+    {
+      title: "Lien Unique pour la Tour de Garde",
+      content: "Pour la Tour de Garde, un seul lien par article d'étude est nécessaire. Pas besoin de plusieurs champs ici !",
+      icon: <BookOpen size={48} />,
+      democode: 'single-link-demo',
+      featureId: 'single-link-input'
     },
     {
       title: "Lancez l'Analyse Hybride",
       content: "Après avoir ajouté vos liens, cliquez sur le bouton 'Générer' pour lancer notre 'Hybrid Intelligence' qui scrape le contenu et utilise Google Search si besoin.",
       icon: <Search size={48} />,
-      democode: 'generate-demo'
+      democode: 'generate-demo',
+      featureId: 'hybrid-intelligence'
     },
     {
       title: "Navigation Facile",
       content: "Utilisez le menu latéral pour accéder rapidement aux différentes sections : Cahier, Tour de Garde, Historique, Paramètres, etc.",
-      icon: <Menu size={48} />
+      icon: <Menu size={48} />,
+      featureId: 'sidebar-navigation'
     },
     {
       title: "Mode Lecture Immersif",
       content: "Une fois votre étude générée, activez le mode lecture pour une concentration maximale, sans aucune distraction visuelle.",
-      icon: <Maximize2 size={48} />
+      icon: <Maximize2 size={48} />,
+      featureId: 'reading-mode'
+    },
+    {
+      title: "Préparation à la Prédication",
+      content: "Préparez vos présentations de porte-en-porte, nouvelles visites ou cours bibliques. Les champs de liens sont optionnels ici !",
+      icon: <Megaphone size={48} />,
+      featureId: 'predication-tool'
     },
     {
       title: "Historique et Export",
       content: "Toutes vos études sont sauvegardées et accessibles hors ligne dans l'Historique. Vous pouvez les régénérer ou les exporter en PDF/DOCX.",
-      icon: <HistoryIcon size={48} />
+      icon: <HistoryIcon size={48} />,
+      featureId: 'history-export'
+    },
+    {
+      title: "Mises à jour de l'application",
+      content: "Consultez le nouvel onglet 'Mises à jour' pour rester informé des dernières fonctionnalités, améliorations et corrections.",
+      icon: <BellRing size={48} />,
+      featureId: 'updates-tab'
+    },
+    {
+      title: "Personnalisation et Préférences",
+      content: "Dans les 'Paramètres', changez les couleurs et affinez les préférences de l'IA. N'oubliez pas de 'Confirmer les modifications' !",
+      icon: <SettingsIcon size={48} />,
+      featureId: 'settings-customization'
     },
     {
       title: "Installer l'Application (PWA)",
       content: "Profitez d'une expérience complète et hors ligne en installant JW Study Pro sur votre appareil comme une véritable application.",
       icon: <Download size={48} />,
-      democode: 'pwa-install-help'
+      democode: 'pwa-install-help',
+      featureId: 'pwa-installation'
     },
   ];
 
@@ -231,10 +256,10 @@ const Tutorial: React.FC<TutorialProps> = ({ deferredPrompt, handleInstallClick,
         </div>
       )}
 
-      {/* Button to start guided tour on desktop, or specific action on mobile */}
+      {/* Button to start simulated guided tour on desktop */}
       {!isMobile && (
         <button 
-          onClick={() => setTourActive(true)} // Example: Toggle a full app tour on desktop
+          onClick={() => setTourActive(true)} 
           style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
           className="mt-12 px-8 py-4 rounded-xl font-black uppercase text-sm tracking-widest shadow-lg hover:brightness-110 transition-all active:scale-95 flex items-center justify-center space-x-2"
         >
@@ -243,13 +268,13 @@ const Tutorial: React.FC<TutorialProps> = ({ deferredPrompt, handleInstallClick,
         </button>
       )}
 
-      {/* Placeholder for the actual guided tour overlay if implemented app-wide */}
-      {tourActive && !isMobile && (
+      {/* Simulated guided tour overlay */}
+      {tourActive && (
         <div className="fixed inset-0 bg-black/70 z-[9999] flex items-center justify-center text-white">
           <div className="bg-white/10 p-8 rounded-2xl flex flex-col items-center space-y-4">
             <Lightbulb size={48} className="text-yellow-400" />
             <p className="text-xl font-bold">Visite guidée en cours (démo)</p>
-            <p>Imaginez des bulles d'aide pointant vers les vrais éléments de l'interface !</p>
+            <p className="text-sm opacity-70 italic">Imaginez des bulles d'aide pointant vers les vrais éléments de l'interface !</p>
             <button 
               onClick={() => setTourActive(false)} 
               className="mt-4 px-6 py-2 bg-blue-600 rounded-lg"
