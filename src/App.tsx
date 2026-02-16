@@ -260,8 +260,8 @@ const App: React.FC = () => {
 
       {/* Mobile Header (for hamburger menu) */}
       <header className={`md:hidden flex items-center justify-between p-4 border-b border-white/10 sticky top-0 z-50 bg-[var(--bg-color)] ${isReadingModeActive ? 'hidden' : ''}`}>
-        <div className="flex items-center space-x-2"> {/* Removed onClick from here for mobile to prevent accidental navigation */}
-           <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 bg-white/5 rounded-lg mr-2"> {/* Added margin-right */}
+        <div className="flex items-center space-x-2">
+           <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 bg-white/5 rounded-lg mr-2" aria-label="Ouvrir le menu">
               {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
            </button>
            <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="w-8 h-8 flex items-center justify-center rounded-lg font-black text-sm">JW</div>
@@ -402,7 +402,7 @@ const App: React.FC = () => {
             {view === AppView.PREDICATION && <PredicationTool onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
             {view === AppView.HISTORY && <History history={history} setHistory={setHistory} settings={settings} />}
             {view === AppView.SETTINGS && <Settings setSettings={setAppSettings} settings={settings} />}
-            {view === AppView.TUTORIAL && <Tutorial />}
+            {view === AppView.TUTORIAL && <Tutorial deferredPrompt={deferredPrompt} handleInstallClick={handleInstallClick} navigateTo={navigateTo} />}
             {view === AppView.UPDATES && <Updates />}
           </div>
         </main>

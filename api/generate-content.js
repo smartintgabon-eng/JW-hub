@@ -19,7 +19,7 @@ function detectArticleType(url) {
   if (url.includes("/w") && !url.includes("/w_")) return "TOUR DE GARDE"; // w pour Tour de Garde
   if (url.includes("/mwb")) return "CAHIER VIE ET MINISTÈRE"; // mwb pour Cahier Vie et Ministère
   if (url.includes("/lp")) return "LIVRE/BROCHURE"; // lp pour Livres/Brochures (ex: bible study)
-  if (url.includes("/sn")) return "ARTICLE GÉNÉRAL/NEWS"; // sn pour articles de nouvelles
+  if (url.includes("/sn")) return "ARTICLE EN LIGNE / NEWS"; // sn pour articles de nouvelles
   if (url.includes("/finder")) return "OUTIL DE RECHERCHE JW"; // finder pour l'outil de recherche
   if (url.includes("/pub-index")) return "INDEX DE PUBLICATIONS"; // index de publications
   return "ARTICLE GÉNÉRAL";

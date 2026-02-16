@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jw-study-pro-cache-v24'; // Incrément de la version du cache
+const CACHE_NAME = 'jw-study-pro-cache-v25'; // Incrément de la version du cache
 const ASSETS = [
   './',
   './index.html',
@@ -6,7 +6,8 @@ const ASSETS = [
   './logo512.png',
   './favicon.ico',
   // Ajout du CDN TailwindCSS au cache pour l'accès hors ligne
-  'https://cdn.tailwindcss.com' 
+  'https://cdn.tailwindcss.com' ,
+  'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Lora:ital,wght@0,400..700;1,400..700&display=swap' // Cache Google Fonts CSS
 ];
 
 self.addEventListener('install', (event) => {
@@ -45,7 +46,13 @@ self.addEventListener('fetch', (event) => {
 
         // Mettre en cache les polices et les CSS pour l'expérience hors ligne
         const url = new URL(event.request.url);
-        if (url.origin === self.location.origin || url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com' || url.pathname.endsWith('.css')) {
+        if (
+          url.origin === self.location.origin || 
+          url.hostname === 'fonts.googleapis.com' || 
+          url.hostname === 'fonts.gstatic.com' || 
+          url.pathname.endsWith('.css') ||
+          event.request.destination === 'font'
+        ) {
           const responseToCache = response.clone();
           caches.open(CACHE_NAME).then(cache => {
             cache.put(event.request, responseToCache);
@@ -55,7 +62,12 @@ self.addEventListener('fetch', (event) => {
       }).catch((error) => {
         // En cas d'échec du réseau, tenter de trouver une version hors ligne
         console.error('Fetch failed:', error);
-        return caches.match('./index.html'); // Fallback to index.html for navigation
+        // Fallback to index.html for navigation if route is not directly cached
+        if (event.request.mode === 'navigate') {
+          return caches.match('./index.html');
+        }
+        // For other assets, return a network error
+        return new Response(null, { status: 503, statusText: 'Service Unavailable' });
       });
     })
   );

@@ -295,6 +295,19 @@ const updates: UpdateItem[] = [
       "Résolution des problèmes d'installation PWA : le `manifest.json` est vérifié et la détection du prompt d'installation est optimisée.",
       "Amélioration du cache du Service Worker pour inclure toutes les feuilles de style et polices de caractères, garantissant un design cohérent hors ligne."
     ]
+  },
+  {
+    version: "2.0.2",
+    date: "22 Février 2025",
+    features: [
+      "**Tutoriel Virtuel Interactif** : L'onglet 'Tutoriel' a été transformé en un simulateur interactif des fonctions clés (saisie multi-liens, boutons, mode lecture) avec des 'Démos' cliquables et des animations pour guider l'utilisateur. Un bouton 'Lancer la visite guidée (Démo)' a été ajouté pour illustrer le concept de bulles d'aide.",
+      "**Aide à l'Installation PWA Intelligente** : Un bouton 'Aide à l'installation' dans le tutoriel détecte le système d'exploitation (iOS/Android) de l'utilisateur et affiche des instructions textuelles spécifiques pour installer l'application PWA.",
+      "**Amélioration du Design Mobile** : L'en-tête mobile a été épuré. Le titre 'JW Study' apparaît désormais à côté du bouton de menu (hamburger) à gauche, laissant plus d'espace et évitant les surcharges visuelles."
+    ],
+    fixes: [
+      "Correction du positionnement de la logique `beforeinstallprompt` dans `App.tsx` pour une détection plus précoce et fiable du bouton d'installation PWA.",
+      "Amélioration de la gestion du cache du Service Worker pour garantir une expérience hors ligne plus complète et visuellement cohérente, incluant CSS et polices."
+    ]
   }
 ];
 

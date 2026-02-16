@@ -1,153 +1,266 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  HelpCircle, ChevronRight, ChevronLeft, Lightbulb, Link as LinkIcon, Search, Save, Calendar, BookOpen, Settings as SettingsIcon, History as HistoryIcon, Download, BellRing, Megaphone, Server, AlertTriangle, Plus, Minus, Menu, Maximize2, X
+} from 'lucide-react';
+import { AppView } from '../types';
 
-import React, { useState } from 'react';
-import { HelpCircle, ChevronRight, ChevronLeft, Lightbulb, Link as LinkIcon, Search, Save, Calendar, BookOpen, Settings as SettingsIcon, History as HistoryIcon, Download, BellRing, Megaphone, Server, AlertTriangle } from 'lucide-react';
+interface TutorialProps {
+  deferredPrompt: any;
+  handleInstallClick: () => void;
+  navigateTo: (view: AppView) => void;
+}
 
-const Tutorial: React.FC = () => {
+const Tutorial: React.FC<TutorialProps> = ({ deferredPrompt, handleInstallClick, navigateTo }) => {
   const [step, setStep] = useState(0);
+  const [tourActive, setTourActive] = useState(false);
+  const [pwaHelpVisible, setPwaHelpVisible] = useState(false);
+  const [demoUrls, setDemoUrls] = useState<string[]>(['']);
+  const isMobile = window.innerWidth < 768;
 
-  const steps = [
-    {
-      title: "Bienvenue sur JW Study Pro",
-      content: "Cette application est votre assistant personnel pour une préparation approfondie de vos réunions et de votre étude biblique. Elle génère des réponses structurées, des commentaires et des applications pratiques basés sur la Bible Traduction du Monde Nouveau et les publications officielles de jw.org.",
-      icon: <HelpCircle className="text-blue-500" size={48} />
-    },
-    {
-      title: "Navigation simple et rapide",
-      content: "Utilisez le menu latéral pour passer de l'Accueil aux sections 'Cahier Vie et Ministère' ou 'Tour de Garde', consulter votre 'Historique', accéder aux 'Mises à jour', au 'Tutoriel' ou ajuster les 'Paramètres' de l'application. Sur mobile, le menu se trouve en haut à gauche.",
-      icon: <Lightbulb className="text-cyan-500" size={48} />
-    },
-    {
-      title: "Architecture Server-side pour un meilleur grounding",
-      content: "L'application utilise désormais une architecture 'Server-side' avec les API Routes de Vercel. Cela signifie que les appels à l'IA de Gemini sont gérés sur un serveur sécurisé, ce qui permet à l'IA d'accéder *réellement* et de manière plus fiable aux informations de jw.org (via un proxy gratuit ou l'outil Google Search) pour générer des réponses plus précises et fidèles. Ce 'grounding' est maintenant appliqué à TOUTES les requêtes de contenu, y compris les liens directs.",
-      icon: <Server className="text-gray-400" size={48} />
-    },
-    {
-      title: "Masquer/Afficher la barre latérale (Desktop & Mobile)",
-      content: "Sur ordinateur, vous pouvez masquer ou afficher la barre latérale avec le bouton en haut à gauche. Sur mobile, la barre latérale en superposition a été améliorée pour s'adapter parfaitement aux petits écrans en mode portrait, occupant une largeur optimale de votre appareil. Elle disparaît totalement (et n'affecte plus le contenu principal) quand elle est fermée et le contenu principal prend toute la largeur de l'écran. L'état est sauvegardé.",
-      icon: <ChevronLeft className="text-gray-400" size={48} />
-    },
-    {
-      title: "Préparation de la Tour de Garde : Lecture Profonde des Liens",
-      content: "Dans l'onglet 'Tour de Garde', si vous collez le(s) lien(s) direct(s) d'un article de jw.org, l'application tentera d'abord de récupérer le contenu via un proxy gratuit (AllOrigins) pour lire le texte réel. Si le texte récupéré est jugé insuffisant (< 2000 caractères), l'outil Google Search de Gemini prendra le relais pour compléter les informations manquantes. L'IA est instruite de rechercher le texte **intégral** et sa structure par paragraphes et questions. C'est notre meilleure chance de surmonter les blocages et d'obtenir des réponses précises et structurées.",
-      icon: <BookOpen className="text-emerald-500" size={48} />
-    },
-    {
-      title: "Préparation du Cahier Vie et Ministère : Lecture Profonde des Liens (Multi-liens)",
-      content: "Comme pour la Tour de Garde, si vous entrez un ou plusieurs liens directs vers les articles du Cahier (1 par ligne), l'application tentera d'abord de récupérer le contenu via le proxy pour chaque lien. Si le texte combiné est insuffisant, l'outil Google Search de Gemini prendra le relais pour analyser les liens avec une instruction stricte de recherche du texte intégral. Cette approche vise à maximiser la fiabilité pour l'analyse des liens directs et à obtenir une structure par paragraphe. **Cependant, la 'Recherche par date/thème' reste la méthode la plus fiable en cas de blocage persistant par jw.org.**",
-      icon: <LinkIcon className="text-orange-500" size={48} />
-    },
-    {
-      title: "Recherche par date/thème améliorée",
-      content: "Lorsque vous choisissez la 'Recherche par date/thème' (pour Cahier ou Tour de Garde), vous disposez maintenant de deux champs distincts : 'Date de début de semaine (JJ/MM/AAAA)' et 'Thème principal (facultatif)'. Utilisez-les pour affiner votre recherche et aider l'IA (via l'outil Google Search) à trouver le contenu le plus pertinent sur jw.org. C'est la méthode la plus fiable actuellement pour obtenir des réponses sur les publications.",
-      icon: <Search className="text-indigo-500" size={48} />
-    },
-    {
-      title: "Cahier Vie et Ministère : Choix des parties d'étude",
-      content: "Après avoir confirmé l'article, vous pourrez choisir la partie spécifique du Cahier que vous souhaitez préparer : 'Joyaux de la Parole de Dieu', 'Perles Spirituelles', 'Applique-toi au Ministère', 'Vie Chrétienne', 'Étude Biblique de l'Assemblée', ou 'Toutes les parties' pour une préparation complète. Les versets bibliques complets de la Traduction du Monde Nouveau sont désormais inclus.",
-      icon: <Calendar className="text-red-500" size={48} />
-    },
-    {
-      title: "Détail : Joyaux de la Parole de Dieu",
-      content: "Cette option vous fournira une proposition d'exposé détaillée basée sur les versets et les publications de référence. L'IA générera un thème, une introduction, des points principaux développés avec des références bibliques complètes (Traduction du Monde Nouveau) et une conclusion.",
-      icon: <Lightbulb className="text-purple-500" size={48} />
-    },
-    {
-      title: "Détail : Perles Spirituelles",
-      content: "Obtenez des réponses concises aux questions, avec les versets clés (texte complet, Traduction du Monde Nouveau), des références de publication, un commentaire d'approfondissement, une application personnelle et une réponse sur les leçons tirées de la lecture biblique.",
-      icon: <Lightbulb className="text-yellow-500" size={48} />
-    },
-    {
-      title: "Détail : Applique-toi au Ministère",
-      content: "L'IA vous présentera les différents exposés possibles pour la semaine et générera des propositions complètes d'introduction, de points à développer (avec versets bibliques complets, Traduction du Monde Nouveau) et de conclusion pour chacun. Vous pourrez ainsi choisir celui qui vous convient le mieux.",
-      icon: <Lightbulb className="text-teal-500" size={48} />
-    },
-    {
-      title: "Détail : Vie Chrétienne",
-      content: "Cette section, souvent accompagnée d'une vidéo ou d'un article, vous fournira des réponses aux questions et des points de discussion pertinents, basés sur l'analyse du contenu par l'IA. Elle inclura aussi des applications personnelles. Les versets sont maintenant complets.",
-      icon: <Lightbulb className="text-pink-500" size={48} />
-    },
-    {
-      title: "Détail : Étude Biblique de l'Assemblée",
-      content: "L'IA répondra aux questions de l'étude (livre/brochure) et, spécifiquement pour cette section, ajoutera des questions d'application pour vous aider à réfléchir sur les leçons personnelles, pour la prédication, la famille, l'assemblée, et sur Jéhovah/Jésus. Les versets sont complets et les réponses plus fidèles.",
-      icon: <Lightbulb className="text-lime-500" size={48} />
-    },
-    {
-      title: "Nouvel Onglet : Prédication",
-      content: "Préparez vos présentations de prédication (porte-en-porte, nouvelles visites, cours bibliques) avec l'aide de l'IA. Vous pourrez spécifier les publications, les sujets, les questions laissées en suspens, ou votre progression dans un cours pour générer des entrées en matière, des manières de faire et des versets pertinents. Les préférences des réponses de vos paramètres s'appliqueront aussi à cette section. Les études sont catégorisées dans l'historique.",
-      icon: <Megaphone className="text-purple-400" size={48} />
-    },
-    {
-      title: "Options après génération : Export & Régénération",
-      content: "Une fois les réponses générées, vous pourrez les lire directement sur le site (avec un mode lecture immersif qui masque les distractions), les télécharger au format DOCX ou PDF (avec un formatage amélioré), ou même les régénérer si vous souhaitez une autre perspective ou des détails supplémentaires.",
-      icon: <Save className="text-gray-400" size={48} />
-    },
-    {
-      title: "Mises à jour de l'application",
-      content: "Consultez le nouvel onglet 'Mises à jour' pour rester informé des dernières fonctionnalités, améliorations et corrections apportées à JW Study Pro. Chaque mise à jour est détaillée pour vous aider à en tirer le meilleur parti.",
-      icon: <BellRing className="text-indigo-400" size={48} />
-    },
-    {
-      title: "Personnalisation de l'Apparence et Préférences (Sauvegarde explicite)",
-      content: "Dans les 'Paramètres', vous pouvez changer la couleur de fond et des boutons de l'application, ainsi que vos préférences pour les réponses de l'IA. Toutes ces modifications sont désormais appliquées et sauvegardées uniquement après avoir cliqué sur le bouton 'Confirmer les modifications'. Un message 'Enregistré !' apparaîtra pour confirmer la sauvegarde.",
-      icon: <SettingsIcon className="text-gray-200" size={48} />
-    },
-    {
-      title: "Historique & Utilisation hors ligne",
-      content: "Toutes vos études générées sont automatiquement sauvegardées dans l'onglet 'Historique' de votre appareil (cache local). Cela signifie que vous pouvez y accéder et les consulter même sans connexion internet ! Vous pouvez les supprimer ou les partager à tout moment. Les études sont désormais catégorisées pour faciliter la recherche.",
-      icon: <HistoryIcon className="text-blue-400" size={48} />
-    },
-    {
-      title: "Installation de l'application (PWA) & Mises à jour automatiques",
-      content: "Pour profiter pleinement de JW Study Pro et l'utiliser hors ligne, installez-la comme une application web progressive (PWA). Un bouton 'Installer l'App' apparaîtra (généralement dans Chrome) vous permettant de l'ajouter à votre écran d'accueil. **Désormais, l'application se mettra à jour automatiquement** en rechargeant la page si une nouvelle version est détectée (ou via un bouton explicite), sans perte de votre historique ou de vos paramètres. En cas de problème persistant, désinstallez la PWA et videz le cache du navigateur pour `jw-hub.vercel.app` avant de la réinstaller.",
-      icon: <Download className="text-green-400" size={48} />
-    },
-    {
-      title: "Vérification et Réinitialisation des logs API sur Vercel",
-      content: "Si vous rencontrez toujours des erreurs API (comme 'is not valid JSON' ou 'Cannot find module'), il est **essentiel** de vérifier les logs de votre fonction `generate-content` sur Vercel après avoir forcé un déploiement avec cache vide. Effectuez une requête, puis examinez les logs du déploiement Vercel pour voir si le message 'API Route /api/generate-content hit!' apparaît. Si l'erreur 'Cannot find module' persiste, assurez-vous d'avoir bien vidé le cache de build sur Vercel lors du redéploiement. Les erreurs de l'outil Google Search (500-LINK-BLOCKED) peuvent indiquer un blocage actif de la part du site cible (jw.org) qui empêche même les outils de Google d'accéder au texte complet.",
-      icon: <AlertTriangle className="text-red-500" size={48} />
+  useEffect(() => {
+    // Reset demo URLs if tutorial is exited/re-entered
+    setDemoUrls(['']);
+    setTourActive(false);
+    setPwaHelpVisible(false);
+  }, []);
+
+  const addDemoUrl = () => {
+    if (demoUrls.length < 3) setDemoUrls([...demoUrls, '']); // Limit demo to 3 for simplicity
+  };
+
+  const removeDemoUrl = (index: number) => {
+    if (demoUrls.length > 1) {
+      setDemoUrls(demoUrls.filter((_, i) => i !== index));
     }
+  };
+
+  const demoLinks = [
+    { target: 'multi-link-input', content: "Ici, collez jusqu'à 8 liens d'articles JW.ORG (1 par ligne). L'IA les analysera tous !", icon: <LinkIcon size={24} /> },
+    { target: 'add-link-button', content: "Cliquez sur '+' pour ajouter plus de champs de liens.", icon: <Plus size={24} /> },
+    { target: 'generate-button', content: "Lancez la recherche pour que l'IA analyse les liens et génère les réponses.", icon: <Search size={24} /> },
+    { target: 'sidebar-menu', content: "Le menu latéral vous permet de naviguer entre les sections principales de l'application.", icon: <Menu size={24} /> },
+    { target: 'reading-mode-toggle', content: "Une fois l'étude générée, activez le mode lecture pour une expérience immersive et sans distraction.", icon: <Maximize2 size={24} /> },
   ];
 
-  const currentStep = steps[step];
+  const pwaInstallationSteps = {
+    android: [
+      { text: "1. Ouvrez JW Study dans Chrome.", media: "android_step1.gif" },
+      { text: "2. Appuyez sur le menu (trois points en haut à droite).", media: "android_step2.gif" },
+      { text: "3. Sélectionnez 'Installer l'application' ou 'Ajouter à l'écran d'accueil'.", media: "android_step3.gif" },
+      { text: "4. Confirmez l'installation.", media: "android_step4.gif" },
+    ],
+    ios: [
+      { text: "1. Ouvrez JW Study dans Safari.", media: "ios_step1.gif" },
+      { text: "2. Appuyez sur le bouton 'Partager' (icône carré avec une flèche vers le haut) en bas de l'écran.", media: "ios_step2.gif" },
+      { text: "3. Faites défiler vers le bas et sélectionnez 'Sur l'écran d'accueil'.", media: "ios_step3.gif" },
+      { text: "4. Appuyez sur 'Ajouter' en haut à droite.", media: "ios_step4.gif" },
+    ],
+    default: [
+      { text: "Utilisez le menu de votre navigateur (souvent trois points ou une flèche) et cherchez une option comme 'Installer l'application' ou 'Ajouter à l'écran d'accueil'.", media: null },
+    ]
+  };
+
+  const getOs = () => {
+    const userAgent = navigator.userAgent || navigator.vendor || (window as any).opera;
+    if (/android/i.test(userAgent)) return 'android';
+    if (/iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream) return 'ios';
+    return 'default';
+  };
+
+  const currentPwaSteps = pwaInstallationSteps[getOs()];
+
+  const TutorialStepContent = ({ currentStepData, isGuidedTour = false }: any) => (
+    <div className={`p-8 bg-white/5 border border-white/10 rounded-[2rem] shadow-2xl relative ${isGuidedTour ? 'min-h-[200px] flex flex-col justify-center items-center' : ''}`}>
+      <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="absolute -top-10 left-1/2 -translate-x-1/2 p-6 rounded-3xl shadow-xl flex items-center justify-center">
+        {currentStepData.icon}
+      </div>
+      <div className="pt-10 space-y-6">
+        <h2 className="text-3xl font-black text-white uppercase tracking-tight">{currentStepData.title}</h2>
+        <p className="text-white/70 text-lg leading-relaxed font-serif">{currentStepData.content}</p>
+        
+        {/* Render interactive demos or specific content based on step */}
+        {currentStepData.democode === 'multi-link-demo' && (
+          <div className="space-y-4 pt-4">
+            <label className="text-[10px] font-black uppercase opacity-40 ml-1 tracking-[0.2em]">Liens des articles (démo)</label>
+            {demoUrls.map((url, index) => (
+              <div key={index} className="flex items-center space-x-2 link-group"> {/* Added link-group class for consistent styling */}
+                <textarea
+                  className="w-full bg-black/40 border border-white/10 rounded-xl py-2 pl-4 pr-10 focus:border-[var(--btn-color)] outline-none text-base resize-none"
+                  rows={1}
+                  placeholder="https://www.jw.org/..."
+                  value={url}
+                  readOnly
+                />
+                <button 
+                  onClick={addDemoUrl} 
+                  className={`w-8 h-8 flex items-center justify-center rounded-full bg-emerald-600 text-white shadow-md btn-action btn-plus ${index === demoUrls.length - 1 && demoUrls.length < 3 ? 'animate-bounce' : ''}`}
+                  title="Ajouter un lien (démo)"
+                  disabled={demoUrls.length >= 3}
+                >
+                  <Plus size={16} />
+                </button>
+                {demoUrls.length > 1 && (
+                  <button 
+                    onClick={() => removeDemoUrl(index)} 
+                    className="w-8 h-8 flex items-center justify-center rounded-full bg-red-600 text-white shadow-md btn-action btn-moins"
+                    title="Supprimer ce lien (démo)"
+                  >
+                    <Minus size={16} />
+                  </button>
+                )}
+              </div>
+            ))}
+             <p className="text-[10px] opacity-30 text-center font-bold italic mt-2">Cliquez sur le '+' pour ajouter des liens démo.</p>
+          </div>
+        )}
+        {currentStepData.democode === 'generate-demo' && (
+           <button 
+             style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
+             className="w-full py-4 rounded-xl font-black uppercase tracking-widest shadow-xl flex items-center justify-center space-x-2 animate-pulse"
+           >
+             <Search size={18} />
+             <span>Générer les réponses (Démo)</span>
+           </button>
+        )}
+        {currentStepData.democode === 'pwa-install-help' && (
+          <div className="space-y-4 pt-4 border-t border-white/5">
+            <h3 className="text-xl font-bold uppercase tracking-tight">Installation PWA sur {getOs() === 'android' ? 'Android' : getOs() === 'ios' ? 'iOS' : 'votre appareil'} :</h3>
+            {currentPwaSteps.map((step, idx) => (
+              <div key={idx} className="flex items-start space-x-3 bg-white/5 p-4 rounded-xl">
+                <span className="font-bold text-[var(--btn-color)]">{idx + 1}.</span>
+                <p className="text-sm text-left">{step.text}</p>
+                {step.media && (
+                  <div className="text-xs opacity-50 italic">[Placeholder pour {step.media}]</div>
+                )}
+              </div>
+            ))}
+            <button 
+              onClick={handleInstallClick} 
+              disabled={!deferredPrompt}
+              style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
+              className="mt-6 px-8 py-4 rounded-xl font-black uppercase text-sm tracking-widest shadow-lg hover:brightness-110 transition-all active:scale-95 flex items-center justify-center mx-auto space-x-2"
+            >
+              <Download size={20} />
+              <span>Installer l'App maintenant</span>
+            </button>
+            {!deferredPrompt && <p className="text-[10px] opacity-40 italic mt-2">Le bouton peut ne pas être disponible si l'application est déjà installée ou si votre navigateur ne supporte pas l'installation PWA directe.</p>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const tutorialSteps = [
+    {
+      title: "Introduction Rapide",
+      content: "Découvrez les fonctionnalités clés de JW Study Pro à travers cette visite guidée interactive.",
+      icon: <HelpCircle size={48} />
+    },
+    {
+      title: "Saisie Multi-Liens Intelligente",
+      content: "Collez plusieurs liens d'articles jw.org (un par ligne) dans cette zone. Notre IA les combinera pour une analyse complète.",
+      icon: <LinkIcon size={48} />,
+      democode: 'multi-link-demo'
+    },
+    {
+      title: "Lancez l'Analyse Hybride",
+      content: "Après avoir ajouté vos liens, cliquez sur le bouton 'Générer' pour lancer notre 'Hybrid Intelligence' qui scrape le contenu et utilise Google Search si besoin.",
+      icon: <Search size={48} />,
+      democode: 'generate-demo'
+    },
+    {
+      title: "Navigation Facile",
+      content: "Utilisez le menu latéral pour accéder rapidement aux différentes sections : Cahier, Tour de Garde, Historique, Paramètres, etc.",
+      icon: <Menu size={48} />
+    },
+    {
+      title: "Mode Lecture Immersif",
+      content: "Une fois votre étude générée, activez le mode lecture pour une concentration maximale, sans aucune distraction visuelle.",
+      icon: <Maximize2 size={48} />
+    },
+    {
+      title: "Historique et Export",
+      content: "Toutes vos études sont sauvegardées et accessibles hors ligne dans l'Historique. Vous pouvez les régénérer ou les exporter en PDF/DOCX.",
+      icon: <HistoryIcon size={48} />
+    },
+    {
+      title: "Installer l'Application (PWA)",
+      content: "Profitez d'une expérience complète et hors ligne en installant JW Study Pro sur votre appareil comme une véritable application.",
+      icon: <Download size={48} />,
+      democode: 'pwa-install-help'
+    },
+  ];
+
+  const currentTutorialStep = tutorialSteps[step];
 
   return (
-    <div className="max-w-3xl mx-auto flex flex-col items-center justify-center min-h-[60vh] text-center space-y-10 animate-in fade-in zoom-in duration-500 pb-20">
-      <div className="p-8 bg-white/5 border border-white/10 rounded-[3rem] shadow-2xl relative">
-        <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="absolute -top-10 left-1/2 -translate-x-1/2 p-6 rounded-3xl shadow-xl flex items-center justify-center">
-          {currentStep.icon}
+    <div className="max-w-5xl mx-auto flex flex-col items-center justify-center min-h-[60vh] text-center space-y-10 animate-in fade-in zoom-in duration-500 pb-20">
+      
+      {/* Dynamic Content based on isMobile */}
+      {isMobile ? (
+        // Mobile "Story" format
+        <div className="w-full flex flex-col items-center">
+          <TutorialStepContent currentStepData={currentTutorialStep} />
+          <div className="flex items-center space-x-4 mt-8">
+            <button 
+              disabled={step === 0}
+              onClick={() => setStep(s => s - 1)}
+              className={`p-3 rounded-full transition-all ${step === 0 ? 'text-white/30' : 'bg-white/10 text-white hover:bg-white/20 active:scale-90'}`}
+              aria-label="Étape précédente"
+            >
+              <ChevronLeft size={24} />
+            </button>
+            <span className="text-sm opacity-60">{step + 1} / {tutorialSteps.length}</span>
+            <button 
+              disabled={step === tutorialSteps.length - 1}
+              onClick={() => setStep(s => s + 1)}
+              style={{ backgroundColor: step === tutorialSteps.length - 1 ? 'rgb(31 41 55)' : 'var(--btn-color)', color: 'var(--btn-text)' }}
+              className={`p-3 rounded-full transition-all ${step === tutorialSteps.length - 1 ? 'opacity-50' : 'shadow-lg shadow-[var(--btn-color)]/30 hover:brightness-110 active:scale-90'}`}
+              aria-label="Étape suivante"
+            >
+              <ChevronRight size={24} />
+            </button>
+          </div>
         </div>
-        <div className="pt-10 space-y-6">
-          <h2 className="text-3xl font-black text-white uppercase tracking-tight">{currentStep.title}</h2>
-          <p className="text-white/70 text-lg leading-relaxed font-serif">{currentStep.content}</p>
-        </div>
-      </div>
-
-      <div className="flex items-center space-x-8">
-        <button 
-          disabled={step === 0}
-          onClick={() => setStep(s => s - 1)}
-          className={`p-4 rounded-full transition-all ${step === 0 ? 'text-white/30' : 'bg-white/10 text-white hover:bg-white/20 active:scale-90'}`}
-        >
-          <ChevronLeft size={28} />
-        </button>
-
-        <div className="flex space-x-2">
-          {steps.map((_, i) => (
-            <div key={i} className={`h-2 rounded-full transition-all ${i === step ? 'w-8 bg-[var(--btn-color)]' : 'w-2 bg-white/10'}`} />
+      ) : (
+        // Desktop format (all content visible, no "story" navigation)
+        <div className="w-full space-y-12">
+          {tutorialSteps.map((stepData, index) => (
+            <TutorialStepContent key={index} currentStepData={{ ...stepData, icon: tutorialSteps[index].icon }} />
           ))}
         </div>
+      )}
 
+      {/* Button to start guided tour on desktop, or specific action on mobile */}
+      {!isMobile && (
         <button 
-          disabled={step === steps.length - 1}
-          onClick={() => setStep(s => s + 1)}
-          style={{ backgroundColor: step === steps.length - 1 ? 'rgb(31 41 55)' : 'var(--btn-color)', color: 'var(--btn-text)' }}
-          className={`p-4 rounded-full transition-all ${step === steps.length - 1 ? 'opacity-50' : 'shadow-lg shadow-[var(--btn-color)]/30 hover:brightness-110 active:scale-90'}`}
+          onClick={() => setTourActive(true)} // Example: Toggle a full app tour on desktop
+          style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
+          className="mt-12 px-8 py-4 rounded-xl font-black uppercase text-sm tracking-widest shadow-lg hover:brightness-110 transition-all active:scale-95 flex items-center justify-center space-x-2"
         >
-          <ChevronRight size={28} />
+          <Lightbulb size={20} />
+          <span>Lancer la Visite Guidée (Démo)</span>
         </button>
-      </div>
+      )}
 
-      <div className="flex items-center space-x-2 text-white/50 text-sm italic">
+      {/* Placeholder for the actual guided tour overlay if implemented app-wide */}
+      {tourActive && !isMobile && (
+        <div className="fixed inset-0 bg-black/70 z-[9999] flex items-center justify-center text-white">
+          <div className="bg-white/10 p-8 rounded-2xl flex flex-col items-center space-y-4">
+            <Lightbulb size={48} className="text-yellow-400" />
+            <p className="text-xl font-bold">Visite guidée en cours (démo)</p>
+            <p>Imaginez des bulles d'aide pointant vers les vrais éléments de l'interface !</p>
+            <button 
+              onClick={() => setTourActive(false)} 
+              className="mt-4 px-6 py-2 bg-blue-600 rounded-lg"
+            >
+              Fermer la démo
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center space-x-2 text-white/50 text-sm italic mt-12">
         <Lightbulb size={16} className="text-amber-500" />
         <span>Astuce : Un tutoriel complet est disponible ici pour maîtriser toutes les fonctionnalités.</span>
       </div>
