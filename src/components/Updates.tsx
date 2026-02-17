@@ -11,6 +11,23 @@ interface UpdateItem {
 
 const updates: UpdateItem[] = [
   {
+    version: "2.0.4",
+    date: "23 Février 2025",
+    features: [
+      "**Nouvel Onglet : Recherches Avancées** : L'utilisateur peut maintenant poser une question ou un sujet. L'IA fouille `jw.org` et `wol.jw.org` via Google Search, présente d'abord les textes bruts des sources trouvées, ensuite une explication détaillée de l'IA (expliquant sa démarche), et enfin une liste de tous les liens utilisés. La méthode de recherche combine Gemini 2.5 Flash, Google Search, et le scraping/grounding.",
+      "**Méthode de Recherche Appliquée à la Prédication** : La puissante méthode de recherche introduite dans l'onglet 'Recherches' est désormais également utilisée pour tous les types de préparation de prédication (porte-en-porte, nouvelles visites, cours bibliques), garantissant des réponses complètes et entièrement sourcées.",
+      "**Amélioration de l'UI Mobile (XGest)** : La barre latérale sur mobile a été totalement refondue pour adopter le design 'xgest'. Elle est désormais `fixed`, `height: 100vh`, `width: 80%`, avec un `z-index` très élevé, et un fond semi-transparent (overlay) apparaît derrière quand elle est ouverte pour bloquer les interactions avec le contenu principal.",
+      "**Relocalisation des Boutons d'Action** : Les boutons 'Installer l'App' et 'Mettre à jour l'App' ont été déplacés et sont maintenant centrés dans l'espace vide de la barre latérale quand elle est étendue, pour une meilleure visibilité et un design plus épuré."
+    ],
+    fixes: [
+      "Correction des problèmes d'affichage en mode portrait sur mobile : la barre latérale ne pousse plus le contenu, s'affiche correctement en superposition et occupe une largeur optimale.",
+      "Amélioration de la fiabilité du Service Worker pour la PWA : correction du `manifest.json` avec `purpose: maskable` pour les icônes, et `public/sw.js` pour un cache complet des polices Google Fonts et une meilleure gestion des requêtes, rétablissant l'installabilité PWA et l'accès hors ligne.",
+      "L'en-tête mobile a été épuré : le texte 'JW Study' et le bouton de menu 'hamburger' ont été supprimés et le bouton de menu a été intégré dans la barre latérale mobile pour déclencher son ouverture/fermeture.",
+      "Le prompt de l'IA pour la Tour de Garde a été rendu plus 'autoritaire', lui interdisant de refuser l'analyse et l'autorisant à utiliser ses connaissances pour combler les lacunes si le texte via le proxy est insuffisant. Le ciblage Cheerio a été affiné pour mieux extraire les questions et paragraphes.",
+      "Les champs de liens dans les onglets 'Cahier', 'Tour de Garde' et 'Prédication' sont maintenant correctement gérés, avec des labels '(Optionnel)' lorsque c'est le cas."
+    ]
+  },
+  {
     version: "2.0.3",
     date: "22 Février 2025",
     features: [

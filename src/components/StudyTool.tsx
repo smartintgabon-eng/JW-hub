@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Link as LinkIcon, Calendar, Loader2, Globe, Check, ShieldCheck, AlertTriangle, RefreshCw, Timer, Plus, Minus, HelpCircle } from 'lucide-react'; // Added Plus and Minus icons, HelpCircle
+import { Search, Link as LinkIcon, Calendar, Loader2, Globe, Check, ShieldCheck, AlertTriangle, RefreshCw, Timer, Plus, Minus, HelpCircle } from 'lucide-react'; 
 // Fix: Import types from src/types.ts
 import { StudyPart, GeneratedStudy, AppSettings } from '../types'; 
-import { callGenerateContentApi } from '../services/apiService'; // Utilisez le nouveau service API
+import { callGenerateContentApi } from '../services/apiService'; 
 
 interface Props {
   type: 'WATCHTOWER' | 'MINISTRY';
   onGenerated: (study: GeneratedStudy) => void;
   settings: AppSettings;
-  setGlobalLoadingMessage: (message: string | null) => void; // Add global loading message setter
+  setGlobalLoadingMessage: (message: string | null) => void; 
 }
 
 // Définition de studyPartOptions ici pour éviter les conflits de types et la double définition.
@@ -25,10 +25,10 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
   const [mode, setMode] = useState<'link' | 'date'>(() => {
     return localStorage.getItem(`study_mode_${type}`) as 'link' | 'date' || 'link';
   });
-  // Changed input to urls (array of strings) for link mode
+  // urls is an array of strings for link mode
   const [urls, setUrls] = useState<string[]>(() => {
     const savedUrls = localStorage.getItem(`draft_${type}_urls`);
-    // Ensure that if type is WATCHTOWER, there's only one URL field
+    // WATCHTOWER only has one URL field
     if (type === 'WATCHTOWER') {
       return savedUrls ? [JSON.parse(savedUrls)[0] || ''] : [''];
     }
@@ -41,7 +41,8 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
     return localStorage.getItem(`selected_part_${type}`) as StudyPart || 'tout';
   });
   const [loading, setLoading] = useState(false);
-  const [preview, setPreview] = useState<{title: string, theme?: string, url?: string | string[]} | null>(null); // url can be string or string[]
+  // url can be string (for date/theme) or string[] (for link mode)
+  const [preview, setPreview] = useState<{title: string, theme?: string, url?: string | string[]} | null>(null); 
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
 
@@ -115,7 +116,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
     setError(null);
 
     try {
-      // Pour l'aperçu, on envoie soit le texte combiné (date/thème) soit le tableau d'URLs
+      // Pour l'aperçu, on envoie soit le tableau d'URLs (si mode link) soit le texte combiné (si mode date)
       const inputForApi = mode === 'link' ? urls.filter(Boolean) : currentCombinedInput;
       const result = await callGenerateContentApi(
         type, 
@@ -164,9 +165,9 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
         type,
         title: result.title,
         date: new Date().toLocaleDateString('fr-FR'),
+        url: (mode === 'link' && Array.isArray(inputForApi) ? inputForApi.join('\n') : (typeof inputForApi === 'string' ? inputForApi : undefined)), // Sauvegarder l'input sous forme de string ou undefined
         content: result.text,
         timestamp: Date.now(),
-        url: (mode === 'link' && Array.isArray(inputForApi) ? inputForApi.join('\n') : undefined) || (typeof inputForApi === 'string' ? inputForApi : undefined), // Sauvegarder l'input sous forme de string
         part: type === 'MINISTRY' ? selectedPart : undefined ,
         category: type === 'WATCHTOWER' ? 'tour_de_garde' : 'cahier_vie_et_ministere'
       };
@@ -258,7 +259,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
                       focus:border-[var(--btn-color)] outline-none transition-all font-medium text-base leading-relaxed
                       ${cooldown > 0 || loading || preview !== null ? 'opacity-30 cursor-not-allowed' : ''}
                     `}
-                    rows={1} // Adjusted to 1 initially, but will grow
+                    rows={1} 
                   />
                   <div className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30">
                     <LinkIcon size={22} />

@@ -10,7 +10,10 @@ import {
   RefreshCw,
   Loader2,
   Download,
-  FileSignature
+  FileSignature,
+  Search, // Added for Recherches type
+  Globe, // Added for link display
+  Link as LinkIcon // Fix: Import LinkIcon
 } from 'lucide-react';
 // Fix: Import types from src/types.ts
 import { GeneratedStudy, AppSettings, StudyPart } from '../types'; 
@@ -18,6 +21,8 @@ import { GeneratedStudy, AppSettings, StudyPart } from '../types';
 import { studyPartOptions } from './StudyTool'; // On importe de StudyTool maintenant
 import { deleteFromHistory, saveToHistory } from '../utils/storage'; 
 import { callGenerateContentApi } from '../services/apiService'; // Utilisez le nouveau service API
+import { callSearchContentApi } from '../services/searchApiService'; // Import the new search API service
+
 
 // Importations pour la génération de documents
 import saveAs from 'file-saver'; 
@@ -60,20 +65,39 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
   const handleRegenerate = async (study: GeneratedStudy) => {
     setIsRegenerating(true);
     try {
-      // Pour la régénération, on utilise le type et l'input original, et la partie si elle était définie
-      // Note: study.url peut être un string ou un tableau de string maintenant
-      const result = await callGenerateContentApi(
-        study.type, 
-        study.url || study.title, // Pass string or string[]
-        study.part || 'tout', 
-        settings, 
-        false, 
-        study.preachingType
-      );
-      const updatedStudy = { ...study, content: result.text, timestamp: Date.now() };
-      saveToHistory(updatedStudy); // Met à jour l'historique
-      setHistory(prev => prev.map(h => h.id === study.id ? updatedStudy : h));
-      setSelectedStudy(updatedStudy); // Met à jour l'étude affichée
+      let result;
+      if (study.type === 'RECHERCHES') {
+        // Pour les recherches, on utilise la nouvelle API de recherche
+        const input = study.url ? (Array.isArray(study.url) ? study.url.join('\n') : study.url) : study.title;
+        result = await callSearchContentApi(input, settings, false);
+        const updatedStudy: GeneratedStudy = { 
+          ...study, 
+          content: result.aiExplanation, // L'explication de l'IA est le contenu principal
+          rawSources: result.rawSources, 
+          aiExplanation: result.aiExplanation, 
+          timestamp: Date.now(),
+          date: new Date().toLocaleDateString('fr-FR') 
+        };
+        saveToHistory(updatedStudy);
+        setHistory(prev => prev.map(h => h.id === study.id ? updatedStudy : h));
+        setSelectedStudy(updatedStudy);
+      } else {
+        // Pour les études normales, on utilise l'API de génération de contenu
+        const input = study.url ? (Array.isArray(study.url) ? study.url[0] : study.url) : study.title; // Pour StudyTool, l'input est un string
+        result = await callGenerateContentApi(
+          study.type, 
+          input, 
+          study.part || 'tout', 
+          settings, 
+          false, 
+          study.preachingType
+        );
+        const updatedStudy = { ...study, content: result.text, timestamp: Date.now(), date: new Date().toLocaleDateString('fr-FR') };
+        saveToHistory(updatedStudy); // Met à jour l'historique
+        setHistory(prev => prev.map(h => h.id === study.id ? updatedStudy : h));
+        setSelectedStudy(updatedStudy); // Met à jour l'étude affichée
+      }
+      
       alert("Étude régénérée avec succès !");
     } catch (err: any) {
       console.error("Erreur lors de la régénération:", err);
@@ -142,87 +166,105 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
     const defaultTextColor = (settings.backgroundColor === '#f4f4f5' || settings.backgroundColor === '#fef3c7') ? '000000' : 'FFFFFF'; // Black for light backgrounds, white for dark
     const btnColor = (settings.customButtonHex || settings.buttonColor).replace('#', '');
 
-    const doc = new Document({
-      sections: [{
-        children: [
+    const docChildren = [
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 240 },
+        children: [new TextRun({ text: study.title, color: defaultTextColor, size: 48, bold: true })] 
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 360 },
+        children: [new TextRun({ text: getStudyLabel(study), color: defaultTextColor, size: 24, italics: true })] 
+      }),
+    ];
+
+    if (study.type === 'RECHERCHES' && study.rawSources && study.aiExplanation) {
+      docChildren.push(
+        new Paragraph({
+          children: [new TextRun({ text: 'Sources Brutes des Recherches :', color: btnColor, size: 28, bold: true })],
+          spacing: { before: 480, after: 180 },
+        }),
+        ...study.rawSources.flatMap(source => [
           new Paragraph({
-            alignment: AlignmentType.CENTER,
+            children: [
+              new TextRun({ text: `Titre: ${source.title}\n`, bold: true, color: defaultTextColor }),
+              new TextRun({ text: `Lien: ${source.uri}\n`, italics: true, color: defaultTextColor }),
+              new TextRun({ text: `Contenu extrait:\n`, bold: true, color: defaultTextColor }),
+              new TextRun({ text: source.content, color: defaultTextColor }),
+            ],
             spacing: { after: 240 },
-            children: [new TextRun({ text: study.title, color: defaultTextColor, size: 48, bold: true })] // Adjust size for TITLE
-          }),
-          new Paragraph({
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 360 },
-            children: [new TextRun({ text: getStudyLabel(study), color: defaultTextColor, size: 24, italics: true })] // Adjust size for date/type
-          }),
-          ...study.content.split('\n').map(line => {
-            const trimmed = line.trim();
-            if (!trimmed) return new Paragraph({});
-
-            // Titres de section (ex: # PERLES SPIRITUELLES)
-            if (trimmed.startsWith('# ') || trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION|PORTE-EN-PORTE|NOUVELLE VISITE|COURS BIBLIQUE)/i)) { // Main Section Headers
-                return new Paragraph({ 
-                  children: [new TextRun({ text: trimmed.replace(/^#\s*/, '').trim(), bold: true, color: btnColor, size: 32 })],
-                  spacing: { before: 480, after: 180 },
-                });
-            }
-            // Thème
-            if (trimmed.startsWith('Thème:')) {
-                const [label, ...rest] = trimmed.split(':');
-                return new Paragraph({ 
-                  children: [
-                    new TextRun({ text: `${label}: `, bold: true, color: btnColor, size: 24 }),
-                    ...formatTextRun(rest.join(':').trim(), defaultTextColor),
-                  ], 
-                  spacing: { after: 240 },
-                });
-            }
-            // PARAGRAPHE (pour les articles de la Tour de Garde)
-            if (trimmed.includes('PARAGRAPHE')) {
-                return new Paragraph({ 
-                  children: [new TextRun({ text: trimmed, bold: true, color: btnColor, size: 28 })],
-                  spacing: { before: 360, after: 120 },
-                });
-            }
-            // VERSETS BIBLIQUES
-            if (trimmed.startsWith('VERSET:')) {
-                const [label, ...rest] = trimmed.split(':');
-                return new Paragraph({
-                  children: [
-                    new TextRun({ text: `${label}: `, bold: true, color: btnColor }),
-                    ...formatTextRun(rest.join(':').trim(), defaultTextColor),
-                  ],
-                  border: { left: { color: btnColor, size: 24, style: 'single' } },
-                  indent: { left: 360 },
-                  spacing: { before: 120, after: 120 },
-                });
-            }
-            // QUESTIONS, RÉPONSES, COMMENTAIRES, APPLICATIONS, INTRODUCTION, POINTS À DÉVELOPPER, CONCLUSION, POINTS PRINCIPAUX, SUJET, ENTRÉE EN MATIÈRE, MANIÈRE DE FAIRE
-            if (trimmed.startsWith('QUESTION:') || trimmed.startsWith('RÉPONSE:') || trimmed.startsWith('COMMENTAIRE:') || trimmed.startsWith('APPLICATION:') || trimmed.startsWith('INTRODUCTION:') || trimmed.startsWith('POINTS À DÉVELOPPER:') || trimmed.startsWith('CONCLUSION:') || trimmed.startsWith('POINTS PRINCIPAUX:') || trimmed.startsWith('SUJET:') || trimmed.startsWith('ENTRÉE EN MATIÈRE:') || trimmed.startsWith('MANIÈRE DE FAIRE:') || trimmed.startsWith('QUESTION POUR REVENIR:')) {
-                const [label, ...rest] = trimmed.split(':');
-                return new Paragraph({
-                  children: [
-                    new TextRun({ text: `${label}: `, bold: true, color: btnColor, size: 20 }),
-                    ...formatTextRun(rest.join(':').trim(), defaultTextColor),
-                  ],
-                  spacing: { after: 60 },
-                });
-            }
-            // Questions d'application spécifiques (listes)
-            if (trimmed.startsWith('- Quelle leçon')) { 
-              return new Paragraph({
-                children: formatTextRun(trimmed, defaultTextColor),
-                spacing: { before: 60, after: 60 },
-                indent: { left: 240 },
-              });
-            }
-            // Texte normal (incluant les lignes de liste ou autres non capturées ci-dessus)
-            return new Paragraph({ children: formatTextRun(trimmed, defaultTextColor), spacing: { after: 60 } });
           })
-        ],
-      }],
-    });
+        ]),
+        new Paragraph({
+          children: [new TextRun({ text: 'Explication de l\'IA :', color: btnColor, size: 28, bold: true })],
+          spacing: { before: 480, after: 180 },
+        }),
+        ...study.aiExplanation.split('\n').map(line => new Paragraph({ children: formatTextRun(line.trim(), defaultTextColor), spacing: { after: 60 } }))
+      );
+    } else {
+      docChildren.push(
+        ...study.content.split('\n').map(line => {
+          const trimmed = line.trim();
+          if (!trimmed) return new Paragraph({});
 
+          if (trimmed.startsWith('# ') || trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION|PORTE-EN-PORTE|NOUVELLE VISITE|COURS BIBLIQUE)/i)) { 
+              return new Paragraph({ 
+                children: [new TextRun({ text: trimmed.replace(/^#\s*/, '').trim(), bold: true, color: btnColor, size: 32 })],
+                spacing: { before: 480, after: 180 },
+              });
+          }
+          if (trimmed.startsWith('Thème:')) {
+              const [label, ...rest] = trimmed.split(':');
+              return new Paragraph({ 
+                children: [
+                  new TextRun({ text: `${label}: `, bold: true, color: btnColor, size: 24 }),
+                  ...formatTextRun(rest.join(':').trim(), defaultTextColor),
+                ], 
+                spacing: { after: 240 },
+              });
+          }
+          if (trimmed.includes('PARAGRAPHE')) {
+              return new Paragraph({ 
+                children: [new TextRun({ text: trimmed, bold: true, color: btnColor, size: 28 })],
+                spacing: { before: 360, after: 120 },
+              });
+          }
+          if (trimmed.startsWith('VERSET:')) {
+              const [label, ...rest] = trimmed.split(':');
+              return new Paragraph({
+                children: [
+                  new TextRun({ text: `${label}: `, bold: true, color: btnColor }),
+                  ...formatTextRun(rest.join(':').trim(), defaultTextColor),
+                ],
+                border: { left: { color: btnColor, size: 24, style: 'single' } },
+                indent: { left: 360 },
+                spacing: { before: 120, after: 120 },
+              });
+          }
+          if (trimmed.startsWith('QUESTION:') || trimmed.startsWith('RÉPONSE:') || trimmed.startsWith('COMMENTAIRE:') || trimmed.startsWith('APPLICATION:') || trimmed.startsWith('INTRODUCTION:') || trimmed.startsWith('POINTS À DÉVELOPPER:') || trimmed.startsWith('CONCLUSION:') || trimmed.startsWith('POINTS PRINCIPAUX:') || trimmed.startsWith('SUJET:') || trimmed.startsWith('ENTRÉE EN MATIÈRE:') || trimmed.startsWith('MANIÈRE DE FAIRE:') || trimmed.startsWith('QUESTION POUR REVENIR:')) {
+              const [label, ...rest] = trimmed.split(':');
+              return new Paragraph({
+                children: [
+                  new TextRun({ text: `${label}: `, bold: true, color: btnColor, size: 20 }),
+                  ...formatTextRun(rest.join(':').trim(), defaultTextColor),
+                ],
+                spacing: { after: 60 },
+              });
+          }
+          if (trimmed.startsWith('- Quelle leçon')) { 
+            return new Paragraph({
+              children: formatTextRun(trimmed, defaultTextColor),
+              spacing: { before: 60, after: 60 },
+              indent: { left: 240 },
+            });
+          }
+          return new Paragraph({ children: formatTextRun(trimmed, defaultTextColor), spacing: { after: 60 } });
+        })
+      );
+    }
+
+    const doc = new Document({ sections: [{ children: docChildren }] });
     const buffer = await Packer.toBuffer(doc);
     saveAs(new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }), `${study.title}.docx`);
   };
@@ -232,110 +274,132 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
     let y = 10;
     const margin = 10;
     const pageWidth = doc.internal.pageSize.getWidth();
-    // Default text color based on background settings
     const defaultTextColor = (settings.backgroundColor === '#f4f4f5' || settings.backgroundColor === '#fef3c7') ? '#000000' : '#FFFFFF'; 
     const btnColor = settings.customButtonHex || settings.buttonColor || '#4a70b5';
 
-    // Set font for better rendering of French characters
     doc.setFont('helvetica');
     doc.setTextColor(defaultTextColor);
 
-    // Title
     doc.setFontSize(24);
     doc.text(study.title, pageWidth / 2, y + 10, { align: 'center' });
     y += 20;
 
-    // Type and Date
     doc.setFontSize(12);
     doc.text(getStudyLabel(study), pageWidth / 2, y + 5, { align: 'center' });
     y += 15;
 
-    doc.setFontSize(11);
-    const lines = study.content.split('\n');
-
-    lines.forEach(line => {
-      const trimmed = line.trim();
-      if (!trimmed) return;
-
+    const addText = (text: string, options: any = {}) => {
       if (y > doc.internal.pageSize.getHeight() - margin) {
         doc.addPage();
         y = margin;
-        doc.setTextColor(defaultTextColor); // Reset color for new page
-        doc.setFont('helvetica', 'normal'); // Reset font style
+        doc.setTextColor(defaultTextColor);
+        doc.setFont('helvetica', 'normal');
       }
+      const textLines = doc.splitTextToSize(text, pageWidth - 2 * margin - (options.indent || 0));
+      doc.text(textLines, margin + (options.indent || 0), y, options);
+      y += (textLines.length * (options.fontSize || 5)) + 3;
+    };
 
-      if (trimmed.startsWith('# ')) { // Titres de section principaux
-        doc.setFontSize(16);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(btnColor);
-        doc.text(trimmed.substring(2).trim(), margin, y);
-        y += 7;
-        doc.setTextColor(defaultTextColor);
-        doc.setFont('helvetica', 'normal');
-      } else if (trimmed.startsWith('Thème:')) { // Thème
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'italic');
-        const textLines = doc.splitTextToSize(trimmed, pageWidth - 2 * margin - 10);
-        doc.text(textLines, margin + 5, y); // Small indent for verses
-        y += (textLines.length * 5) + 3;
-        doc.setFont('helvetica', 'normal');
-      } else if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION|PORTE-EN-PORTE|NOUVELLE VISITE|COURS BIBLIQUE)/i)) { // Section headers for Ministry / Predication
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(btnColor);
-        doc.text(trimmed, margin, y);
-        y += 7;
-        doc.setTextColor(defaultTextColor);
-        doc.setFont('helvetica', 'normal');
-      } else if (trimmed.includes('PARAGRAPHE')) { // Paragraphes for Watchtower
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(btnColor);
-        doc.text(trimmed, margin, y);
-        y += 7;
-        doc.setTextColor(defaultTextColor); // Reset color
-        doc.setFont('helvetica', 'normal');
-      } else if (trimmed.startsWith('VERSET:')) { // Versets bibliques
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'italic');
-        const textLines = doc.splitTextToSize(trimmed, pageWidth - 2 * margin - 10);
-        doc.text(textLines, margin + 5, y); // Small indent for verses
-        y += (textLines.length * 5) + 3;
-        doc.setFont('helvetica', 'normal');
-      } else if (trimmed.startsWith('QUESTION:') || trimmed.startsWith('RÉPONSE:') || trimmed.startsWith('COMMENTAIRE:') || trimmed.startsWith('APPLICATION:') || trimmed.startsWith('INTRODUCTION:') || trimmed.startsWith('POINTS À DÉVELOPPER:') || trimmed.startsWith('CONCLUSION:') || trimmed.startsWith('POINTS PRINCIPAUX:') || trimmed.startsWith('SUJET:') || trimmed.startsWith('ENTRÉE EN MATIÈRE:') || trimmed.startsWith('MANIÈRE DE FAIRE:') || trimmed.startsWith('QUESTION POUR REVENIR:')) { // Labeled content
-        // Ajout d'espace avant les QUESTIONS pour les distinguer
-        if (trimmed.startsWith('QUESTION:')) {
-          y += 5; // Extra spacing for questions
-          doc.setFontSize(12); // Slightly larger font for questions
-        } else {
-          doc.setFontSize(11);
+    if (study.type === 'RECHERCHES' && study.rawSources && study.aiExplanation) {
+      addText('Sources Brutes des Recherches :', { fontSize: 16, fontStyle: 'bold', textColor: btnColor });
+      y += 7;
+      doc.setTextColor(defaultTextColor); // Reset color
+      study.rawSources.forEach(source => {
+        addText(`Titre: ${source.title}`, { fontSize: 11, fontStyle: 'bold' });
+        addText(`Lien: ${source.uri}`, { fontSize: 10, fontStyle: 'italic' });
+        addText(`Contenu extrait: ${source.content}`, { fontSize: 10, indent: 5 });
+        y += 5; // Spacing
+      });
+      addText('Explication de l\'IA :', { fontSize: 16, fontStyle: 'bold', textColor: btnColor });
+      y += 7;
+      doc.setTextColor(defaultTextColor); // Reset color
+      study.aiExplanation.split('\n').forEach(line => addText(line.trim(), { fontSize: 11 }));
+    } else {
+      const lines = study.content.split('\n');
+
+      lines.forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+
+        if (y > doc.internal.pageSize.getHeight() - margin) {
+          doc.addPage();
+          y = margin;
+          doc.setTextColor(defaultTextColor); 
+          doc.setFont('helvetica', 'normal'); 
         }
-        doc.setFont('helvetica', 'bold');
-        const [label, ...rest] = trimmed.split(':');
-        doc.setTextColor(btnColor);
-        doc.text(`${label}: `, margin, y);
-        doc.setTextColor(defaultTextColor); // Reset color
-        doc.setFont('helvetica', 'normal');
-        const textLines = doc.splitTextToSize(rest.join(':').trim(), pageWidth - 2 * margin - doc.getStringUnitWidth(`${label}: `) * doc.getFontSize());
-        doc.text(textLines, margin + doc.getStringUnitWidth(`${label}: `) * doc.getFontSize(), y, { align: 'left' });
-        y += (textLines.length * 5) + 3;
-      } else if (trimmed.startsWith('- Quelle leçon')) { // Questions d'application
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'italic');
-        const textLines = doc.splitTextToSize(trimmed, pageWidth - 2 * margin - 10);
-        doc.text(textLines, margin + 5, y);
-        y += (textLines.length * 5) + 2;
-        doc.setFont('helvetica', 'normal');
-      }
-      else { // Texte normal
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'normal');
-        const textLines = doc.splitTextToSize(trimmed, pageWidth - 2 * margin);
-        doc.text(textLines, margin, y);
-        y += (textLines.length * 5) + 3;
-      }
-      y += 2; // Extra spacing between lines
-    });
+
+        if (trimmed.startsWith('# ')) { 
+          doc.setFontSize(16);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(btnColor);
+          doc.text(trimmed.substring(2).trim(), margin, y);
+          y += 7;
+          doc.setTextColor(defaultTextColor);
+          doc.setFont('helvetica', 'normal');
+        } else if (trimmed.startsWith('Thème:')) { 
+          doc.setFontSize(11);
+          doc.setFont('helvetica', 'italic');
+          const textLines = doc.splitTextToSize(trimmed, pageWidth - 2 * margin - 10);
+          doc.text(textLines, margin + 5, y); 
+          y += (textLines.length * 5) + 3;
+          doc.setFont('helvetica', 'normal');
+        } else if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION|PORTE-EN-PORTE|NOUVELLE VISITE|COURS BIBLIQUE)/i)) { 
+          doc.setFontSize(14);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(btnColor);
+          doc.text(trimmed, margin, y);
+          y += 7;
+          doc.setTextColor(defaultTextColor);
+          doc.setFont('helvetica', 'normal');
+        } else if (trimmed.includes('PARAGRAPHE')) { 
+          doc.setFontSize(14);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(btnColor);
+          doc.text(trimmed, margin, y);
+          y += 7;
+          doc.setTextColor(defaultTextColor); 
+          doc.setFont('helvetica', 'normal');
+        } else if (trimmed.startsWith('VERSET:')) { 
+          doc.setFontSize(11);
+          doc.setFont('helvetica', 'italic');
+          const textLines = doc.splitTextToSize(trimmed, pageWidth - 2 * margin - 10);
+          doc.text(textLines, margin + 5, y); 
+          y += (textLines.length * 5) + 3;
+          doc.setFont('helvetica', 'normal');
+        } else if (trimmed.startsWith('QUESTION:') || trimmed.startsWith('RÉPONSE:') || trimmed.startsWith('COMMENTAIRE:') || trimmed.startsWith('APPLICATION:') || trimmed.startsWith('INTRODUCTION:') || trimmed.startsWith('POINTS À DÉVELOPPER:') || trimmed.startsWith('CONCLUSION:') || trimmed.startsWith('POINTS PRINCIPAUX:') || trimmed.startsWith('SUJET:') || trimmed.startsWith('ENTRÉE EN MATIÈRE:') || trimmed.startsWith('MANIÈRE DE FAIRE:') || trimmed.startsWith('QUESTION POUR REVENIR:')) { 
+          if (trimmed.startsWith('QUESTION:')) {
+            y += 5; 
+            doc.setFontSize(12); 
+          } else {
+            doc.setFontSize(11);
+          }
+          doc.setFont('helvetica', 'bold');
+          const [label, ...rest] = trimmed.split(':');
+          doc.setTextColor(btnColor);
+          doc.text(`${label}: `, margin, y);
+          doc.setTextColor(defaultTextColor); 
+          doc.setFont('helvetica', 'normal');
+          const textLines = doc.splitTextToSize(rest.join(':').trim(), pageWidth - 2 * margin - doc.getStringUnitWidth(`${label}: `) * doc.getFontSize());
+          doc.text(textLines, margin + doc.getStringUnitWidth(`${label}: `) * doc.getFontSize(), y, { align: 'left' });
+          y += (textLines.length * 5) + 3;
+        } else if (trimmed.startsWith('- Quelle leçon')) {
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'italic');
+          const textLines = doc.splitTextToSize(trimmed, pageWidth - 2 * margin - 10);
+          doc.text(textLines, margin + 5, y);
+          y += (textLines.length * 5) + 2;
+          doc.setFont('helvetica', 'normal');
+        }
+        else { 
+          doc.setFontSize(11);
+          doc.setFont('helvetica', 'normal');
+          const textLines = doc.splitTextToSize(trimmed, pageWidth - 2 * margin);
+          doc.text(textLines, margin, y);
+          y += (textLines.length * 5) + 3;
+        }
+        y += 2; 
+      });
+    }
 
     doc.save(`${study.title}.pdf`);
   };
@@ -355,6 +419,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
       if (study.preachingType === 'cours_biblique') label += ' (Cours Biblique)';
       return label;
     }
+    if (study.type === 'RECHERCHES') return `Recherches - ${study.date}`;
     return '';
   };
 
@@ -372,9 +437,18 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
              <button onClick={() => setReadingMode(!readingMode)} className="p-3 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10" title="Mode Lecture">
                 {readingMode ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
              </button>
-             <button onClick={() => handleRegenerate(selectedStudy)} disabled={isRegenerating} className="p-3 bg-white/5 rounded-xl border border-white/10 text-blue-400 hover:bg-white/10" title="Régénérer les réponses">
-                {isRegenerating ? <Loader2 size={20} className="animate-spin"/> : <RefreshCw size={20} />}
-             </button>
+             {/* Régénération uniquement si ce n'est pas une recherche générale */}
+             {selectedStudy.type !== 'RECHERCHES' && (
+                <button onClick={() => handleRegenerate(selectedStudy)} disabled={isRegenerating} className="p-3 bg-white/5 rounded-xl border border-white/10 text-blue-400 hover:bg-white/10" title="Régénérer les réponses">
+                    {isRegenerating ? <Loader2 size={20} className="animate-spin"/> : <RefreshCw size={20} />}
+                </button>
+             )}
+             {/* Régénération de recherche si c'en est une */}
+             {selectedStudy.type === 'RECHERCHES' && (
+                <button onClick={() => handleRegenerate(selectedStudy)} disabled={isRegenerating} className="p-3 bg-white/5 rounded-xl border border-white/10 text-blue-400 hover:bg-white/10" title="Relancer la recherche">
+                    {isRegenerating ? <Loader2 size={20} className="animate-spin"/> : <Search size={20} />}
+                </button>
+             )}
              <button onClick={() => exportToDocx(selectedStudy)} className="p-3 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10" title="Télécharger en DOCX">
                 <FileSignature size={20} />
              </button>
@@ -393,59 +467,94 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
         <article className={`md:max-w-4xl md:mx-auto ${readingMode ? 'pt-10 px-6' : ''} print:p-0 print:text-black`}> 
           <header className="mb-16 text-center">
              <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="text-[10px] font-black uppercase tracking-[0.4em] px-6 py-2 rounded-full mb-8 inline-block shadow-lg">
-                {selectedStudy.type === 'WATCHTOWER' ? 'Étude de la Tour de Garde' : (selectedStudy.type === 'MINISTRY' ? `Cahier Vie et Ministère - ${getPartLabel(selectedStudy.part)}` : `Prédication - ${selectedStudy.preachingType ? selectedStudy.preachingType.replace(/_/g, ' ').toUpperCase() : 'Général'}`)}
+                {selectedStudy.type === 'WATCHTOWER' ? 'Étude de la Tour de Garde' : 
+                 (selectedStudy.type === 'MINISTRY' ? `Cahier Vie et Ministère - ${getPartLabel(selectedStudy.part)}` : 
+                 (selectedStudy.type === 'PREDICATION' ? `Prédication - ${selectedStudy.preachingType ? selectedStudy.preachingType.replace(/_/g, ' ').toUpperCase() : 'Général'}` : 
+                 'Recherches Avancées'))}
              </div>
              <h1 className="text-4xl md:text-6xl font-black leading-none mb-6 tracking-tighter uppercase">{selectedStudy.title}</h1>
              <p className="opacity-30 text-xs font-black uppercase tracking-[0.5em]">Mis à jour le {selectedStudy.date}</p>
+             {selectedStudy.url && (
+                <div className="flex items-center justify-center space-x-2 mt-4 text-sm opacity-50">
+                    <Globe size={16} />
+                    <span className="truncate max-w-[200px] sm:max-w-none">
+                        {Array.isArray(selectedStudy.url) ? selectedStudy.url.join(', ') : selectedStudy.url}
+                    </span>
+                </div>
+             )}
           </header>
 
           <div className="space-y-10 font-serif text-xl leading-relaxed print:text-lg">
-            {selectedStudy.content.split('\n').map((line, idx) => {
-              const trimmed = line.trim();
-              if (!trimmed) return null;
-              // TITRES DE SECTION (ex: # PERLES SPIRITUELLES ou JOYAUX DE LA PAROLE DE DIEU)
-              if (trimmed.startsWith('# ') || trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION|PORTE-EN-PORTE|NOUVELLE VISITE|COURS BIBLIQUE)/i)) {
-                return <h3 key={idx} className="text-3xl font-black pt-12 border-t border-white/10 mt-12 uppercase tracking-tight" style={{ color: 'var(--btn-color)' }}>{trimmed.replace(/^#\s*/, '').trim()}</h3>;
-              }
-              // THÈME
-              if (trimmed.startsWith('Thème:')) {
-                return <p key={idx} className="text-lg opacity-60 mb-8 font-serif italic">{trimmed}</p>;
-              }
-              // PARAGRAPHES (pour les articles de la Tour de Garde)
-              if (trimmed.includes('PARAGRAPHE')) {
-                return <h3 key={idx} className="text-2xl font-black pt-8 mt-8 uppercase tracking-tight" style={{ color: 'var(--btn-color)' }}>{trimmed}</h3>;
-              }
-              // VERSETS BIBLIQUES
-              if (trimmed.startsWith('VERSET:')) {
-                return <div key={idx} className="p-8 bg-white/5 border-l-8 border-[var(--btn-color)] italic rounded-r-3xl my-8 print:border-black print:bg-gray-100">{trimmed}</div>;
-              }
-              // QUESTIONS
-              if (trimmed.startsWith('QUESTION:')) {
-                const [label, ...rest] = trimmed.split(':');
-                return (
-                  <div key={idx} className="space-y-2 mt-6"> 
-                    <span className="inline-block px-3 py-1 bg-[var(--btn-color)] text-[var(--btn-text)] text-[10px] font-black uppercase tracking-widest rounded-md">{label}</span>
-                    <p className="font-sans font-bold text-lg opacity-90">{rest.join(':').trim()}</p>
-                  </div>
-                );
-              }
-              // RÉPONSES, COMMENTAIRES, APPLICATIONS
-              if (trimmed.startsWith('RÉPONSE:') || trimmed.startsWith('COMMENTAIRE:') || trimmed.startsWith('APPLICATION:') || trimmed.startsWith('INTRODUCTION:') || trimmed.startsWith('POINTS À DÉVELOPPER:') || trimmed.startsWith('CONCLUSION:') || trimmed.startsWith('POINTS PRINCIPAUX:') || trimmed.startsWith('SUJET:') || trimmed.startsWith('ENTRÉE EN MATIÈRE:') || trimmed.startsWith('MANIÈRE DE FAIRE:') || trimmed.startsWith('QUESTION POUR REVENIR:')) {
-                const [label, ...rest] = trimmed.split(':');
-                return (
-                  <div key={idx} className="space-y-2">
-                    <span className="inline-block px-3 py-1 bg-white/10 text-white/70 text-[10px] font-black uppercase tracking-widest rounded-md">{label}</span>
-                    <p className="font-sans font-bold text-lg opacity-90">{rest.join(':').trim()}</p>
-                  </div>
-                );
-              }
-              // QUESTIONS D'APPLICATION SPÉCIFIQUES
-              if (trimmed.startsWith('- Quelle leçon')) {
-                return <p key={idx} className="opacity-60 font-sans italic pt-4">{trimmed}</p>;
-              }
-              // TEXTE NORMAL
-              return <p key={idx} className="opacity-60 font-sans">{trimmed}</p>;
-            })}
+            {selectedStudy.type === 'RECHERCHES' && selectedStudy.rawSources && selectedStudy.aiExplanation ? (
+              <>
+                <h2 className="text-3xl font-black pt-12 border-t border-white/10 mt-12 uppercase tracking-tight" style={{ color: 'var(--btn-color)' }}>Sources Brutes des Recherches :</h2>
+                {selectedStudy.rawSources.map((source, sIdx) => (
+                    <div key={`raw-source-${sIdx}`} className="bg-white/5 p-6 rounded-xl border border-white/10 space-y-3">
+                        <h4 className="font-bold text-lg text-white/90">{source.title}</h4>
+                        <a href={source.uri} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline text-sm flex items-center space-x-2">
+                            <LinkIcon size={16} /> <span className="truncate">{source.uri}</span>
+                        </a>
+                        <p className="text-sm opacity-60 mt-2 italic">{source.content}</p>
+                    </div>
+                ))}
+                <h2 className="text-3xl font-black pt-12 border-t border-white/10 mt-12 uppercase tracking-tight" style={{ color: 'var(--btn-color)' }}>Explication de l'IA :</h2>
+                {selectedStudy.aiExplanation.split('\n').map((line, idx) => {
+                    const trimmed = line.trim();
+                    if (!trimmed) return null;
+                    if (trimmed.startsWith('# ')) return <h3 key={idx} className="text-2xl font-black pt-4 mt-4 uppercase tracking-tight" style={{ color: 'var(--btn-color)' }}>{trimmed.replace(/^#\s*/, '').trim()}</h3>;
+                    if (trimmed.startsWith('**') && trimmed.endsWith('**')) return <p key={idx} className="font-sans font-bold text-lg opacity-90">{trimmed.replace(/\*\*/g, '')}</p>;
+                    return <p key={idx} className="opacity-60 font-sans">{trimmed}</p>;
+                })}
+              </>
+            ) : (
+                // Existing display for WATCHTOWER, MINISTRY, PREDICATION
+                selectedStudy.content.split('\n').map((line, idx) => {
+                const trimmed = line.trim();
+                if (!trimmed) return null;
+                // TITRES DE SECTION (ex: # PERLES SPIRITUELLES ou JOYAUX DE LA PAROLE DE DIEU)
+                if (trimmed.startsWith('# ') || trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION|PORTE-EN-PORTE|NOUVELLE VISITE|COURS BIBLIQUE)/i)) {
+                    return <h3 key={idx} className="text-3xl font-black pt-12 border-t border-white/10 mt-12 uppercase tracking-tight" style={{ color: 'var(--btn-color)' }}>{trimmed.replace(/^#\s*/, '').trim()}</h3>;
+                }
+                // THÈME
+                if (trimmed.startsWith('Thème:')) {
+                    return <p key={idx} className="text-lg opacity-60 mb-8 font-serif italic">{trimmed}</p>;
+                }
+                // PARAGRAPHES (pour les articles de la Tour de Garde)
+                if (trimmed.includes('PARAGRAPHE')) {
+                    return <h3 key={idx} className="text-2xl font-black pt-8 mt-8 uppercase tracking-tight" style={{ color: 'var(--btn-color)' }}>{trimmed}</h3>;
+                }
+                // VERSETS BIBLIQUES
+                if (trimmed.startsWith('VERSET:')) {
+                    return <div key={idx} className="p-8 bg-white/5 border-l-8 border-[var(--btn-color)] italic rounded-r-3xl my-8 print:border-black print:bg-gray-100">{trimmed}</div>;
+                }
+                // QUESTIONS
+                if (trimmed.startsWith('QUESTION:')) {
+                    const [label, ...rest] = trimmed.split(':');
+                    return (
+                    <div key={idx} className="space-y-2 mt-6"> 
+                        <span className="inline-block px-3 py-1 bg-[var(--btn-color)] text-[var(--btn-text)] text-[10px] font-black uppercase tracking-widest rounded-md">{label}</span>
+                        <p className="font-sans font-bold text-lg opacity-90">{rest.join(':').trim()}</p>
+                    </div>
+                    );
+                }
+                // RÉPONSES, COMMENTAIRES, APPLICATIONS
+                if (trimmed.startsWith('RÉPONSE:') || trimmed.startsWith('COMMENTAIRE:') || trimmed.startsWith('APPLICATION:') || trimmed.startsWith('INTRODUCTION:') || trimmed.startsWith('POINTS À DÉVELOPPER:') || trimmed.startsWith('CONCLUSION:') || trimmed.startsWith('POINTS PRINCIPAUX:') || trimmed.startsWith('SUJET:') || trimmed.startsWith('ENTRÉE EN MATIÈRE:') || trimmed.startsWith('MANIÈRE DE FAIRE:') || trimmed.startsWith('QUESTION POUR REVENIR:')) {
+                    const [label, ...rest] = trimmed.split(':');
+                    return (
+                    <div key={idx} className="space-y-2">
+                        <span className="inline-block px-3 py-1 bg-white/10 text-white/70 text-[10px] font-black uppercase tracking-widest rounded-md">{label}</span>
+                        <p className="font-sans font-bold text-lg opacity-90">{rest.join(':').trim()}</p>
+                    </div>
+                    );
+                }
+                // QUESTIONS D'APPLICATION SPÉCIFIQUES
+                if (trimmed.startsWith('- Quelle leçon')) {
+                    return <p key={idx} className="opacity-60 font-sans italic pt-4">{trimmed}</p>;
+                }
+                // TEXTE NORMAL
+                return <p key={idx} className="opacity-60 font-sans">{trimmed}</p>;
+                })
+            )}
           </div>
         </article>
       </div>
@@ -481,6 +590,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
                 {study.type} 
                 {study.part && `- ${getPartLabel(study.part).toUpperCase()}`}
                 {study.preachingType && `- ${study.preachingType.replace(/_/g, ' ').toUpperCase()}`}
+                {study.type === 'RECHERCHES' && `- RECHERCHES`}
               </div>
               <h3 className="font-black text-2xl mb-6 line-clamp-2 leading-tight uppercase tracking-tight">{study.title}</h3>
               <div className="flex justify-between items-center mt-auto pt-6 border-t border-white/5">

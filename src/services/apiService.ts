@@ -1,6 +1,5 @@
 // src/services/apiService.ts
-// Fix: Import types from src/types.ts instead of defining them locally
-import { StudyPart, PredicationType, AppSettings } from '../types'; 
+import { StudyPart, PredicationType, AppSettings, GeneratedStudy } from '../types'; // Import GeneratedStudy type
 
 export const callGenerateContentApi = async (
   type: 'WATCHTOWER' | 'MINISTRY' | 'PREDICATION',
@@ -9,7 +8,7 @@ export const callGenerateContentApi = async (
   settings: AppSettings,
   isInitialSearchForPreview: boolean = false,
   preachingType: PredicationType | undefined
-): Promise<{ text: string; title: string; theme?: string }> => {
+): Promise<{ text: string; title: string; theme?: string; rawSources?: GeneratedStudy['rawSources']; aiExplanation?: string }> => { // Added optional rawSources and aiExplanation
 
   const response = await fetch('/api/generate-content', {
     method: 'POST',

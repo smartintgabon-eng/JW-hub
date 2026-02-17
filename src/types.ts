@@ -8,7 +8,8 @@ export enum AppView {
   TUTORIAL = 'TUTORIAL',
   SETTINGS = 'SETTINGS',
   HISTORY = 'HISTORY',
-  UPDATES = 'UPDATES' 
+  UPDATES = 'UPDATES',
+  RECHERCHES = 'RECHERCHES' // New view for advanced search
 }
 
 export type StudyPart =
@@ -29,19 +30,22 @@ export type HistoryCategory =
   | 'tour_de_garde'
   | 'predication_porte_en_porte'
   | 'predication_nouvelle_visite'
-  | 'predication_cours_biblique';
+  | 'predication_cours_biblique'
+  | 'recherches'; // New category for searches
 
 export interface GeneratedStudy {
   id: string;
-  type: 'WATCHTOWER' | 'MINISTRY' | 'PREDICATION'; 
+  type: 'WATCHTOWER' | 'MINISTRY' | 'PREDICATION' | 'RECHERCHES'; // Added RECHERCHES
   title: string;
   date: string;
-  url?: string;
+  url?: string | string[]; // Can be a single string or an array of strings
   content: string;
   timestamp: number;
   part?: StudyPart; 
   preachingType?: PredicationType; 
   category: HistoryCategory; 
+  rawSources?: { title: string; uri: string; content: string }[]; // For Recherches tab
+  aiExplanation?: string; // For Recherches tab
 }
 
 export interface AppSettings {

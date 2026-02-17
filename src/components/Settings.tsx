@@ -13,7 +13,7 @@ import {
 // Fix: Import AppSettings from src/types.ts
 import { AppSettings } from '../types'; 
 import { saveSettings, clearHistory, totalReset } from '../utils/storage'; 
-import { isEqual } from 'lodash'; // Using lodash for deep comparison
+import { isEqual } from 'lodash'; 
 
 interface Props {
   settings: AppSettings;
@@ -25,7 +25,6 @@ const Settings: React.FC<Props> = ({ settings, setSettings }) => {
   const [showSavedMessage, setShowSavedMessage] = useState(false);
 
   // Synchronize draftSettings with global settings if settings prop changes externally
-  // This is important if settings are loaded/reset from other parts of the app
   useEffect(() => {
     setDraftSettings(settings);
   }, [settings]);

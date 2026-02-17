@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Megaphone, Loader2, Check, AlertTriangle, Timer, BookOpen, Search, Link as LinkIcon, Handshake, CornerRightDown, ChevronRight, ChevronLeft } from 'lucide-react';
 // Fix: Import types from src/types.ts
 import { AppSettings, GeneratedStudy, PredicationType } from '../types';
-import { callGenerateContentApi } from '../services/apiService'; // Utilisez le nouveau service API
+import { callGenerateContentApi } from '../services/apiService'; 
 
 interface Props {
   onGenerated: (study: GeneratedStudy) => void;
@@ -22,7 +22,7 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
   const [pepOfferStudy, setPepOfferStudy] = useState(false);
   const [pepStudyBrochureLink, setPepStudyBrochureLink] = useState('');
   const [pepCurrentAffairs, setPepCurrentAffairs] = useState('');
-  const [pepStep, setPepStep] = useState(1); // 1: Initial inputs, 2: Context/Generate
+  const [pepStep, setPepStep] = useState(1); 
 
   // Nouvelle Visite states
   const [nvType, setNvType] = useState<'study' | 'question' | null>(null);
@@ -73,7 +73,7 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
 
   const handleGenerateContent = async (
     title: string,
-    inputDetails: string | string[], // Modified to accept string or string[]
+    inputDetails: string | string[], 
     preachingType: PredicationType
   ) => {
     if (loading || cooldown > 0) return;
@@ -91,9 +91,9 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
         type: 'PREDICATION',
         title: result.title,
         date: new Date().toLocaleDateString('fr-FR'),
+        url: (Array.isArray(inputDetails) ? inputDetails.join('\n') : inputDetails) || '', 
         content: result.text,
         timestamp: Date.now(),
-        url: (Array.isArray(inputDetails) ? inputDetails.join('\n') : inputDetails) || '', // Store as string
         preachingType: preachingType,
         category: `predication_${preachingType}`
       };
@@ -107,18 +107,15 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
   };
 
   const handleError = (err: any) => {
-    // La réponse de l'API contient déjà des messages d'erreur formatés
-    setGlobalLoadingMessage(null); // Always clear global loading on error
+    setGlobalLoadingMessage(null); 
     setError(err.message || "Une erreur inconnue est survenue.");
     
-    // Si l'erreur vient du cooldown, mettez à jour le compteur
     if (err.message && err.message.includes('patienter')) {
-      // Extraire le nombre de secondes si le message contient "Veuillez patienter Xs"
       const match = err.message.match(/patienter (\d+)s/);
       if (match && match[1]) {
         setCooldown(parseInt(match[1]));
       } else {
-        setCooldown(90); // Fallback si le format n'est pas celui attendu
+        setCooldown(90); 
       }
     }
   };
@@ -128,8 +125,8 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
   const getCommonButtonStyles = (isActive: boolean) => `px-4 py-2 rounded-lg text-sm font-bold transition-all ${isActive ? 'bg-[var(--btn-color)] text-[var(--btn-text)] shadow' : 'bg-white/5 opacity-60 hover:opacity-100'}`;
 
   // Check if main fields are empty for specific modes
-  const isPepGenerateDisabled = !pepPublicationLink.trim() || !pepTopic.trim();
-  const isNvGenerateDisabled = (nvType === 'study' && (!nvStudyLink.trim() || !nvStudyChapterParagraph.trim())) || (nvType === 'question' && (!nvQuestionLeft.trim() || !nvBrochureLink.trim()));
+  const isPepGenerateDisabled = !pepTopic.trim();
+  const isNvGenerateDisabled = (nvType === 'study' && (!nvStudyChapterParagraph.trim())) || (nvType === 'question' && (!nvQuestionLeft.trim()));
   const isCbGenerateDisabled = (cbType === 'new' && !cbPublicationLink.trim()) || (cbType === 'ongoing' && (!cbChapterParagraph.trim() || !cbPublicationLink.trim()));
 
 

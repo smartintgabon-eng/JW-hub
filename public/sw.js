@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jw-study-pro-cache-v26'; // Incrément de la version du cache
+const CACHE_NAME = 'jw-study-pro-cache-v27'; // Incrément de la version du cache
 const ASSETS = [
   './',
   './index.html',
@@ -6,8 +6,9 @@ const ASSETS = [
   './logo512.png',
   './favicon.ico',
   // Ajout du CDN TailwindCSS au cache pour l'accès hors ligne
-  'https://cdn.tailwindcss.com' ,
-  'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Lora:ital,wght@0,400..700;1,400..700&display=swap' // Cache Google Fonts CSS
+  'https://cdn.tailwindcss.com',
+  // Cache Google Fonts CSS
+  'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Lora:ital,wght@0,400..700;1,400..700&display=swap' 
 ];
 
 self.addEventListener('install', (event) => {
@@ -28,7 +29,12 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   // Ignore les requêtes vers l'API Gemini ou notre API Route pour éviter de les mettre en cache
-  if (event.request.url.includes('generativelanguage.googleapis.com') || event.request.url.includes('/api/generate-content') || event.request.method !== 'GET') {
+  // Et aussi les requêtes non-GET ou les requêtes vers allorigins.win (proxy)
+  if (event.request.url.includes('generativelanguage.googleapis.com') || 
+      event.request.url.includes('/api/generate-content') || 
+      event.request.url.includes('/api/search-content') || // Nouvelle API de recherche
+      event.request.url.includes('allorigins.win') || // Exclure le proxy du cache
+      event.request.method !== 'GET') {
     return event.respondWith(fetch(event.request));
   }
 

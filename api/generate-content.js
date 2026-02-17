@@ -25,7 +25,6 @@ function detectArticleType(url) {
   return "ARTICLE GÉNÉRAL";
 }
 
-
 const getApplicationQuestions = () => `
 - Quelle leçon pouvons-nous tirer pour nous?
 - Quelle leçon pour la prédication?
@@ -51,7 +50,7 @@ async function fetchAndCombineContent(urls) {
       const $ = cheerio.load(data.contents);
       let extractedContent = '';
       
-      // Ciblage spécifique pour les articles JW
+      // Ciblage spécifique pour les articles JW: #article, .bodyTxt, .pGroup, .qu
       const targetContainer = $('#article, .bodyTxt'); 
       if (targetContainer.length > 0) {
           targetContainer.find('.qu, .pGroup, h2, h3, ul, ol, p, strong').each((i, el) => { 
@@ -70,7 +69,8 @@ async function fetchAndCombineContent(urls) {
           });
       } else {
         // Fallback si pas de conteneur d'article spécifique trouvé
-        extractedContent = $.text();
+        // Tenter d'extraire tout le texte pertinent
+        extractedContent = $('p, h1, h2, h3, li, strong').text();
       }
       
       const cleanedText = extractedContent.replace(/\s\s+/g, ' ').trim();
@@ -107,7 +107,7 @@ export default async function handler(req, res) {
   const isLinkInput = Array.isArray(cleanedInput) ? cleanedInput.some(url => url.startsWith('http')) : cleanedInput.startsWith('http');
 
   let modelToUse = 'gemini-2.5-flash';
-  let toolsConfig = [{ googleSearch: {} }]; // googleSearch est toujours activé pour la "Hybrid Intelligence"
+  let toolsConfig = [{ googleSearch: {} }];
   let systemInstruction = '';
   let temperature = 0.2;
 
@@ -130,7 +130,7 @@ export default async function handler(req, res) {
     2. Si tu vois une question (souvent précédée par 'QUESTION:' ou identifiable par son contexte), c'est le début d'une section ou d'un paragraphe.
     3. Ne dis JAMAIS que tu ne peux pas accéder au texte ou qu'il est insuffisant. Utilise ce que tu as pour reconstruire l'étude.
     4. **MÉTHODE HYBRIDE :** Si les sources fournies (texte direct ou résultats Google Search) sont trop courtes ou ne contiennent pas tous les détails, utilise AUTOMATIQUEMENT tes connaissances internes approfondies sur les publications des Témoins de Jéhovah de ${new Date().getFullYear()}/${new Date().getFullYear() + 1} (et spécifiquement sur l'article "${knowledgeContextTitle}") pour compléter fidèlement les questions d'étude, les versets et la structure.
-    5. Pour la Tour de Garde : Si le texte du proxy est trop court, utilise spécifiquement Google Search avec la requête 'Questions et paragraphes Tour de Garde ${knowledgeContextTitle}'.
+    5. Pour la Tour de Garde (type WATCHTOWER) : Si le texte du proxy est trop court, utilise spécifiquement Google Search avec la requête 'Questions et paragraphes Tour de Garde ${knowledgeContextTitle}'.
     6. Force Gemini à citer le numéro du paragraphe (exemple : "§ 1:") avant chaque réponse pour garantir qu'il n'invente rien.
 
     FORMAT GÉNÉRAL POUR TOUS LES ARTICLES :
@@ -152,12 +152,15 @@ export default async function handler(req, res) {
   if (isLinkInput) {
     combinedTextFromSources = await fetchAndCombineContent(cleanedInput);
     
-    // Détection du type d'article à partir du premier lien (ou d'un composite si plusieurs)
     const primaryArticleType = Array.isArray(cleanedInput) && cleanedInput.length > 0 
       ? detectArticleType(cleanedInput[0]) 
       : (typeof cleanedInput === 'string' ? detectArticleType(cleanedInput) : "ARTICLE GÉNÉRAL");
 
-    if (combinedTextFromSources && combinedTextFromSources.length > 200) { // Seuil de 200 caractères minimum pour juger le texte "suffisant" pour le proxy
+    // Détermine si le texte extrait est suffisant ou si Google Search est nécessaire
+    const isProxyContentSufficient = combinedTextFromSources && combinedTextFromSources.length > 200; // Seuil de 200 caractères
+    const needsGoogleSearchFallback = !isProxyContentSufficient || (type === 'WATCHTOWER' && !combinedTextFromSources.includes('PARAGRAPHE')); // Si Tour de Garde et pas de paragraphes, force GS
+
+    if (isProxyContentSufficient && !needsGoogleSearchFallback) {
         if (combinedTextFromSources.length < 2000) { // Si le texte est court, activer l'intelligence hybride
             modelContents = [{ text: `Voici le texte brut extrait via proxy, qui peut être incomplet:\n${combinedTextFromSources}\n\nEn plus de cela, utilise Google Search pour compléter les informations manquantes.` }];
             systemInstruction = buildAuthoritativeSystemInstruction('proxy', primaryArticleType);
@@ -167,8 +170,13 @@ export default async function handler(req, res) {
         }
         console.log("Content successfully fetched via proxy and will be used by Gemini. Length:", combinedTextFromSources.length);
     } else {
-        console.warn("Proxy fetch resulted in insufficient content. Falling back to Google Search tool for link analysis.");
-        modelContents = [{ text: `Recherche d'informations sur jw.org concernant: ${Array.isArray(cleanedInput) ? cleanedInput.join(', ') : cleanedInput}` }];
+        console.warn("Proxy fetch resulted in insufficient content or missing paragraphs for Watchtower. Falling back to Google Search tool for link analysis.");
+        let googleSearchQuery = Array.isArray(cleanedInput) ? cleanedInput.join(', ') : cleanedInput;
+        if (type === 'WATCHTOWER') {
+             // Spécifique pour la Tour de Garde si le proxy échoue
+            googleSearchQuery = `Questions et paragraphes Tour de Garde ${googleSearchQuery}`;
+        }
+        modelContents = [{ text: `Recherche d'informations sur jw.org concernant: ${googleSearchQuery}` }];
         systemInstruction = buildAuthoritativeSystemInstruction('googleSearch', primaryArticleType);
     }
   } else { // C'est une recherche par date/thème
@@ -320,7 +328,6 @@ export default async function handler(req, res) {
       Réponds uniquement avec le format suivant: # [Titre de la préparation] \n Thème: [Bref résumé de l'objectif]. Ne fournis aucun autre détail.`;
     }
     systemInstruction = previewInstruction; // Écrase tout pour le mode prévisualisation
-    // Pour la prévisualisation, modelContents doit être une chaîne pour la recherche initiale
     modelContents = [{ text: `Cherche le titre et le thème de: "${previewInput}"` }];
   }
 

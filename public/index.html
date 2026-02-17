@@ -10,20 +10,8 @@
       content="Assistant d'étude pour la Tour de Garde et le Cahier Vie et Ministère, utilisant la Bible Traduction du Monde Nouveau."
     />
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <!--
-      Le fichier manifest.json relie les fonctionnalités PWA.
-      Voir https://developers.google.com/web/fundamentals/web-app-manifest/
-    -->
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <!--
-      Notez l'utilisation de %PUBLIC_URL% dans les balises ci-dessus.
-      Il sera remplacé par l'URL du dossier `public` pendant la construction.
-      Seuls les fichiers à l'intérieur du dossier `public` peuvent être référencés depuis le HTML.
-
-      Contrairement à "/favicon.ico" ou "favicon.ico", "%PUBLIC_URL%/favicon.ico" fonctionnera
-      correctement avec le routage côté client et une URL publique non-racine.
-      Apprenez à configurer une URL publique non-racine en exécutant `npm run build`.
-    -->
+    
     <title>JW Study - Assistant Spirituel</title>
 
     <!-- Tailwind CSS CDN - Nécessaire si vous n'utilisez pas une configuration PostCSS -->
@@ -61,12 +49,7 @@
           navigator.serviceWorker.register('%PUBLIC_URL%/sw.js')
             .then(reg => {
               console.log('Service Worker enregistré avec succès:', reg);
-              reg.addEventListener('updatefound', () => {
-                const newWorker = reg.installing;
-                if (newWorker) {
-                  console.log('Nouveau Service Worker trouvé:', newWorker);
-                }
-              });
+              // Pas besoin d'écouter 'updatefound' ici, c'est géré dans App.tsx
             })
             .catch(err => console.error('Erreur lors de l\'enregistrement du Service Worker:', err));
         });
@@ -89,9 +72,10 @@
             color: var(--text-color);
             margin: 0;
             min-height: 100vh;
-            overflow-x: hidden;
+            overflow-x: hidden; /* Prevent horizontal scroll for sidebar transitions */
             transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0;
+            overscroll-behavior: contain; /* Prevent pull-to-refresh */
         }
         
         .font-serif {
@@ -110,12 +94,12 @@
           border-radius: 10px;
         }
 
-        /* Styles pour le mode lecture */
+        /* Styles pour le mode lecture (masque la sidebar et le header mobile) */
         body.reading-mode-active #root > div > aside,
-        body.reading-mode-active #root > div > header,
-        body.reading-mode-active #root > div > main > div:not(article) { /* Masquer tout SAUF l'article en mode lecture */
+        body.reading-mode-active #root > div > header {
             display: none !important;
         }
+        /* Pour le mode lecture, le contenu principal prend toute la largeur */
         body.reading-mode-active #root > div > main {
             margin-left: 0 !important;
             padding: 0 !important;
@@ -127,15 +111,5 @@
 <body class="selection:bg-blue-600/40">
     <noscript>Vous devez activer JavaScript pour exécuter cette application.</noscript>
     <div id="root"></div>
-    <!--
-      Ce fichier HTML est un modèle.
-      Si vous l'ouvrez directement dans le navigateur, vous verrez une page vide.
-
-      Vous pouvez ajouter des polices web, des balises meta ou des analyses à ce fichier.
-      L'étape de build placera les scripts groupés dans la balise <body>.
-
-      Pour commencer le développement, exécutez `npm start` ou `yarn start`.
-      Pour créer un bundle de production, utilisez `npm run build` ou `yarn build`.
-    -->
 </body>
 </html>

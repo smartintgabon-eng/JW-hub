@@ -16,7 +16,8 @@ import {
   Megaphone, // Icon for Predication
   ChevronLeft, // For sidebar toggle
   ChevronRight, // For sidebar toggle
-  RefreshCw // For update button
+  RefreshCw, // For update button
+  Search // For new Recherches tab
 } from 'lucide-react';
 // Fix: Import types from src/types.ts
 import { AppView, GeneratedStudy, AppSettings } from './types'; 
@@ -29,12 +30,13 @@ import Settings from './components/Settings';
 import Tutorial from './components/Tutorial'; 
 import Updates from './components/Updates'; 
 import PredicationTool from './components/PredicationTool'; // New Predication component
+import RecherchesTool from './components/RecherchesTool'; // New Recherches component
 
 const getContrastColor = (hex: string) => {
   if (!hex || hex.length < 6) return 'white';
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16); // Fix: Correctly declare b
+  const b = parseInt(hex.slice(5, 7), 16); 
   const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
   return (yiq >= 128) ? '#09090b' : 'white';
 };
@@ -58,21 +60,21 @@ const App: React.FC = () => {
   const [newWorkerReady, setNewWorkerReady] = useState(false); // New state for update prompt
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null); // New state to hold the waiting SW
 
+  // Save sidebar expanded state to localStorage
   useEffect(() => {
     localStorage.setItem('isSidebarExpanded', JSON.stringify(isSidebarExpanded));
   }, [isSidebarExpanded]);
 
   useEffect(() => {
-    // --- PWA Install Prompt Logic (moved to top for earlier detection) ---
+    // --- PWA Install Prompt Logic ---
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
-      console.log('beforeinstallprompt fired'); // Debugging
       setDeferredPrompt(e);
     };
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     // --- END PWA Install Prompt Logic ---
 
-
+    // --- Online/Offline Status ---
     const handleStatus = () => setIsOnline(navigator.onLine);
     window.addEventListener('online', handleStatus);
     window.addEventListener('offline', handleStatus);
@@ -95,6 +97,11 @@ const App: React.FC = () => {
               });
             }
           });
+          // Also check for already waiting worker on initial load
+          if (registration.waiting) {
+            setNewWorkerReady(true);
+            setWaitingWorker(registration.waiting);
+          }
         }
       }
     };
@@ -120,9 +127,9 @@ const App: React.FC = () => {
       }
     };
     window.addEventListener('focus', handleFocus);
-
     // --- END Service Worker Update Logic ---
 
+    // --- Apply Theme Colors ---
     const bgColor = settings.customHex || settings.backgroundColor || '#09090b';
     const btnColor = settings.customButtonHex || settings.buttonColor || '#4a70b5';
     const textColor = getContrastColor(bgColor);
@@ -140,7 +147,6 @@ const App: React.FC = () => {
       window.removeEventListener('online', handleStatus);
       window.removeEventListener('offline', handleStatus);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt); 
-      // Clean up SW listeners
       if (registration) {
         registration.removeEventListener('updatefound', () => {}); 
         if (registration.installing) {
@@ -188,13 +194,9 @@ const App: React.FC = () => {
     }
   };
 
-  // Handler for update button
   const handleUpdateClick = () => {
     if (waitingWorker) {
-      // Send a message to the waiting Service Worker to skip waiting
       waitingWorker.postMessage({ type: 'SKIP_WAITING' });
-      // The 'controllerchange' listener will handle the reload
-      // A small delay to ensure the message is processed before reload
       setTimeout(() => window.location.reload(), 100); 
     }
   };
@@ -258,31 +260,16 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Mobile Header (for hamburger menu) */}
-      <header className={`md:hidden flex items-center justify-between p-4 border-b border-white/10 sticky top-0 z-50 bg-[var(--bg-color)] ${isReadingModeActive ? 'hidden' : ''}`}>
-        <div className="flex items-center space-x-2">
-           <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 bg-white/5 rounded-lg mr-2" aria-label="Ouvrir le menu">
-              {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
-           </button>
+      {/* Mobile Header (repositioned menu button) */}
+      <header className={`md:hidden flex items-center p-4 border-b border-white/10 sticky top-0 z-50 bg-[var(--bg-color)] ${isReadingModeActive ? 'hidden' : ''}`}>
+        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 bg-white/5 rounded-lg mr-2" aria-label="Ouvrir le menu">
+          {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+        <div className="flex items-center space-x-2" onClick={() => navigateTo(AppView.HOME)}>
            <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="w-8 h-8 flex items-center justify-center rounded-lg font-black text-sm">JW</div>
            <span className="font-bold text-lg tracking-tight uppercase">Study</span>
         </div>
       </header>
-
-      {/* Desktop Sidebar Toggle Button */}
-      {!isReadingModeActive && (
-        <button 
-          onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
-          style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }}
-          className={`hidden md:flex items-center justify-center p-2 rounded-full shadow-lg fixed top-6 z-50 transition-all duration-300 ease-in-out hover:brightness-110 active:scale-90 
-            ${isSidebarExpanded ? 'left-[calc(18rem+40px)]' : 'left-[calc(5rem+40px)]'} 
-          `}
-          aria-expanded={isSidebarExpanded}
-          aria-controls="main-sidebar"
-        >
-          {isSidebarExpanded ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
-        </button>
-      )}
 
       {/* Sidebar */}
       <aside 
@@ -292,17 +279,31 @@ const App: React.FC = () => {
           bg-black/90 backdrop-blur-xl border-r border-white/10 
           ${isReadingModeActive ? 'hidden' : ''}
           
-          // Mobile specific (overlay with xgest styling)
+          // Mobile specific (fixed, 80% width, high z-index, hidden by default, overlay)
           ${isSidebarOpen ? 'fixed inset-y-0 left-0 h-screen w-[80vw] max-w-[280px] z-[9999] flex translate-x-0' : 'fixed -translate-x-full w-0 h-screen z-[9999] hidden'} 
           
-          // Desktop specific (push content, always visible but collapsed/expanded)
+          // Desktop specific (static, push content, always visible but collapsed/expanded)
           md:static md:flex md:z-40 
           md:${isSidebarExpanded ? 'w-72 translate-x-0' : 'w-20 translate-x-0 items-center md:py-8'}
         `}
       >
+        {/* Toggle button for desktop sidebar (only visible on desktop) */}
+        {!isReadingModeActive && (
+          <button 
+            onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
+            style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }}
+            className={`hidden md:flex items-center justify-center p-2 rounded-full shadow-lg absolute -right-5 top-8 z-50 transition-all duration-300 ease-in-out hover:brightness-110 active:scale-90`}
+            aria-expanded={isSidebarExpanded}
+            aria-controls="main-sidebar"
+          >
+            {isSidebarExpanded ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+          </button>
+        )}
+
+        {/* JW Study Logo / Title */}
         <div className={`mb-10 px-2 flex items-center ${isSidebarExpanded ? 'space-x-3' : 'justify-center'} cursor-pointer`} onClick={() => navigateTo(AppView.HOME)}>
            <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="w-12 h-12 flex items-center justify-center rounded-xl font-black text-xl shadow-lg">JW</div>
-           {isSidebarExpanded && ( // Only show text when expanded
+           {isSidebarExpanded && ( 
                <div>
                 <h1 className="font-black text-xl leading-none uppercase">Study</h1>
                 <span className="text-[10px] font-bold opacity-30 uppercase tracking-widest">Assistant</span>
@@ -310,37 +311,46 @@ const App: React.FC = () => {
            )}
         </div>
 
+        {/* Navigation */}
         <nav className="space-y-1 flex-1" aria-label="Main navigation">
           <NavItem icon={HomeIcon} label="Accueil" active={view === AppView.HOME} onClick={() => navigateTo(AppView.HOME)} isExpanded={isSidebarExpanded} />
           <NavItem icon={Calendar} label="Cahier" active={view === AppView.MINISTRY} onClick={() => navigateTo(AppView.MINISTRY)} isExpanded={isSidebarExpanded} />
           <NavItem icon={BookOpen} label="Tour de Garde" active={view === AppView.WATCHTOWER} onClick={() => navigateTo(AppView.WATCHTOWER)} isExpanded={isSidebarExpanded} />
           <NavItem icon={Megaphone} label="Prédication" active={view === AppView.PREDICATION} onClick={() => navigateTo(AppView.PREDICATION)} isExpanded={isSidebarExpanded} />
+          <NavItem icon={Search} label="Recherches" active={view === AppView.RECHERCHES} onClick={() => navigateTo(AppView.RECHERCHES)} isExpanded={isSidebarExpanded} /> {/* New Search tab */}
           <NavItem icon={HistoryIcon} label="Historique" active={view === AppView.HISTORY} onClick={() => navigateTo(AppView.HISTORY)} isExpanded={isSidebarExpanded} />
           <NavItem icon={BellRing} label="Mises à jour" active={view === AppView.UPDATES} onClick={() => navigateTo(AppView.UPDATES)} isExpanded={isSidebarExpanded} />
           <NavItem icon={HelpCircle} label="Tutoriel" active={view === AppView.TUTORIAL} onClick={() => navigateTo(AppView.TUTORIAL)} isExpanded={isSidebarExpanded} />
           <NavItem icon={SettingsIcon} label="Paramètres" active={view === AppView.SETTINGS} onClick={() => navigateTo(AppView.SETTINGS)} isExpanded={isSidebarExpanded} />
         </nav>
 
-        {deferredPrompt && (isSidebarExpanded || isSidebarOpen) && ( // Show on desktop expanded or mobile open
-          <button 
-            onClick={handleInstallClick}
-            className="mt-4 w-full bg-blue-600/20 border border-blue-600/30 text-blue-400 py-3 rounded-xl flex items-center justify-center space-x-2 text-xs font-bold uppercase tracking-widest hover:bg-blue-600/30 transition-all"
-            aria-label="Installer l'application"
-          >
-            <Download size={16} />
-            <span>Installer l'App</span>
-          </button>
-        )}
+        {/* PWA / Update Buttons (Centered if sidebar is expanded) */}
+        {(isSidebarExpanded || isSidebarOpen) && (
+          <div className={`mt-auto space-y-3 ${isSidebarExpanded ? 'px-2' : 'flex flex-col items-center'}`}>
+            {deferredPrompt && (
+              <button 
+                onClick={handleInstallClick}
+                className={`w-full bg-blue-600/20 border border-blue-600/30 text-blue-400 py-3 rounded-xl flex items-center justify-center space-x-2 text-xs font-bold uppercase tracking-widest hover:bg-blue-600/30 transition-all ${!isSidebarExpanded ? 'w-12 h-12 p-0 flex-shrink-0' : ''}`}
+                aria-label="Installer l'application"
+                title="Installer l'App"
+              >
+                <Download size={isSidebarExpanded ? 16 : 20} />
+                {isSidebarExpanded && <span>Installer l'App</span>}
+              </button>
+            )}
 
-        {newWorkerReady && ( // Show only when an update is ready
-          <button
-            onClick={handleUpdateClick}
-            className="mt-4 w-full bg-emerald-600/20 border border-emerald-600/30 text-emerald-400 py-3 rounded-xl flex items-center justify-center space-x-2 text-xs font-bold uppercase tracking-widest hover:bg-emerald-600/30 transition-all"
-            aria-label="Mettre à jour l'application"
-          >
-            <RefreshCw size={16} />
-            <span>Mettre à jour l'App</span>
-          </button>
+            {newWorkerReady && (
+              <button
+                onClick={handleUpdateClick}
+                className={`w-full bg-emerald-600/20 border border-emerald-600/30 text-emerald-400 py-3 rounded-xl flex items-center justify-center space-x-2 text-xs font-bold uppercase tracking-widest hover:bg-emerald-600/30 transition-all ${!isSidebarExpanded ? 'w-12 h-12 p-0 flex-shrink-0' : ''}`}
+                aria-label="Mettre à jour l'application"
+                title="Mettre à jour l'App"
+              >
+                <RefreshCw size={isSidebarExpanded ? 16 : 20} />
+                {isSidebarExpanded && <span>Mettre à jour l'App</span>}
+              </button>
+            )}
+          </div>
         )}
       </aside>
 
@@ -400,6 +410,7 @@ const App: React.FC = () => {
             {view === AppView.MINISTRY && <StudyTool type="MINISTRY" onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
             {view === AppView.WATCHTOWER && <StudyTool type="WATCHTOWER" onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
             {view === AppView.PREDICATION && <PredicationTool onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
+            {view === AppView.RECHERCHES && <RecherchesTool onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />} {/* Render new component */}
             {view === AppView.HISTORY && <History history={history} setHistory={setHistory} settings={settings} />}
             {view === AppView.SETTINGS && <Settings setSettings={setAppSettings} settings={settings} />}
             {view === AppView.TUTORIAL && <Tutorial deferredPrompt={deferredPrompt} handleInstallClick={handleInstallClick} navigateTo={navigateTo} />}

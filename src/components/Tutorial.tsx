@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   HelpCircle, ChevronRight, ChevronLeft, Lightbulb, Link as LinkIcon, Search, Save, Calendar, BookOpen, Settings as SettingsIcon, History as HistoryIcon, Download, BellRing, Megaphone, Server, AlertTriangle, Plus, Minus, Menu, Maximize2, X
@@ -151,8 +152,8 @@ const Tutorial: React.FC<TutorialProps> = ({ deferredPrompt, handleInstallClick,
       icon: <HelpCircle size={48} />
     },
     {
-      title: "Saisie Multi-Liens Intelligente",
-      content: "Collez plusieurs liens d'articles jw.org (un par ligne) dans cette zone. Notre IA les combinera pour une analyse complète. (Cahier Vie et Ministère)",
+      title: "Saisie Multi-Liens Intelligente (Cahier)",
+      content: "Dans l'onglet 'Cahier', vous pouvez coller plusieurs liens d'articles jw.org (un par ligne, max 8) si votre étude de l'assemblée référence plusieurs publications. Notre IA les combinera pour une analyse complète.",
       icon: <LinkIcon size={48} />,
       democode: 'multi-link-demo',
       featureId: 'multi-link-input'
@@ -166,14 +167,14 @@ const Tutorial: React.FC<TutorialProps> = ({ deferredPrompt, handleInstallClick,
     },
     {
       title: "Lancez l'Analyse Hybride",
-      content: "Après avoir ajouté vos liens, cliquez sur le bouton 'Générer' pour lancer notre 'Hybrid Intelligence' qui scrape le contenu et utilise Google Search si besoin.",
+      content: "Après avoir ajouté vos liens ou votre recherche, cliquez sur le bouton 'Générer' pour lancer notre 'Hybrid Intelligence' qui scrape le contenu via un proxy et utilise Google Search si besoin.",
       icon: <Search size={48} />,
       democode: 'generate-demo',
       featureId: 'hybrid-intelligence'
     },
     {
       title: "Navigation Facile",
-      content: "Utilisez le menu latéral pour accéder rapidement aux différentes sections : Cahier, Tour de Garde, Historique, Paramètres, etc.",
+      content: "Utilisez le menu latéral pour accéder rapidement aux différentes sections : Accueil, Cahier, Tour de Garde, Prédication, Recherches, Historique, Paramètres, etc.",
       icon: <Menu size={48} />,
       featureId: 'sidebar-navigation'
     },
@@ -185,13 +186,19 @@ const Tutorial: React.FC<TutorialProps> = ({ deferredPrompt, handleInstallClick,
     },
     {
       title: "Préparation à la Prédication",
-      content: "Préparez vos présentations de porte-en-porte, nouvelles visites ou cours bibliques. Les champs de liens sont optionnels ici !",
+      content: "Préparez vos présentations de porte-en-porte, nouvelles visites ou cours bibliques. Les champs de liens sont optionnels ici et la méthode de recherche est identique à l'onglet 'Recherches' !",
       icon: <Megaphone size={48} />,
       featureId: 'predication-tool'
     },
     {
+      title: "Nouvel Onglet : Recherches Avancées",
+      content: "Posez une question ou un sujet précis. L'IA utilisera Google Search pour fouiller jw.org et wol.jw.org, vous fournira les textes bruts des sources, puis une explication détaillée de l'IA, et enfin tous les liens utilisés.",
+      icon: <Search size={48} className="text-yellow-400" />,
+      featureId: 'recherches-tab'
+    },
+    {
       title: "Historique et Export",
-      content: "Toutes vos études sont sauvegardées et accessibles hors ligne dans l'Historique. Vous pouvez les régénérer ou les exporter en PDF/DOCX.",
+      content: "Toutes vos études et recherches sont sauvegardées et accessibles hors ligne dans l'Historique. Vous pouvez les régénérer ou les exporter en PDF/DOCX.",
       icon: <HistoryIcon size={48} />,
       featureId: 'history-export'
     },
