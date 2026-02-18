@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   BookOpen, Calendar, Settings as SettingsIcon, History as HistoryIcon, 
   HelpCircle, Menu, X, Home as HomeIcon, WifiOff, Download, 
-  Lightbulb, BellRing, Loader2, Megaphone, RefreshCw, Search 
+  Lightbulb, BellRing, Loader2, Megaphone, RefreshCw, Search, ChevronRight 
 } from 'lucide-react';
 import { AppView, GeneratedStudy, AppSettings } from './types'; 
 import { getSettings, getHistory, saveToHistory } from './utils/storage'; 
@@ -27,7 +27,7 @@ const getContrastColor = (hex: string) => {
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>(AppView.HOME);
   const [settings, setAppSettings] = useState<AppSettings>(getSettings());
-  const [isExpanded, setIsExpanded] = useState(false); // XGest Style toggle
+  const [isExpanded, setIsExpanded] = useState(window.innerWidth >= 1024); 
   const [history, setHistory] = useState<GeneratedStudy[]>(getHistory());
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -47,36 +47,20 @@ const App: React.FC = () => {
     window.addEventListener('online', handleStatus);
     window.addEventListener('offline', handleStatus);
 
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistration().then(reg => {
-        if (reg) {
-          reg.addEventListener('updatefound', () => {
-            const installing = reg.installing;
-            if (installing) {
-              installing.addEventListener('statechange', () => {
-                if (installing.state === 'installed' && navigator.serviceWorker.controller) {
-                  setNewWorkerReady(true);
-                  setWaitingWorker(installing);
-                }
-              });
-            }
-          });
-        }
-      });
-    }
+    return () => {
+      window.removeEventListener('online', handleStatus);
+      window.removeEventListener('offline', handleStatus);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
 
+  useEffect(() => {
     const bgColor = settings.customHex || settings.backgroundColor || '#09090b';
     const btnColor = settings.customButtonHex || settings.buttonColor || '#4a70b5';
     document.documentElement.style.setProperty('--bg-color', bgColor);
     document.documentElement.style.setProperty('--text-color', getContrastColor(bgColor));
     document.documentElement.style.setProperty('--btn-color', btnColor);
     document.documentElement.style.setProperty('--btn-text', getContrastColor(btnColor));
-
-    return () => {
-      window.removeEventListener('online', handleStatus);
-      window.removeEventListener('offline', handleStatus);
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
   }, [settings]);
 
   const handleInstallClick = async () => {
@@ -121,16 +105,10 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {!isOnline && (
-        <div className="fixed top-0 inset-x-0 bg-amber-500 text-black text-[10px] font-bold py-1 text-center z-[100] flex items-center justify-center space-x-2">
-          <WifiOff size={12} /> <span>MODE HORS LIGNE</span>
-        </div>
-      )}
-
-      {/* XGEST SIDEBAR */}
+      {/* XGEST SIDEBAR - FIXED FOR TABLETS */}
       <aside 
         className={`flex flex-col h-screen bg-black/90 backdrop-blur-xl border-r border-white/10 transition-all duration-300 z-50
-          ${isExpanded ? 'w-72' : 'w-20'} ${isReadingModeActive ? 'hidden' : 'flex'}`}
+          ${isExpanded ? 'w-72' : 'w-20'} ${isReadingModeActive ? 'hidden' : 'flex'} md:translate-x-0`}
       >
         <div className="p-4 flex items-center justify-center mb-8">
           <button 
@@ -153,7 +131,6 @@ const App: React.FC = () => {
           <NavItem icon={SettingsIcon} label="Paramètres" viewId={AppView.SETTINGS} />
         </nav>
 
-        {/* MIDDLE ACTIONS SPACE */}
         <div className="flex-1 flex flex-col justify-center items-center px-4 space-y-4">
           {deferredPrompt && (
             <button 
@@ -180,23 +157,52 @@ const App: React.FC = () => {
         </div>
 
         <div className="p-4 text-center opacity-20">
-          <span className="text-xs font-black">JW</span>
+          <span className="text-xs font-black">JW STUDY</span>
         </div>
       </aside>
 
-      <main className="flex-1 h-screen overflow-y-auto p-4 md:p-10">
+      <main className="flex-1 h-screen overflow-y-auto p-4 md:p-10 relative">
+        {!isOnline && (
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-amber-500 text-black text-[10px] font-bold px-4 py-2 rounded-full z-[100] flex items-center space-x-2 shadow-xl">
+            <WifiOff size={14} /> <span>MODE HORS LIGNE</span>
+          </div>
+        )}
+
         {view === AppView.HOME && (
-          <div className="max-w-4xl mx-auto py-20 text-center animate-in fade-in duration-700">
-            <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter mb-6">Préparez-vous.</h1>
-            <p className="text-xl opacity-40 mb-12">L'outil indispensable pour vos réunions et votre prédication.</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <button onClick={() => setView(AppView.MINISTRY)} className="p-10 bg-white/5 rounded-3xl hover:bg-[var(--btn-color)]/20 border border-white/10 transition-all">
-                <Calendar size={48} className="mx-auto mb-4 text-[var(--btn-color)]" />
-                <span className="text-xl font-bold uppercase">Cahier de Réunion</span>
+          <div className="max-w-4xl mx-auto py-12 flex flex-col items-center justify-center min-h-[80vh] text-center animate-in fade-in duration-1000">
+            {/* JW LOGO RESTORATION */}
+            <div 
+              style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
+              className="w-32 h-32 text-5xl rounded-3xl flex items-center justify-center font-black shadow-2xl hover:scale-105 transition-transform cursor-pointer mb-12"
+              onClick={() => setView(AppView.TUTORIAL)}
+            >JW</div>
+
+            <h1 className="text-5xl md:text-8xl font-black uppercase tracking-tighter mb-4 leading-none">
+              Préparez-vous. <br/> <span className="opacity-20 text-4xl md:text-6xl">Simplement.</span>
+            </h1>
+            <p className="text-xl opacity-40 mb-12 max-w-lg mx-auto">L'assistant spirituel indispensable pour approfondir votre étude biblique.</p>
+            
+            {/* STYLISH TUTORIAL BUTTON */}
+            <button 
+              onClick={() => setView(AppView.TUTORIAL)}
+              className="group relative px-10 py-5 rounded-2xl font-black uppercase text-sm tracking-widest bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 text-white shadow-[0_20px_50px_rgba(79,70,229,0.3)] hover:shadow-[0_20px_60px_rgba(79,70,229,0.5)] transition-all active:scale-95 mb-16 overflow-hidden"
+            >
+              <span className="relative z-10 flex items-center gap-3">
+                Découvrir le tutoriel visuel <ChevronRight className="group-hover:translate-x-1 transition-transform" />
+              </span>
+              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+            </button>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-3xl">
+              <button onClick={() => setView(AppView.MINISTRY)} className="p-10 bg-white/5 rounded-[2.5rem] hover:bg-white/10 border border-white/10 transition-all text-left group">
+                <Calendar size={48} className="mb-6 text-[var(--btn-color)] group-hover:scale-110 transition-transform" />
+                <h3 className="text-2xl font-bold uppercase mb-2">Cahier</h3>
+                <p className="text-sm opacity-40">Réunions de semaine</p>
               </button>
-              <button onClick={() => setView(AppView.WATCHTOWER)} className="p-10 bg-white/5 rounded-3xl hover:bg-[var(--btn-color)]/20 border border-white/10 transition-all">
-                <BookOpen size={48} className="mx-auto mb-4 text-[var(--btn-color)]" />
-                <span className="text-xl font-bold uppercase">Tour de Garde</span>
+              <button onClick={() => setView(AppView.WATCHTOWER)} className="p-10 bg-white/5 rounded-[2.5rem] hover:bg-white/10 border border-white/10 transition-all text-left group">
+                <BookOpen size={48} className="mb-6 text-[var(--btn-color)] group-hover:scale-110 transition-transform" />
+                <h3 className="text-2xl font-bold uppercase mb-2">Tour de Garde</h3>
+                <p className="text-sm opacity-40">Étude de week-end</p>
               </button>
             </div>
           </div>
@@ -207,7 +213,7 @@ const App: React.FC = () => {
         {view === AppView.PREDICATION && <PredicationTool onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
         {view === AppView.RECHERCHES && <RecherchesTool onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
         {view === AppView.HISTORY && <History history={history} setHistory={setHistory} settings={settings} />}
-        {view === AppView.SETTINGS && <Settings setSettings={setAppSettings} settings={settings} />}
+        {view === AppView.SETTINGS && <Settings setSettings={setAppSettings} settings={settings} deferredPrompt={deferredPrompt} handleInstallClick={handleInstallClick} />}
         {view === AppView.TUTORIAL && <Tutorial deferredPrompt={deferredPrompt} handleInstallClick={handleInstallClick} navigateTo={setView} />}
         {view === AppView.UPDATES && <Updates />}
       </main>
