@@ -4,13 +4,17 @@ import { AppSettings, GeneratedStudy } from '../types';
 export const callSearchContentApi = async (
   questionOrSubject: string,
   settings: AppSettings,
-  isInitialSearchForPreview: boolean = false, // Potentially for future use if needed
+  // Fix: Add confirmMode parameter
+  confirmMode: boolean, 
 ): Promise<{ 
     text: string; 
     title: string; 
     theme?: string; 
-    rawSources: GeneratedStudy['rawSources']; 
-    aiExplanation: string 
+    rawSources?: GeneratedStudy['rawSources']; 
+    aiExplanation?: string;
+    previewTitle?: string;
+    previewSummary?: string;
+    previewImage?: string;
 }> => {
 
   const response = await fetch('/api/search-content', {
@@ -21,7 +25,8 @@ export const callSearchContentApi = async (
     body: JSON.stringify({
       questionOrSubject,
       settings,
-      isInitialSearchForPreview,
+      // Fix: Pass confirmMode in the request body
+      confirmMode, 
     }),
   });
 

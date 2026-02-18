@@ -33,8 +33,6 @@ const App: React.FC = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isReadingModeActive, setIsReadingModeActive] = useState(false); 
   const [globalLoadingMessage, setGlobalLoadingMessage] = useState<string | null>(null); 
-  const [newWorkerReady, setNewWorkerReady] = useState(false);
-  const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
@@ -42,11 +40,9 @@ const App: React.FC = () => {
       setDeferredPrompt(e);
     };
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
     const handleStatus = () => setIsOnline(navigator.onLine);
     window.addEventListener('online', handleStatus);
     window.addEventListener('offline', handleStatus);
-
     return () => {
       window.removeEventListener('online', handleStatus);
       window.removeEventListener('offline', handleStatus);
@@ -63,25 +59,21 @@ const App: React.FC = () => {
     document.documentElement.style.setProperty('--btn-text', getContrastColor(btnColor));
   }, [settings]);
 
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') setDeferredPrompt(null);
-  };
-
-  const handleUpdateClick = () => {
-    if (waitingWorker) {
-      waitingWorker.postMessage({ type: 'SKIP_WAITING' });
-      setTimeout(() => window.location.reload(), 100); 
-    }
-  };
-
   const handleStudyGenerated = (study: GeneratedStudy) => {
     saveToHistory(study);
     setHistory(getHistory());
     setGlobalLoadingMessage(null);
     setView(AppView.HISTORY);
+  };
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') setDeferredPrompt(null);
+    } else {
+      alert("Installation : Cliquez sur 'Partager' (iOS) ou le Menu (Android) puis 'Ajouter à l'écran d'accueil'.");
+    }
   };
 
   const NavItem = ({ icon: Icon, label, viewId }: any) => (
@@ -105,16 +97,13 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* XGEST SIDEBAR - FIXED FOR TABLETS */}
+      {/* SIDEBAR - md:translate-x-0 ensure it's always visible on tablets+ */}
       <aside 
         className={`flex flex-col h-screen bg-black/90 backdrop-blur-xl border-r border-white/10 transition-all duration-300 z-50
-          ${isExpanded ? 'w-72' : 'w-20'} ${isReadingModeActive ? 'hidden' : 'flex'} md:translate-x-0`}
+          ${isExpanded ? 'w-72' : 'w-20'} ${isReadingModeActive ? 'hidden' : 'flex'} md:static md:translate-x-0`}
       >
         <div className="p-4 flex items-center justify-center mb-8">
-          <button 
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-all text-[var(--btn-color)]"
-          >
+          <button onClick={() => setIsExpanded(!isExpanded)} className="p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-all text-[var(--btn-color)]">
             <Menu size={24} />
           </button>
         </div>
@@ -131,46 +120,13 @@ const App: React.FC = () => {
           <NavItem icon={SettingsIcon} label="Paramètres" viewId={AppView.SETTINGS} />
         </nav>
 
-        <div className="flex-1 flex flex-col justify-center items-center px-4 space-y-4">
-          {deferredPrompt && (
-            <button 
-              onClick={handleInstallClick}
-              className={`bg-blue-600/20 border border-blue-600/30 text-blue-400 p-3 rounded-xl hover:bg-blue-600/30 transition-all flex items-center space-x-2
-                ${!isExpanded ? 'aspect-square' : 'w-full'}`}
-              title="Installer l'App"
-            >
-              <Download size={20} />
-              {isExpanded && <span className="text-[10px] font-bold uppercase">Installer l'App</span>}
-            </button>
-          )}
-          {newWorkerReady && (
-            <button 
-              onClick={handleUpdateClick}
-              className={`bg-emerald-600/20 border border-emerald-600/30 text-emerald-400 p-3 rounded-xl hover:bg-emerald-600/30 transition-all flex items-center space-x-2
-                ${!isExpanded ? 'aspect-square' : 'w-full'}`}
-              title="Mettre à jour"
-            >
-              <RefreshCw size={20} />
-              {isExpanded && <span className="text-[10px] font-bold uppercase">Mettre à jour</span>}
-            </button>
-          )}
-        </div>
-
-        <div className="p-4 text-center opacity-20">
-          <span className="text-xs font-black">JW STUDY</span>
-        </div>
+        <div className="p-4 text-center opacity-20"><span className="text-xs font-black tracking-[0.3em]">JW STUDY</span></div>
       </aside>
 
       <main className="flex-1 h-screen overflow-y-auto p-4 md:p-10 relative">
-        {!isOnline && (
-          <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-amber-500 text-black text-[10px] font-bold px-4 py-2 rounded-full z-[100] flex items-center space-x-2 shadow-xl">
-            <WifiOff size={14} /> <span>MODE HORS LIGNE</span>
-          </div>
-        )}
-
         {view === AppView.HOME && (
           <div className="max-w-4xl mx-auto py-12 flex flex-col items-center justify-center min-h-[80vh] text-center animate-in fade-in duration-1000">
-            {/* JW LOGO RESTORATION */}
+            {/* JW LOGO Square restoration */}
             <div 
               style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
               className="w-32 h-32 text-5xl rounded-3xl flex items-center justify-center font-black shadow-2xl hover:scale-105 transition-transform cursor-pointer mb-12"
@@ -178,11 +134,10 @@ const App: React.FC = () => {
             >JW</div>
 
             <h1 className="text-5xl md:text-8xl font-black uppercase tracking-tighter mb-4 leading-none">
-              Préparez-vous. <br/> <span className="opacity-20 text-4xl md:text-6xl">Simplement.</span>
+              Préparez-vous. <br/> <span className="opacity-20 text-4xl md:text-6xl italic">Simplement.</span>
             </h1>
-            <p className="text-xl opacity-40 mb-12 max-w-lg mx-auto">L'assistant spirituel indispensable pour approfondir votre étude biblique.</p>
             
-            {/* STYLISH TUTORIAL BUTTON */}
+            {/* Brillant Tutorial Button */}
             <button 
               onClick={() => setView(AppView.TUTORIAL)}
               className="group relative px-10 py-5 rounded-2xl font-black uppercase text-sm tracking-widest bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 text-white shadow-[0_20px_50px_rgba(79,70,229,0.3)] hover:shadow-[0_20px_60px_rgba(79,70,229,0.5)] transition-all active:scale-95 mb-16 overflow-hidden"
@@ -190,19 +145,19 @@ const App: React.FC = () => {
               <span className="relative z-10 flex items-center gap-3">
                 Découvrir le tutoriel visuel <ChevronRight className="group-hover:translate-x-1 transition-transform" />
               </span>
-              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+              <div className="absolute inset-0 bg-white/10 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 skew-x-12"></div>
             </button>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-3xl">
               <button onClick={() => setView(AppView.MINISTRY)} className="p-10 bg-white/5 rounded-[2.5rem] hover:bg-white/10 border border-white/10 transition-all text-left group">
-                <Calendar size={48} className="mb-6 text-[var(--btn-color)] group-hover:scale-110 transition-transform" />
+                <Calendar size={48} className="mb-6 text-[var(--btn-color)]" />
                 <h3 className="text-2xl font-bold uppercase mb-2">Cahier</h3>
-                <p className="text-sm opacity-40">Réunions de semaine</p>
+                <p className="text-sm opacity-40 italic">Réunions de semaine</p>
               </button>
               <button onClick={() => setView(AppView.WATCHTOWER)} className="p-10 bg-white/5 rounded-[2.5rem] hover:bg-white/10 border border-white/10 transition-all text-left group">
-                <BookOpen size={48} className="mb-6 text-[var(--btn-color)] group-hover:scale-110 transition-transform" />
+                <BookOpen size={48} className="mb-6 text-[var(--btn-color)]" />
                 <h3 className="text-2xl font-bold uppercase mb-2">Tour de Garde</h3>
-                <p className="text-sm opacity-40">Étude de week-end</p>
+                <p className="text-sm opacity-40 italic">Étude de week-end</p>
               </button>
             </div>
           </div>

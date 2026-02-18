@@ -12,6 +12,7 @@ const defaultSettings: AppSettings = {
   buttonColor: '#4a70b5',
   customButtonHex: '',
   autoSave: true, 
+  // Use gemini-2.5-flash for stability with grounding as per user's request
   modelName: 'gemini-2.5-flash', 
   answerPreferences: 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.',
 };
