@@ -25,7 +25,7 @@ const RecherchesTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadi
     setGlobalLoadingMessage("Recherche d'article pertinent sur JW.ORG...");
 
     try {
-      // Fix: Pass confirmMode: true to callSearchContentApi
+      // Pass confirmMode: true to callSearchContentApi to get preview data
       const data = await callSearchContentApi(query, settings, true); 
       if (data.previewTitle) {
         setArticleConfirmed(data);
@@ -48,7 +48,7 @@ const RecherchesTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadi
     setGlobalLoadingMessage("Analyse des résultats et génération de l'explication...");
 
     try {
-      // Fix: Now call without confirmMode to get full content
+      // Call without confirmMode to get full structured content
       const data = await callSearchContentApi(query, settings, false); 
       
       const study: GeneratedStudy = {
@@ -56,9 +56,9 @@ const RecherchesTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadi
         type: 'RECHERCHES',
         title: query,
         date: new Date().toLocaleDateString('fr-FR'),
-        content: data.aiExplanation, // The AI explanation is the main content for display
-        rawSources: data.rawSources,
-        aiExplanation: data.aiExplanation,
+        content: data.text, // Use data.text which contains the structured NOM, LIEN, EXPLICATION
+        rawSources: [], // The raw sources are now embedded in data.text, so this can be empty or parsed from data.text if needed
+        aiExplanation: data.text, // aiExplanation can also point to the full structured text
         timestamp: Date.now(),
         category: 'recherches',
         url: query // Store the search query as URL
