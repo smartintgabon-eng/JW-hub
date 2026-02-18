@@ -13,7 +13,8 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
   const [mainLink, setMainLink] = useState('');
   const [extraLinks, setExtraLinks] = useState<string[]>([]);
   const [manualText, setManualText] = useState('');
-  const [useManual, setUseManual] = useState(false);
+  // Set useManual default based on type: true for WATCHTOWER, false for MINISTRY
+  const [useManual, setUseManual] = useState(type === 'WATCHTOWER'); 
   const [loading, setLoading] = useState(false);
   const [articleConfirmed, setArticleConfirmed] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -98,7 +99,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
       setMainLink('');
       setExtraLinks([]);
       setManualText('');
-      setUseManual(false);
+      setUseManual(type === 'WATCHTOWER'); // Reset useManual to default for the type
       setArticleConfirmed(null);
     } catch (err: any) {
       setError(err.message || "Échec de la génération. Quotas Gemini?");
@@ -136,7 +137,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
               <textarea 
                 value={manualText} 
                 onChange={e => setManualText(e.target.value)}
-                placeholder="Collez ici le texte intégral de l'article (ex: copié directement depuis jw.org)..."
+                placeholder="Collez ici le texte intégral de l'article de la Tour de Garde (copié directement depuis jw.org). L'IA utilisera cette source en priorité."
                 className="w-full h-64 bg-black/40 border border-white/10 rounded-2xl p-5 outline-none focus:border-[var(--btn-color)] transition-all resize-none"
               />
             ) : (

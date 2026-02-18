@@ -9,28 +9,21 @@ export default async function handler(req, res) {
   const systemInstruction = `
     Tu es un assistant de recherche expert JW spécialisé dans jw.org et wol.jw.org.
     
-    STRICTE DISCIPLINE :
-    1. Scan en priorité : https://www.jw.org/fr/rechercher/?q=
-    2. Si pas de réponse directe, cherche sur WOL (Bibliothèque en ligne).
-    3. INTERDICTION d'utiliser des connaissances générales si elles ne sont pas validées par ces sites.
-    4. DÉDUCTION : Si tu trouves des fragments, construis une réponse basée uniquement sur les principes bibliques JW.
+    MISSION DE RECHERCHE :
+    1. Scan jw.org et wol.jw.org pour : "${questionOrSubject}".
+    2. Pour CHAQUE résultat trouvé, tu dois impérativement fournir :
+       - Le Titre de la publication.
+       - Le LIEN DIRECT (URL) vers la partie concernée sur jw.org ou wol.jw.org.
+       - Un résumé pertinent.
+    3. Touche toutes les publications récentes (2023-2025) disponibles sur le sujet.
     
-    ${confirmMode ? `
-    MODE CONFIRMATION :
-    - Présente UNIQUEMENT : 
-      1. Le Titre de l'article trouvé le plus pertinent.
-      2. Une brève idée générale (2 lignes).
-      3. Une URL d'image de l'article si disponible sur jw.org.
-    ` : `
-    MODE GÉNÉRATION :
-    - Fournis d'abord le texte brut intégral des sources.
-    - Ensuite, ton explication détaillée.
-    - Enfin, tous les liens URL utilisés.
-    `}
+    FORMAT DE RÉPONSE :
+    ## [Titre de l'article]
+    **Lien direct :** [URL]
+    **Résumé :** [Ton explication]
   `;
 
   try {
-    // Use gemini-2.5-flash for advanced reasoning and research tasks
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash', // Changed to gemini-2.5-flash
       contents: [{ text: `Recherche approfondie sur : ${questionOrSubject}` }],
@@ -44,19 +37,23 @@ export default async function handler(req, res) {
     const fullText = response.text || "";
     
     if (confirmMode) {
-      // Extract title and summary for confirmation
-      const lines = fullText.split('\n').filter(l => l.trim() !== "");
+      // Extract title, summary and image for confirmation from the generated text
+      // The systemInstruction now forces a specific format, so we parse it here.
+      const titleMatch = fullText.match(/^##\s*(.*?)\n/);
+      const urlMatch = fullText.match(/\*\*Lien direct : \*\*(.*?)\n/);
+      const summaryMatch = fullText.match(/\*\*Résumé : \*\*(.*?)(?:\n|$)/);
+
       return res.status(200).json({ 
-        previewTitle: lines[0]?.replace(/^#*\s*/, '') || "Article trouvé",
-        previewSummary: lines.slice(1, 4).join(' '),
-        previewImage: fullText.match(/https?:\/\/\S+\.(?:jpg|png|gif)/i)?.[0] || null
+        previewTitle: titleMatch ? titleMatch[1].trim() : (questionOrSubject.length > 50 ? questionOrSubject.substring(0, 47) + "..." : questionOrSubject),
+        previewSummary: summaryMatch ? summaryMatch[1].trim() : fullText.substring(0, 150) + "...", // Fallback summary
+        previewImage: null // Gemini doesn't directly return image URLs here, requires further logic if needed.
       });
     }
 
     return res.status(200).json({ 
       text: fullText, 
       title: questionOrSubject,
-      aiExplanation: fullText
+      aiExplanation: fullText // The full text is the AI explanation
     });
 
   } catch (error) {
