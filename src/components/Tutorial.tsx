@@ -1,9 +1,9 @@
 import React from 'react';
 import { Lightbulb, Link as LinkIcon, Search, Smartphone, Type, LayoutGrid, ChevronRight } from 'lucide-react';
-import { AppSettings } from '../types'; // Import AppSettings
+import { AppSettings, AppView } from '../types'; // Import AppSettings and AppView
 
 interface Props {
-  navigateTo: (v: any) => void;
+  navigateTo: (v: AppView) => void; // navigateTo now expects an AppView
   deferredPrompt: any;
   handleInstallClick: () => void;
   settings: AppSettings; // Pass settings to Tutorial
@@ -87,7 +87,7 @@ const Tutorial: React.FC<Props> = ({ navigateTo, handleInstallClick, settings })
         <h3 className="text-2xl font-black uppercase mb-4">{getLocalizedText(settings, 'readyToStart')}</h3>
         <p className="opacity-80 mb-8 max-w-lg mx-auto">{getLocalizedText(settings, 'savedAuto')}</p>
         <div className="flex flex-col sm:flex-row justify-center gap-4">
-          <button onClick={() => navigateTo('HOME' as any)} className="px-8 py-4 bg-white text-indigo-700 font-black uppercase text-xs tracking-widest rounded-2xl hover:scale-105 transition-all">{getLocalizedText(settings, 'returnHome')}</button>
+          <button onClick={() => navigateTo(AppView.HOME)} className="px-8 py-4 bg-white text-indigo-700 font-black uppercase text-xs tracking-widest rounded-2xl hover:scale-105 transition-all">{getLocalizedText(settings, 'returnHome')}</button>
           <button onClick={handleInstallClick} className="px-8 py-4 bg-black/20 text-white border border-white/20 font-black uppercase text-xs tracking-widest rounded-2xl hover:bg-black/30 transition-all">{getLocalizedText(settings, 'installApp')}</button>
         </div>
       </div>

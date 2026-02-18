@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Link as LinkIcon, Calendar, Loader2, Globe, Check, ShieldCheck, AlertTriangle, Plus, Minus, Type } from 'lucide-react'; 
+import { Search, Link as LinkIcon, Calendar, Loader2, Globe, Check, ShieldCheck, AlertTriangle, Plus, Minus, Type, Info } from 'lucide-react'; 
 import { StudyPart, GeneratedStudy, AppSettings } from '../types'; 
 import { saveInputState, loadInputState } from '../utils/storage'; // Import for persistence
 
@@ -111,7 +111,8 @@ const getLocalizedText = (settings: AppSettings, key: string) => {
       'fr': 'Saisie Manuelle',
       'en': 'Manual Input',
       'es': 'Entrada Manual'
-    }
+    },
+    'infosKeys': { 'fr': 'Infos clés :', 'en': 'Key info:', 'es': 'Información clave:' } // New key for preview infos
   };
   return texts[key]?.[settings.language] || texts[key]?.['fr'];
 };
@@ -161,7 +162,8 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
         setArticleConfirmed({ 
           previewTitle: `${getLocalizedText(settings, 'manualInput')} (${type === 'WATCHTOWER' ? 'Tour de Garde' : 'Cahier'})`, 
           previewSummary: `${getLocalizedText(settings, 'readyForAnalysis')}`,
-          previewImage: null // No image for manual text
+          previewImage: null, // No image for manual text
+          previewInfos: '' // No infos for manual text
         });
       } else {
         const res = await fetch('/api/search-content', {
@@ -303,6 +305,11 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
                 <span className="text-[10px] font-black uppercase text-[var(--btn-color)] tracking-widest">{getLocalizedText(settings, 'articleIdentified')}</span>
                 <h3 className="text-2xl font-black mt-1 uppercase tracking-tight">{articleConfirmed.previewTitle || articleConfirmed.title}</h3>
                 <p className="text-sm opacity-50 mt-2 italic">{articleConfirmed.previewSummary || getLocalizedText(settings, 'readyForAnalysis')}</p>
+                {articleConfirmed.previewInfos && (
+                  <p className="text-xs opacity-40 mt-2 flex items-center gap-2">
+                    <Info size={14} className="text-[var(--btn-color)]" /> {getLocalizedText(settings, 'infosKeys')} {articleConfirmed.previewInfos}
+                  </p>
+                )}
               </div>
               <button onClick={() => setArticleConfirmed(null)} className="text-xs font-bold opacity-30 hover:opacity-100 uppercase underline">{getLocalizedText(settings, 'change')}</button>
             </div>

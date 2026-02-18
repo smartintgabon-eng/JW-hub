@@ -19,6 +19,7 @@ export default async function handler(req, res) {
     TITRE : [Le titre exact de l'article trouvé]
     IMAGE : [URL d'une image pertinente de l'article sur jw.org si disponible, sinon utilise https://assets.jw.org/assets/m/jwb-og-image.png comme fallback]
     RÉSUMÉ : [Un résumé concis et pertinent de 2-3 lignes du contenu de l'article]
+    INFOS : [Informations clés comme "Étude de la semaine du JJ Mois" ou "Nombre de paragraphes"]
     ` : `
     MODE RECHERCHE COMPLÈTE :
     Recherche en profondeur sur jw.org et wol.jw.org pour : "${questionOrSubject}".
@@ -52,11 +53,13 @@ export default async function handler(req, res) {
       const titleMatch = fullText.match(/TITRE\s*:\s*(.*)/i);
       const imgMatch = fullText.match(/IMAGE\s*:\s*(.*)/i);
       const sumMatch = fullText.match(/RÉSUMÉ\s*:\s*(.*)/i);
+      const infosMatch = fullText.match(/INFOS\s*:\s*(.*)/i);
 
       return res.status(200).json({ 
         previewTitle: titleMatch ? titleMatch[1].trim() : (questionOrSubject.length > 50 ? questionOrSubject.substring(0, 47) + "..." : questionOrSubject),
         previewImage: imgMatch ? imgMatch[1].trim() : "https://assets.jw.org/assets/m/jwb-og-image.png", // Fallback image provided by user
-        previewSummary: sumMatch ? sumMatch[1].trim() : "Cliquez pour générer l'analyse."
+        previewSummary: sumMatch ? sumMatch[1].trim() : "Cliquez pour générer l'analyse.",
+        previewInfos: infosMatch ? infosMatch[1].trim() : '' // Added for "Infos clés"
       });
     }
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Settings as SettingsIcon, Palette, Info, MessageSquareText, 
-  MousePointer2, Trash2, RotateCcw, AlertTriangle, CheckCircle, Download, Smartphone, Globe, Languages, Lightbulb
+  Trash2, AlertTriangle, CheckCircle, Download, Smartphone, Languages, Lightbulb, Save
 } from 'lucide-react';
 import { AppSettings } from '../types'; 
 import { saveSettings, clearHistoryOnly, totalReset } from '../utils/storage'; 
@@ -52,7 +52,6 @@ const getLocalizedText = (settings: AppSettings, key: string) => {
     'selectLanguage': { 'fr': 'Sélectionner la langue', 'en': 'Select Language', 'es': 'Seleccionar idioma' },
     'modelSelection': { 'fr': 'Sélection du Modèle IA', 'en': 'AI Model Selection', 'es': 'Selección del modelo de IA' },
     'modelName': { 'fr': 'Nom du modèle', 'en': 'Model Name', 'es': 'Nombre del modelo' },
-    // Fix: Add language options
     'french': { 'fr': 'Français', 'en': 'French', 'es': 'Francés' },
     'english': { 'fr': 'Anglais', 'en': 'English', 'es': 'Inglés' },
     'spanish': { 'fr': 'Espagnol', 'en': 'Spanish', 'es': 'Español' },
@@ -194,7 +193,6 @@ const Settings: React.FC<Props> = ({ settings, setSettings, deferredPrompt, hand
           onChange={(e) => handleDraftChange('language', e.target.value as 'fr' | 'en' | 'es')}
           className="w-full bg-black/40 border border-white/10 rounded-xl py-4 px-5 outline-none focus:border-[var(--btn-color)] transition-all font-medium text-white/80"
         >
-          {/* Fix: Use getLocalizedText for option labels */}
           <option value="fr">{getLocalizedText(settings, 'french')}</option>
           <option value="en">{getLocalizedText(settings, 'english')}</option>
           <option value="es">{getLocalizedText(settings, 'spanish')}</option>
@@ -294,6 +292,9 @@ const Settings: React.FC<Props> = ({ settings, setSettings, deferredPrompt, hand
         <div className="flex items-center space-x-2 opacity-70">
           <MessageSquareText size={18} />
           <h3 className="font-bold uppercase text-xs tracking-widest">{getLocalizedText(settings, 'aiPreferencesTitle')}</h3>
+          <button onClick={handleSaveSettings} className="ml-auto p-2 bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/40 transition-all">
+            <Save size={20} />
+          </button>
         </div>
         <textarea
           value={draftSettings.answerPreferences}

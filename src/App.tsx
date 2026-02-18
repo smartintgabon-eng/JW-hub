@@ -49,12 +49,16 @@ const getLocalizedText = (settings: AppSettings, key: string) => {
     'viewHistory': { 'fr': 'Voir l\'historique', 'en': 'View history', 'es': 'Ver historial' },
     'latestVersion': { 'fr': 'Dernière version', 'en': 'Latest version', 'es': 'Última versión' },
     'newFeatures': { 'fr': 'Nouvelles Fonctionnalités', 'en': 'New Features', 'es': 'Nuevas características' },
+    'advancedSearch': { 'fr': 'Recherches Avancées', 'en': 'Advanced Searches', 'es': 'Búsquedas avanzadas' },
   };
   return texts[key]?.[settings.language] || texts[key]?.['fr'];
 };
 
 const App: React.FC = () => {
-  const [view, setView] = useState<AppView>(AppView.HOME);
+  const [view, setView] = useState<AppView>(() => {
+    const savedView = localStorage.getItem('lastView');
+    return savedView ? (savedView as AppView) : AppView.HOME;
+  });
   const [settings, setAppSettings] = useState<AppSettings>(getSettings());
   const [isExpanded, setIsExpanded] = useState(window.innerWidth >= 1024); 
   const [history, setHistory] = useState<GeneratedStudy[]>(getHistory());
@@ -124,11 +128,16 @@ const App: React.FC = () => {
     document.documentElement.style.setProperty('--btn-text', getContrastColor(btnColor));
   }, [settings]);
 
+  const handleViewChange = (newView: AppView) => {
+    setView(newView);
+    localStorage.setItem('lastView', newView);
+  };
+
   const handleStudyGenerated = (study: GeneratedStudy) => {
     saveToHistory(study);
     setHistory(getHistory());
     setGlobalLoadingMessage(null);
-    setView(AppView.HISTORY);
+    handleViewChange(AppView.HISTORY); // Use handleViewChange
   };
 
   const handleInstallClick = async () => {
@@ -143,7 +152,7 @@ const App: React.FC = () => {
 
   const NavItem = ({ icon: Icon, label, viewId }: any) => (
     <button
-      onClick={() => setView(viewId)}
+      onClick={() => handleViewChange(viewId)} // Use handleViewChange
       className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 
         ${view === viewId ? 'bg-[var(--btn-color)] text-[var(--btn-text)] shadow-lg' : 'opacity-50 hover:opacity-100 hover:bg-white/5'}
         ${!isExpanded ? 'justify-center' : ''}`}
@@ -155,8 +164,6 @@ const App: React.FC = () => {
 
   // Get last generated study for "Continue current study" card
   const lastStudy = history.length > 0 ? history[0] : null;
-  const lastStudyInputKey = lastStudy ? `${lastStudy.type === 'MINISTRY' ? 'MINISTRY' : lastStudy.type === 'WATCHTOWER' ? 'WATCHTOWER' : 'RECHERCHES'}-mainLink` : '';
-  const lastStudyInputValue = lastStudyInputKey ? loadInputState(lastStudyInputKey, '') : '';
   const firstUpdate = Updates.updates.length > 0 ? Updates.updates[0] : null;
 
 
@@ -213,7 +220,7 @@ const App: React.FC = () => {
             <div 
               style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
               className="w-32 h-32 text-5xl rounded-3xl flex items-center justify-center font-black shadow-2xl hover:scale-105 transition-transform cursor-pointer mb-12"
-              onClick={() => setView(AppView.TUTORIAL)}
+              onClick={() => handleViewChange(AppView.TUTORIAL)}
             >JW</div>
 
             <h1 className="text-5xl md:text-8xl font-black uppercase tracking-tighter mb-4 leading-none">
@@ -222,7 +229,7 @@ const App: React.FC = () => {
             
             {/* Brillant Tutorial Button */}
             <button 
-              onClick={() => setView(AppView.TUTORIAL)}
+              onClick={() => handleViewChange(AppView.TUTORIAL)}
               className="group relative px-10 py-5 rounded-2xl font-black uppercase text-sm tracking-widest bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 text-white shadow-[0_20px_50px_rgba(79,70,229,0.3)] hover:shadow-[0_20px_60px_rgba(79,70,229,0.5)] transition-all active:scale-95 mb-16 overflow-hidden"
             >
               <span className="relative z-10 flex items-center gap-3">
@@ -234,7 +241,7 @@ const App: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl">
               {/* Card 1: Continue Current Study */}
               <button 
-                onClick={() => lastStudy && setView(AppView.HISTORY)} // Navigate to history and select last study
+                onClick={() => lastStudy && handleViewChange(AppView.HISTORY)} // Navigate to history and select last study
                 disabled={!lastStudy}
                 className="p-8 bg-white/5 rounded-[2.5rem] hover:bg-white/10 border border-white/10 transition-all text-left group disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -255,7 +262,7 @@ const App: React.FC = () => {
 
               {/* Card 2: Latest Update */}
               <button 
-                onClick={() => setView(AppView.UPDATES)}
+                onClick={() => handleViewChange(AppView.UPDATES)}
                 className="p-8 bg-white/5 rounded-[2.5rem] hover:bg-white/10 border border-white/10 transition-all text-left group"
               >
                 <BellRing size={40} className="mb-4 text-amber-400" />
@@ -270,11 +277,11 @@ const App: React.FC = () => {
               </button>
 
               {/* Card 3: Quick Access to Search */}
-              <button onClick={() => setView(AppView.RECHERCHES)} className="p-8 bg-white/5 rounded-[2.5rem] hover:bg-white/10 border border-white/10 transition-all text-left group">
+              <button onClick={() => handleViewChange(AppView.RECHERCHES)} className="p-8 bg-white/5 rounded-[2.5rem] hover:bg-white/10 border border-white/10 transition-all text-left group">
                 <Search size={40} className="mb-4 text-violet-400" />
                 <h3 className="text-xl font-bold uppercase mb-2">{getLocalizedText(settings, 'searches')}</h3>
                 <p className="text-sm opacity-60 italic">{getLocalizedText(settings, 'advancedSearch')}</p>
-              </p>
+              </button> 
             </div>
           </div>
         )}
@@ -285,7 +292,7 @@ const App: React.FC = () => {
         {view === AppView.RECHERCHES && <RecherchesTool onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
         {view === AppView.HISTORY && <History history={history} setHistory={setHistory} settings={settings} />}
         {view === AppView.SETTINGS && <Settings setSettings={setAppSettings} settings={settings} deferredPrompt={deferredPrompt} handleInstallClick={handleInstallClick} />}
-        {view === AppView.TUTORIAL && <Tutorial deferredPrompt={deferredPrompt} handleInstallClick={handleInstallClick} navigateTo={setView} settings={settings} />}
+        {view === AppView.TUTORIAL && <Tutorial deferredPrompt={deferredPrompt} handleInstallClick={handleInstallClick} navigateTo={handleViewChange} settings={settings} />}
         {view === AppView.UPDATES && <Updates settings={settings} />}
       </main>
     </div>

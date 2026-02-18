@@ -15,6 +15,7 @@ export const callSearchContentApi = async (
     previewTitle?: string;
     previewSummary?: string;
     previewImage?: string;
+    previewInfos?: string; // Added for "Infos clés"
 }> => {
 
   const response = await fetch('/api/search-content', {

@@ -5,6 +5,7 @@ import { AppView, StudyPart, PredicationType, HistoryCategory, GeneratedStudy, A
 const SETTINGS_KEY = 'jw_study_pro_settings';
 const HISTORY_KEY = 'jw_study_pro_history';
 const INPUT_STATE_KEY_PREFIX = 'jw_study_pro_input_'; // Prefix for input states
+const LAST_VIEW_KEY = 'lastView'; // Key for last active view
 
 // Default settings
 const defaultSettings: AppSettings = {

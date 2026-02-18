@@ -78,6 +78,7 @@ const getLocalizedText = (settings: AppSettings, key: string) => {
       'en': 'Advanced Searches',
       'es': 'Búsquedas avanzadas'
     },
+    'infosKeys': { 'fr': 'Infos clés :', 'en': 'Key info:', 'es': 'Información clave:' } // New key for preview infos
   };
   return texts[key]?.[settings.language] || texts[key]?.['fr'];
 };
@@ -191,6 +192,11 @@ const RecherchesTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadi
                 <span className="text-[10px] font-black uppercase text-[var(--btn-color)] tracking-widest">{getLocalizedText(settings, 'articleFound')}</span>
                 <h3 className="text-2xl font-black mt-1 uppercase tracking-tight">{articleConfirmed.previewTitle}</h3>
                 <p className="text-sm opacity-50 mt-2 italic">{articleConfirmed.previewSummary}</p>
+                {articleConfirmed.previewInfos && (
+                  <p className="text-xs opacity-40 mt-2 flex items-center gap-2">
+                    <Info size={14} className="text-[var(--btn-color)]" /> {getLocalizedText(settings, 'infosKeys')} {articleConfirmed.previewInfos}
+                  </p>
+                )}
               </div>
               <button onClick={() => setArticleConfirmed(null)} className="text-xs font-bold opacity-30 hover:opacity-100 uppercase underline">{getLocalizedText(settings, 'changeSearch')}</button>
             </div>

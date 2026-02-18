@@ -6,7 +6,7 @@ import {
 import { GeneratedStudy, AppSettings, StudyPart } from '../types'; 
 import { deleteFromHistory, saveToHistory } from '../utils/storage'; 
 import saveAs from 'file-saver'; 
-import { Document, Paragraph, TextRun, Packer, AlignmentType, HeadingLevel } from 'docx'; // Added HeadingLevel
+import { Document, Paragraph, TextRun, Packer, AlignmentType, HeadingLevel } from 'docx'; 
 import jsPDF from 'jspdf';
 
 interface Props {
@@ -32,6 +32,7 @@ const getLocalizedText = (settings: AppSettings, key: string) => {
     'articleTypeMinistry': { 'fr': 'Cahier de Réunion', 'en': 'Meeting Workbook', 'es': 'Cuaderno de Reuniones' },
     'articleTypePredication': { 'fr': 'Prédication', 'en': 'Preaching', 'es': 'Predicación' },
     'articleTypeRecherches': { 'fr': 'Recherches', 'en': 'Research', 'es': 'Búsquedas' },
+    'generatedOn': { 'fr': 'Généré le', 'en': 'Generated on', 'es': 'Generado el' }, // New key for generated date
   };
   return texts[key]?.[settings.language] || texts[key]?.['fr'];
 };
