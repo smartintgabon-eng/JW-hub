@@ -56,4 +56,6 @@ export interface AppSettings {
   autoSave: boolean;
   modelName: string;
   answerPreferences: string;
+  // Fix: Add language property to AppSettings interface
+  language: 'fr' | 'en' | 'es'; 
 }

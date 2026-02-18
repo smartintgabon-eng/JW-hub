@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ message: 'Method Not Allowed' });
 
   const { type, input, part, settings, manualText } = req.body;
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }); // Changed to GEMINI_API_KEY
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }); 
 
   let contextData = "";
   if (manualText) {
@@ -29,6 +29,8 @@ export default async function handler(req, res) {
   const systemInstruction = `
     Tu es un assistant expert JW (Témoins de Jéhovah). 
     MISSION : Générer des réponses PRÊTES À L'EMPLOI pour l'étude "${type}".
+    Langue de la réponse : ${settings.language || 'fr'}.
+    Préférences utilisateur pour le style de réponse : "${settings.answerPreferences || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.'}".
 
     RÈGLES D'OR :
     - INTERDICTION de dire "Vous pouvez répondre que..." ou "Préparez votre réponse".

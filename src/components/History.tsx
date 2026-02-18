@@ -15,6 +15,27 @@ interface Props {
   settings: AppSettings;
 }
 
+const getLocalizedText = (settings: AppSettings, key: string) => {
+  const texts: { [key: string]: { [lang: string]: string } } = {
+    'close': { 'fr': 'Fermer', 'en': 'Close', 'es': 'Cerrar' },
+    'deleteStudyConfirm': { 'fr': 'Voulez-vous supprimer cette étude ?', 'en': 'Do you want to delete this study?', 'es': '¿Desea eliminar este estudio?' },
+    'emptyContent': { 'fr': 'Contenu vide !', 'en': 'Empty content!', 'es': '¡Contenido vacío!' },
+    'historyTitle': { 'fr': 'Historique Local', 'en': 'Local History', 'es': 'Historial Local' },
+    'noStudySaved': { 'fr': 'Aucune étude sauvegardée', 'en': 'No study saved', 'es': 'Ningún estudio guardado' },
+    'partLabelJoyaux': { 'fr': 'Joyaux de la Parole de Dieu', 'en': 'Treasures from God\'s Word', 'es': 'Joyas de la Palabra de Dios' },
+    'partLabelPerles': { 'fr': 'Perles Spirituelles', 'en': 'Spiritual Gems', 'es': 'Perlas Espirituales' },
+    'partLabelAppliqueToi': { 'fr': 'Applique-toi au Ministère', 'en': 'Apply Yourself to the Ministry', 'es': 'Aplicarse al Ministerio' },
+    'partLabelVieChretienne': { 'fr': 'Vie Chrétienne', 'en': 'Christian Life', 'es': 'Vida Cristiana' },
+    'partLabelEtudeBiblique': { 'fr': 'Étude Biblique de l\'Assemblée', 'en': 'Congregation Bible Study', 'es': 'Estudio Bíblico de la Congregación' },
+    'partLabelTout': { 'fr': 'Toutes les parties', 'en': 'All Parts', 'es': 'Todas las partes' },
+    'articleTypeWatchtower': { 'fr': 'Tour de Garde', 'en': 'Watchtower', 'es': 'La Atalaya' },
+    'articleTypeMinistry': { 'fr': 'Cahier de Réunion', 'en': 'Meeting Workbook', 'es': 'Cuaderno de Reuniones' },
+    'articleTypePredication': { 'fr': 'Prédication', 'en': 'Preaching', 'es': 'Predicación' },
+    'articleTypeRecherches': { 'fr': 'Recherches', 'en': 'Research', 'es': 'Búsquedas' },
+  };
+  return texts[key]?.[settings.language] || texts[key]?.['fr'];
+};
+
 const History: React.FC<Props> = ({ history, setHistory, settings }) => {
   const [selectedStudy, setSelectedStudy] = useState<GeneratedStudy | null>(null);
   const [readingMode, setReadingMode] = useState(false);
@@ -26,7 +47,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm("Voulez-vous supprimer cette étude ?")) {
+    if (window.confirm(getLocalizedText(settings, 'deleteStudyConfirm'))) {
       deleteFromHistory(id);
       setHistory(prev => prev.filter(h => h.id !== id));
       if (selectedStudy?.id === id) setSelectedStudy(null);
@@ -116,7 +137,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
 
 
   const exportToDocx = async (study: GeneratedStudy) => {
-    if (!study.content) return alert("Contenu vide !");
+    if (!study.content) return alert(getLocalizedText(settings, 'emptyContent'));
 
     const defaultTextColor = (settings.backgroundColor === '#f4f4f5' || settings.backgroundColor === '#fef3c7') ? '000000' : 'FFFFFF';
     const btnColor = (settings.customButtonHex || settings.buttonColor).replace('#', '');
@@ -130,7 +151,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
       new Paragraph({
         alignment: AlignmentType.CENTER,
         spacing: { after: 360 },
-        children: [new TextRun({ text: `Date: ${study.date}`, color: defaultTextColor, size: 24, italics: true })]
+        children: [new TextRun({ text: `${getLocalizedText(settings, 'generatedOn')}: ${new Date(study.timestamp).toLocaleDateString(settings.language === 'fr' ? 'fr-FR' : settings.language === 'es' ? 'es-ES' : 'en-US')}`, color: defaultTextColor, size: 24, italics: true })]
       }),
     ];
 
@@ -243,7 +264,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
   };
 
   const exportToPdf = (study: GeneratedStudy) => {
-    if (!study.content) return alert("Contenu vide !");
+    if (!study.content) return alert(getLocalizedText(settings, 'emptyContent'));
     const doc = new jsPDF();
     const margin = 15;
     let y = 20;
@@ -261,7 +282,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
 
     // Date
     doc.setFontSize(12);
-    doc.text(`Généré le ${study.date}`, pageWidth / 2, y + 5, { align: 'center' });
+    doc.text(`${getLocalizedText(settings, 'generatedOn')}: ${new Date(study.timestamp).toLocaleDateString(settings.language === 'fr' ? 'fr-FR' : settings.language === 'es' ? 'es-ES' : 'en-US')}`, pageWidth / 2, y + 5, { align: 'center' });
     y += 15;
 
     // Content
@@ -381,24 +402,33 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
   };
 
   const getPartLabel = (part: StudyPart | undefined) => {
-    const options = [
-      { value: 'joyaux_parole_dieu', label: 'Joyaux de la Parole de Dieu' },
-      { value: 'perles_spirituelles', label: 'Perles Spirituelles' },
-      { value: 'applique_ministere', label: 'Applique-toi au Ministère' },
-      { value: 'vie_chretienne', label: 'Vie Chrétienne' },
-      { value: 'etude_biblique_assemblee', label: 'Étude Biblique de l\'Assemblée' },
-      { value: 'tout', label: 'Toutes les parties' },
-    ];
-    const option = options.find(opt => opt.value === part);
-    return option ? option.label : 'Toutes les parties';
+    switch (part) {
+      case 'joyaux_parole_dieu': return getLocalizedText(settings, 'partLabelJoyaux');
+      case 'perles_spirituelles': return getLocalizedText(settings, 'partLabelPerles');
+      case 'applique_ministere': return getLocalizedText(settings, 'partLabelAppliqueToi');
+      case 'vie_chretienne': return getLocalizedText(settings, 'partLabelVieChretienne');
+      case 'etude_biblique_assemblee': return getLocalizedText(settings, 'partLabelEtudeBiblique');
+      case 'tout': return getLocalizedText(settings, 'partLabelTout');
+      default: return getLocalizedText(settings, 'partLabelTout');
+    }
   };
+
+  const getStudyTypeLabel = (type: GeneratedStudy['type']) => {
+    switch (type) {
+      case 'WATCHTOWER': return getLocalizedText(settings, 'articleTypeWatchtower');
+      case 'MINISTRY': return getLocalizedText(settings, 'articleTypeMinistry');
+      case 'PREDICATION': return getLocalizedText(settings, 'articleTypePredication');
+      case 'RECHERCHES': return getLocalizedText(settings, 'articleTypeRecherches');
+      default: return type;
+    }
+  }
 
   if (selectedStudy) {
     return (
       <div className={`animate-in fade-in duration-500 pb-24 ${readingMode ? 'fixed inset-0 z-[100] bg-[var(--bg-color)] overflow-y-auto p-6' : ''}`}>
         <div className="flex items-center justify-between mb-10 sticky top-0 py-4 z-20 bg-[var(--bg-color)]">
           <button onClick={() => setSelectedStudy(null)} className="flex items-center gap-2 opacity-50 hover:opacity-100 uppercase font-black text-xs">
-            <ChevronLeft size={20} /> Fermer
+            <ChevronLeft size={20} /> {getLocalizedText(settings, 'close')}
           </button>
           <div className="flex gap-2">
             <button onClick={() => setReadingMode(!readingMode)} className="p-3 bg-white/5 rounded-xl border border-white/10">{readingMode ? <Minimize2 size={20}/> : <Maximize2 size={20}/>}</button>
@@ -410,9 +440,9 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
 
         <article className="max-w-3xl mx-auto space-y-10">
           <header className="text-center space-y-4">
-            <span className="px-4 py-1 bg-[var(--btn-color)]/20 text-[var(--btn-color)] rounded-full text-[10px] font-black uppercase tracking-widest">{selectedStudy.type}</span>
+            <span className="px-4 py-1 bg-[var(--btn-color)]/20 text-[var(--btn-color)] rounded-full text-[10px] font-black uppercase tracking-widest">{getStudyTypeLabel(selectedStudy.type)}</span>
             <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter">{selectedStudy.title}</h1>
-            <p className="opacity-30 text-xs">{selectedStudy.date}</p>
+            <p className="opacity-30 text-xs">{new Date(selectedStudy.timestamp).toLocaleDateString(settings.language === 'fr' ? 'fr-FR' : settings.language === 'es' ? 'es-ES' : 'en-US')}</p>
           </header>
           {selectedStudy.type === 'RECHERCHES' ? (
             <div className="space-y-8">
@@ -455,21 +485,21 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20 max-w-5xl mx-auto">
       <h2 className="text-3xl font-black uppercase mb-6 flex items-center gap-3">
-        <HistoryIcon className="text-[var(--btn-color)]" /> Historique Local
+        <HistoryIcon className="text-[var(--btn-color)]" /> {getLocalizedText(settings, 'historyTitle')}
       </h2>
       {history.length === 0 ? (
         <div className="p-20 border-2 border-dashed border-white/5 rounded-[3rem] text-center opacity-20">
           <FileText size={64} className="mx-auto mb-4" />
-          <p className="uppercase font-black tracking-widest">Aucune étude sauvegardée</p>
+          <p className="uppercase font-black tracking-widest">{getLocalizedText(settings, 'noStudySaved')}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {history.map(study => (
             <div key={study.id} onClick={() => setSelectedStudy(study)} className="bg-white/5 p-8 rounded-[2rem] border border-white/10 hover:border-[var(--btn-color)] transition-all cursor-pointer group relative overflow-hidden">
-              <span className="text-[9px] font-black opacity-30 uppercase tracking-widest">{study.type}</span>
+              <span className="text-[9px] font-black opacity-30 uppercase tracking-widest">{getStudyTypeLabel(study.type)}</span>
               <h3 className="text-xl font-black mt-2 uppercase line-clamp-2 leading-tight">{study.title}</h3>
               <div className="mt-6 pt-6 border-t border-white/5 flex justify-between items-center">
-                <span className="text-[10px] opacity-30">{study.date}</span>
+                <span className="text-[10px] opacity-30">{new Date(study.timestamp).toLocaleDateString(settings.language === 'fr' ? 'fr-FR' : settings.language === 'es' ? 'es-ES' : 'en-US')}</span>
                 <ChevronRight size={16} className="text-[var(--btn-color)] group-hover:translate-x-1 transition-transform" />
               </div>
             </div>

@@ -4,6 +4,7 @@ import { AppView, StudyPart, PredicationType, HistoryCategory, GeneratedStudy, A
 
 const SETTINGS_KEY = 'jw_study_pro_settings';
 const HISTORY_KEY = 'jw_study_pro_history';
+const INPUT_STATE_KEY_PREFIX = 'jw_study_pro_input_'; // Prefix for input states
 
 // Default settings
 const defaultSettings: AppSettings = {
@@ -15,6 +16,8 @@ const defaultSettings: AppSettings = {
   // Use gemini-2.5-flash for stability with grounding as per user's request
   modelName: 'gemini-2.5-flash', 
   answerPreferences: 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.',
+  // Fix: Add language default setting
+  language: 'fr', // Default language
 };
 
 export const getSettings = (): AppSettings => {
@@ -49,6 +52,8 @@ export const getHistory = (): GeneratedStudy[] => {
           study.category = 'cahier_vie_et_ministere';
         } else if (study.type === 'PREDICATION' && study.preachingType) {
           study.category = `predication_${study.preachingType}` as HistoryCategory;
+        } else if (study.type === 'RECHERCHES') { // Handle new RECHERCHES type
+          study.category = 'recherches';
         } else {
           study.category = 'cahier_vie_et_ministere'; // Default fallback
         }
@@ -78,6 +83,8 @@ export const saveToHistory = (study: GeneratedStudy) => {
             study.category = 'cahier_vie_et_ministere';
         } else if (study.type === 'PREDICATION' && study.preachingType) {
             study.category = `predication_${study.preachingType}` as HistoryCategory;
+        } else if (study.type === 'RECHERCHES') {
+            study.category = 'recherches';
         } else {
             study.category = 'cahier_vie_et_ministere'; // Fallback
         }
@@ -106,11 +113,29 @@ export const deleteFromHistory = (id: string) => {
   }
 };
 
-export const clearHistory = () => {
+export const clearHistoryOnly = () => {
   try {
     localStorage.removeItem(HISTORY_KEY);
   } catch (error) {
     console.error("Error clearing history from localStorage:", error);
+  }
+};
+
+export const saveInputState = (key: string, value: any) => {
+  try {
+    localStorage.setItem(INPUT_STATE_KEY_PREFIX + key, JSON.stringify(value));
+  } catch (error) {
+    console.error(`Error saving input state for ${key}:`, error);
+  }
+};
+
+export const loadInputState = (key: string, defaultValue: any) => {
+  try {
+    const savedValue = localStorage.getItem(INPUT_STATE_KEY_PREFIX + key);
+    return savedValue ? JSON.parse(savedValue) : defaultValue;
+  } catch (error) {
+    console.error(`Error loading input state for ${key}:`, error);
+    return defaultValue;
   }
 };
 

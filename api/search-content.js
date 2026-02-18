@@ -9,13 +9,15 @@ export default async function handler(req, res) {
   const systemInstruction = `
     Tu es un assistant expert JW. 
     STRICTE DISCIPLINE : N'utilise que jw.org et wol.jw.org. Ne déduis qu'à partir de ces sources.
+    Langue de la réponse : ${settings.language || 'fr'}.
+    Préférences utilisateur pour le style de réponse : "${settings.answerPreferences || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.'}".
 
     ${confirmMode ? `
     MODE APERÇU :
     Trouve l'article le plus pertinent sur jw.org ou wol.jw.org pour : "${questionOrSubject}".
     Réponds EXCLUSIVEMENT sous ce format (ne réponds rien d'autre) :
     TITRE : [Le titre exact de l'article trouvé]
-    IMAGE : https://www.jw.org/fr/biblioth%C3%A8que/livres/%C3%89tude-perspicace-des-%C3%89critures/Exemples-images/ (Utilise cette URL générique si tu ne trouves pas d'image spécifique pertinente)
+    IMAGE : [URL d'une image pertinente de l'article sur jw.org si disponible, sinon utilise https://assets.jw.org/assets/m/jwb-og-image.png comme fallback]
     RÉSUMÉ : [Un résumé concis et pertinent de 2-3 lignes du contenu de l'article]
     ` : `
     MODE RECHERCHE COMPLÈTE :
@@ -52,7 +54,7 @@ export default async function handler(req, res) {
       const sumMatch = fullText.match(/RÉSUMÉ\s*:\s*(.*)/i);
 
       return res.status(200).json({ 
-        previewTitle: titleMatch ? titleMatch[1].trim() : "Article trouvé",
+        previewTitle: titleMatch ? titleMatch[1].trim() : (questionOrSubject.length > 50 ? questionOrSubject.substring(0, 47) + "..." : questionOrSubject),
         previewImage: imgMatch ? imgMatch[1].trim() : "https://assets.jw.org/assets/m/jwb-og-image.png", // Fallback image provided by user
         previewSummary: sumMatch ? sumMatch[1].trim() : "Cliquez pour générer l'analyse."
       });

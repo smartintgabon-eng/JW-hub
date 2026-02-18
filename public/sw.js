@@ -1,11 +1,12 @@
-const CACHE_NAME = 'jw-study-pro-cache-v28';
+const CACHE_NAME = 'jw-study-pro-cache-v29'; // Incremented cache version
 const ASSETS = [
   '/',
   '/index.html',
   '/logo192.png',
   '/logo512.png',
   '/favicon.ico',
-  'https://cdn.tailwindcss.com'
+  'https://cdn.tailwindcss.com',
+  'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Lora:ital,wght@0,400..700;1,400..700&display=swap' // Cache fonts
 ];
 
 self.addEventListener('install', (event) => {
@@ -26,23 +27,44 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.url.includes('/api/') || event.request.method !== 'GET') {
+    // For API calls, try network first, then cache (or just network if not applicable to cache)
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match(event.request))
+    );
     return;
   }
 
   event.respondWith(
     caches.match(event.request).then((cached) => {
-      return cached || fetch(event.request).then((response) => {
-        if (!response || response.status !== 200 || response.type !== 'basic') return response;
+      // Return cached response if found
+      if (cached) {
+        return cached;
+      }
+      
+      // Otherwise, fetch from network
+      return fetch(event.request).then((response) => {
+        // Cache valid responses
+        if (!response || response.status !== 200 || response.type !== 'basic') {
+          return response;
+        }
         const toCache = response.clone();
         caches.open(CACHE_NAME).then(cache => cache.put(event.request, toCache));
         return response;
       }).catch(() => {
-        if (event.request.mode === 'navigate') return caches.match('/');
+        // If network fails for navigation requests, return offline page
+        if (event.request.mode === 'navigate') {
+          return caches.match('/');
+        }
+        // For other requests, you might return a generic offline image or error page
+        return new Response('Network request failed and no cache available for ' + event.request.url, { status: 503, statusText: 'Service Unavailable' });
       });
     })
   );
 });
 
+// Listen for message from client to skip waiting
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
