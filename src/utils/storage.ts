@@ -1,3 +1,4 @@
+
 // src/utils/storage.ts
 // Fix: Import types from src/types.ts instead of defining them locally
 import { AppView, StudyPart, PredicationType, HistoryCategory, GeneratedStudy, AppSettings } from './types'; 
@@ -14,8 +15,8 @@ const defaultSettings: AppSettings = {
   buttonColor: '#4a70b5',
   customButtonHex: '',
   autoSave: true, 
-  // Use gemini-2.5-flash for stability with grounding as per user's request
-  modelName: 'gemini-2.5-flash', 
+  /* Fix: Updated default model name to gemini-3-flash-preview as recommended for text tasks */
+  modelName: 'gemini-3-flash-preview', 
   answerPreferences: 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.',
   // Fix: Add language default setting
   language: 'fr', // Default language

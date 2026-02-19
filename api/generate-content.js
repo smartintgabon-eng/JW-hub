@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 import * as cheerio from 'cheerio';
 
@@ -7,7 +8,8 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ message: 'Method Not Allowed' });
 
   const { type, input, part, settings, manualText } = req.body;
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }); 
+  /* Fix: Use process.env.API_KEY for GenAI initialization */
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY }); 
 
   let contextData = "";
   if (manualText) {
@@ -58,9 +60,9 @@ export default async function handler(req, res) {
       ? [{ text: `BASE DE DONNÉES :\n${contextData}\n\nACTION : Génère le contenu pour ${input || 'le texte fourni'}.` }] 
       : [{ text: `Recherche et analyse sur jw.org : ${input}` }];
 
-    // Use gemini-2.5-flash for complex reasoning tasks
+    /* Fix: Use gemini-3-flash-preview for general text tasks like summarization and analysis */
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-flash-preview',
       contents,
       config: { 
         systemInstruction, 

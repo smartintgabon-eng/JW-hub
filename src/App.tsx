@@ -68,7 +68,6 @@ const App: React.FC = () => {
   const [globalLoadingMessage, setGlobalLoadingMessage] = useState<string | null>(null); 
   const [newServiceWorkerReady, setNewServiceWorkerReady] = useState<ServiceWorker | null>(null);
 
-  // PWA Update Logic
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.ready.then(registration => {
@@ -77,31 +76,19 @@ const App: React.FC = () => {
           if (newWorker) {
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                // New service worker is installed and ready to take over
                 setNewServiceWorkerReady(newWorker);
               }
             });
           }
         });
       });
-
-      // Listen for messages from the service worker (e.g., SKIP_WAITING)
       navigator.serviceWorker.addEventListener('message', (event) => {
         if (event.data && event.data.type === 'SKIP_WAITING_CONFIRMED') {
-          // If the service worker confirms it skipped waiting, reload the page
           window.location.reload();
         }
       });
     }
   }, []);
-
-  const updateApp = () => {
-    if (newServiceWorkerReady) {
-      newServiceWorkerReady.postMessage({ type: 'SKIP_WAITING' });
-      // The message listener will handle the reload
-    }
-  };
-
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
@@ -109,14 +96,7 @@ const App: React.FC = () => {
       setDeferredPrompt(e);
     };
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    const handleStatus = () => setIsOnline(navigator.onLine);
-    window.addEventListener('online', handleStatus);
-    window.addEventListener('offline', handleStatus);
-    return () => {
-      window.removeEventListener('online', handleStatus);
-      window.removeEventListener('offline', handleStatus);
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
   }, []);
 
   useEffect(() => {
@@ -137,7 +117,7 @@ const App: React.FC = () => {
     saveToHistory(study);
     setHistory(getHistory());
     setGlobalLoadingMessage(null);
-    handleViewChange(AppView.HISTORY); // Use handleViewChange
+    handleViewChange(AppView.HISTORY);
   };
 
   const handleInstallClick = async () => {
@@ -152,7 +132,7 @@ const App: React.FC = () => {
 
   const NavItem = ({ icon: Icon, label, viewId }: any) => (
     <button
-      onClick={() => handleViewChange(viewId)} // Use handleViewChange
+      onClick={() => handleViewChange(viewId)}
       className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 
         ${view === viewId ? 'bg-[var(--btn-color)] text-[var(--btn-text)] shadow-lg' : 'opacity-50 hover:opacity-100 hover:bg-white/5'}
         ${!isExpanded ? 'justify-center' : ''}`}
@@ -162,10 +142,7 @@ const App: React.FC = () => {
     </button>
   );
 
-  // Get last generated study for "Continue current study" card
   const lastStudy = history.length > 0 ? history[0] : null;
-  const firstUpdate = Updates.updates.length > 0 ? Updates.updates[0] : null;
-
 
   return (
     <div className="min-h-screen flex flex-row bg-[var(--bg-color)] text-[var(--text-color)] overflow-hidden">
@@ -176,11 +153,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* SIDEBAR - md:translate-x-0 ensure it's always visible on tablets+ */}
-      <aside 
-        className={`flex flex-col h-screen bg-black/90 backdrop-blur-xl border-r border-white/10 transition-all duration-300 z-50
-          ${isExpanded ? 'w-72' : 'w-20'} ${isReadingModeActive ? 'hidden' : 'flex'} md:static md:translate-x-0`}
-      >
+      <aside className={`flex flex-col h-screen bg-black/90 backdrop-blur-xl border-r border-white/10 transition-all duration-300 z-50 ${isExpanded ? 'w-72' : 'w-20'} ${isReadingModeActive ? 'hidden' : 'flex'} md:static`}>
         <div className="p-4 flex items-center justify-center mb-8">
           <button onClick={() => setIsExpanded(!isExpanded)} className="p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-all text-[var(--btn-color)]">
             <Menu size={24} />
@@ -197,26 +170,12 @@ const App: React.FC = () => {
           <NavItem icon={BellRing} label={getLocalizedText(settings, 'updates')} viewId={AppView.UPDATES} />
           <NavItem icon={HelpCircle} label={getLocalizedText(settings, 'tutorial')} viewId={AppView.TUTORIAL} />
           <NavItem icon={SettingsIcon} label={getLocalizedText(settings, 'settings')} viewId={AppView.SETTINGS} />
-          
-          {newServiceWorkerReady && isExpanded && (
-            <button
-              onClick={updateApp}
-              className="mt-4 w-full flex items-center space-x-3 px-4 py-3 rounded-xl bg-green-600 text-white font-bold uppercase tracking-wider shadow-lg animate-pulse"
-            >
-              <RefreshCw size={24} />
-              <span>{getLocalizedText(settings, 'updateApp')}</span>
-            </button>
-          )}
-
         </nav>
-
-        <div className="p-4 text-center opacity-20"><span className="text-xs font-black tracking-[0.3em]">JW STUDY</span></div>
       </aside>
 
       <main className="flex-1 h-screen overflow-y-auto p-4 md:p-10 relative">
         {view === AppView.HOME && (
           <div className="max-w-4xl mx-auto py-12 flex flex-col items-center justify-center min-h-[80vh] text-center animate-in fade-in duration-1000">
-            {/* JW LOGO Square restoration */}
             <div 
               style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
               className="w-32 h-32 text-5xl rounded-3xl flex items-center justify-center font-black shadow-2xl hover:scale-105 transition-transform cursor-pointer mb-12"
@@ -227,7 +186,6 @@ const App: React.FC = () => {
               {getLocalizedText(settings, 'prepareSimply')} <br/> <span className="opacity-20 text-4xl md:text-6xl italic">{getLocalizedText(settings, 'simply')}</span>
             </h1>
             
-            {/* Brillant Tutorial Button */}
             <button 
               onClick={() => handleViewChange(AppView.TUTORIAL)}
               className="group relative px-10 py-5 rounded-2xl font-black uppercase text-sm tracking-widest bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 text-white shadow-[0_20px_50px_rgba(79,70,229,0.3)] hover:shadow-[0_20px_60px_rgba(79,70,229,0.5)] transition-all active:scale-95 mb-16 overflow-hidden"
@@ -235,53 +193,35 @@ const App: React.FC = () => {
               <span className="relative z-10 flex items-center gap-3">
                 {getLocalizedText(settings, 'discoverTutorial')} <ChevronRight className="group-hover:translate-x-1 transition-transform" />
               </span>
-              <div className="absolute inset-0 bg-white/10 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 skew-x-12"></div>
             </button>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl">
-              {/* Card 1: Continue Current Study */}
               <button 
-                onClick={() => lastStudy && handleViewChange(AppView.HISTORY)} // Navigate to history and select last study
-                disabled={!lastStudy}
-                className="p-8 bg-white/5 rounded-[2.5rem] hover:bg-white/10 border border-white/10 transition-all text-left group disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => handleViewChange(AppView.MINISTRY)}
+                className="p-8 bg-white/5 rounded-[2.5rem] border border-white/10 hover:border-[var(--btn-color)] transition-all group flex flex-col items-center"
               >
-                <HistoryIcon size={40} className="mb-4 text-emerald-400" />
-                <h3 className="text-xl font-bold uppercase mb-2">{getLocalizedText(settings, 'continueStudy')}</h3>
-                {lastStudy ? (
-                  <>
-                    <p className="text-sm opacity-60 italic">{getLocalizedText(settings, 'lastStudy')} {lastStudy.title}</p>
-                    <p className="text-xs opacity-40 mt-1">{lastStudy.date}</p>
-                  </>
-                ) : (
-                  <p className="text-sm opacity-60 italic">{getLocalizedText(settings, 'noCurrentStudy')}</p>
-                )}
-                {lastStudy && (
-                   <span className="text-[10px] font-black uppercase text-[var(--btn-color)] mt-4 block">{getLocalizedText(settings, 'viewHistory')}</span>
-                )}
+                <Calendar size={48} className="text-[var(--btn-color)] mb-4" />
+                <h3 className="text-xl font-bold uppercase">{getLocalizedText(settings, 'workbook')}</h3>
+                <p className="text-xs opacity-40 mt-1">{getLocalizedText(settings, 'midweekMeetings')}</p>
               </button>
 
-              {/* Card 2: Latest Update */}
               <button 
-                onClick={() => handleViewChange(AppView.UPDATES)}
-                className="p-8 bg-white/5 rounded-[2.5rem] hover:bg-white/10 border border-white/10 transition-all text-left group"
+                onClick={() => handleViewChange(AppView.WATCHTOWER)}
+                className="p-8 bg-white/5 rounded-[2.5rem] border border-white/10 hover:border-[var(--btn-color)] transition-all group flex flex-col items-center"
               >
-                <BellRing size={40} className="mb-4 text-amber-400" />
-                <h3 className="text-xl font-bold uppercase mb-2">{getLocalizedText(settings, 'lastUpdate')}</h3>
-                {firstUpdate && (
-                  <>
-                    <p className="text-sm opacity-60 italic">{getLocalizedText(settings, 'latestVersion')} : {firstUpdate.version}</p>
-                    <p className="text-xs opacity-40 mt-1">{firstUpdate.date}</p>
-                    <span className="text-[10px] font-black uppercase text-[var(--btn-color)] mt-4 block">{getLocalizedText(settings, 'newFeatures')}</span>
-                  </>
-                )}
+                <BookOpen size={48} className="text-[var(--btn-color)] mb-4" />
+                <h3 className="text-xl font-bold uppercase">{getLocalizedText(settings, 'watchtower')}</h3>
+                <p className="text-xs opacity-40 mt-1">{getLocalizedText(settings, 'weekendStudy')}</p>
               </button>
 
-              {/* Card 3: Quick Access to Search */}
-              <button onClick={() => handleViewChange(AppView.RECHERCHES)} className="p-8 bg-white/5 rounded-[2.5rem] hover:bg-white/10 border border-white/10 transition-all text-left group">
-                <Search size={40} className="mb-4 text-violet-400" />
-                <h3 className="text-xl font-bold uppercase mb-2">{getLocalizedText(settings, 'searches')}</h3>
-                <p className="text-sm opacity-60 italic">{getLocalizedText(settings, 'advancedSearch')}</p>
-              </button> 
+              <button 
+                onClick={() => handleViewChange(AppView.RECHERCHES)}
+                className="p-8 bg-white/5 rounded-[2.5rem] border border-white/10 hover:border-[var(--btn-color)] transition-all group flex flex-col items-center"
+              >
+                <Search size={48} className="text-[var(--btn-color)] mb-4" />
+                <h3 className="text-xl font-bold uppercase">{getLocalizedText(settings, 'searches')}</h3>
+                <p className="text-xs opacity-40 mt-1">{getLocalizedText(settings, 'advancedSearch')}</p>
+              </button>
             </div>
           </div>
         )}
