@@ -49,10 +49,8 @@ export interface GeneratedStudy {
 }
 
 export interface AppSettings {
-  backgroundColor: string;
-  customHex: string;
-  buttonColor: string;
-  customButtonHex: string;
+  bgColor: string;
+  btnColor: string;
   autoSave: boolean;
   modelName: string;
   answerPreferences: string;

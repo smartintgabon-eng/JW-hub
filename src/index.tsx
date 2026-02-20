@@ -1,6 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client'; // Fix: Use createRoot for React 18+
-import App from './App';
+import App from './App.tsx';
 
 const container = document.getElementById('root');
 if (container) {

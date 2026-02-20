@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 /* Added Download to imports from lucide-react */
-import { Palette, CheckCircle, AlertTriangle, Trash2, Globe, Check, Settings as SettingsIcon, Save, Languages, Download } from 'lucide-react';
-import { AppSettings } from '../types';
-import { saveSettings, clearHistoryOnly } from '../utils/storage';
+import { Palette, CheckCircle, AlertTriangle, Trash2, Globe, Check, Settings as SettingsIcon, Save, Languages, Download, List as ListIcon } from 'lucide-react';
+import { AppSettings, AppView } from '../types.ts';
+import { saveSettings, clearHistoryOnly } from '../utils/storage.ts';
 
 const baseColors = [
   { name: "Bleu JW", hex: "#4a70b5" },
@@ -16,7 +16,7 @@ const baseColors = [
 ];
 
 const Settings: React.FC<{ settings: AppSettings, setSettings: any, deferredPrompt: any, handleInstallClick: () => void }> = ({ settings, setSettings, deferredPrompt, handleInstallClick }) => {
-  const [draft, setDraft] = useState(settings);
+  const [draft, setDraft] = useState<AppSettings>(settings);
   const [colorQuery, setColorQuery] = useState('');
   const [bgQuery, setBgQuery] = useState('');
   const [saved, setSaved] = useState(false);
@@ -56,7 +56,7 @@ const Settings: React.FC<{ settings: AppSettings, setSettings: any, deferredProm
           <input value={colorQuery} onChange={(e) => setColorQuery(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded-xl p-4 mt-1" placeholder="Chercher une couleur (ex: Indigo)..." />
           <div className="flex gap-2 mt-2">
             {filterColors(colorQuery).map(c => (
-              <button key={c.hex} onClick={() => {setDraft({...draft, buttonColor: c.hex, customButtonHex: c.hex}); setColorQuery(c.name)}} className="px-3 py-1 bg-white/10 rounded-full text-[10px] font-bold" style={{color: c.hex}}>● {c.name}</button>
+              <button key={c.hex} onClick={() => {setDraft({...draft, btnColor: c.hex}); setColorQuery(c.name)}} className="px-3 py-1 bg-white/10 rounded-full text-[10px] font-bold" style={{color: c.hex}}>● {c.name}</button>
             ))}
           </div>
         </div>
@@ -66,7 +66,7 @@ const Settings: React.FC<{ settings: AppSettings, setSettings: any, deferredProm
           <input value={bgQuery} onChange={(e) => setBgQuery(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded-xl p-4 mt-1" placeholder="Ex: Nuit, #09090b" />
           <div className="flex gap-2 mt-2">
             {filterColors(bgQuery).map(c => (
-              <button key={c.hex} onClick={() => {setDraft({...draft, backgroundColor: c.hex, customHex: c.hex}); setBgQuery(c.name)}} className="px-3 py-1 bg-white/10 rounded-full text-[10px] font-bold">● {c.name}</button>
+              <button key={c.hex} onClick={() => {setDraft({...draft, bgColor: c.hex}); setBgQuery(c.name)}} className="px-3 py-1 bg-white/10 rounded-full text-[10px] font-bold">● {c.name}</button>
             ))}
           </div>
         </div>
@@ -75,18 +75,22 @@ const Settings: React.FC<{ settings: AppSettings, setSettings: any, deferredProm
       {/* Préférences IA */}
       <section className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10">
         <div className="flex justify-between items-center mb-4">
-          <label className="text-[10px] font-black uppercase opacity-40">Préférences de l'IA (Personnalité)</label>
-          <button onClick={handleQuickSave} className={`p-2 rounded-lg transition-all ${saved ? 'bg-emerald-500 text-white' : 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/40'}`}>
-            {saved ? <Check size={20} /> : <Save size={20} />}
-          </button>
+          <label className="text-xs font-black uppercase opacity-50">Préférences IA</label>
+          <div className="flex gap-2">
+            <button onClick={() => setSettings(prev => ({...prev, view: AppView.PREFERENCE_MANAGER}))} className="p-2 bg-white/5 rounded-lg hover:bg-white/10">
+              <ListIcon size={18} /> {/* Bouton Manager */}
+            </button>
+            <button onClick={handleQuickSave} className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg">
+              <Check size={18} /> {/* Crochet Vert */}
+            </button>
+          </div>
         </div>
         <textarea 
           value={draft.answerPreferences} 
           onChange={(e) => setDraft({...draft, answerPreferences: e.target.value})}
-          className="w-full bg-black/20 border border-white/10 rounded-xl p-4 h-24 resize-none outline-none focus:border-emerald-500 text-sm"
-          placeholder="Ex: Utilise un ton simple, sois direct, cite toujours le verset complet..."
+          placeholder="Ex: Réponds toujours en français, sois encourageant..."
+          className="w-full bg-black/20 rounded-xl p-4 text-sm border-none focus:ring-2 focus:ring-emerald-500"
         />
-        {saved && <p className="text-[10px] text-emerald-400 font-bold mt-2 animate-pulse uppercase">Enregistré dans le cache local !</p>}
       </section>
 
       {/* Zone de Danger */}

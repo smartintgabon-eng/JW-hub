@@ -1,5 +1,6 @@
 import React from 'react';
 import { BellRing, CheckCircle, Bug, Rocket, Megaphone } from 'lucide-react'; // Added Megaphone for new feature
+import { AppSettings } from '../types.ts'; // Import AppSettings
 
 interface UpdateItem {
   version: string;

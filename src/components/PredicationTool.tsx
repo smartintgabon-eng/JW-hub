@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Megaphone, Loader2, Check, AlertTriangle, Timer, BookOpen, Search, Link as LinkIcon, Handshake, CornerRightDown, ChevronRight, ChevronLeft } from 'lucide-react';
 // Fix: Import types from src/types.ts
-import { AppSettings, GeneratedStudy, PredicationType } from '../types';
-import { callGenerateContentApi } from '../services/apiService'; 
+import { AppSettings, GeneratedStudy, PredicationType } from '../types.ts';
+import { callGenerateContentApi } from '../services/apiService.ts'; 
+import { saveInputState, loadInputState } from '../utils/storage.ts';
 
 interface Props {
   onGenerated: (study: GeneratedStudy) => void;
@@ -11,30 +12,30 @@ interface Props {
 }
 
 const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadingMessage }) => {
-  const [predicationMode, setPredicationMode] = useState<PredicationType | null>(null);
+  const [predicationMode, setPredicationMode] = useState<PredicationType | null>(() => loadInputState('predicationMode', null));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
 
   // Porte-en-porte states
-  const [pepPublicationLink, setPepPublicationLink] = useState('');
-  const [pepTopic, setPepTopic] = useState('');
-  const [pepOfferStudy, setPepOfferStudy] = useState(false);
-  const [pepStudyBrochureLink, setPepStudyBrochureLink] = useState('');
-  const [pepCurrentAffairs, setPepCurrentAffairs] = useState('');
-  const [pepStep, setPepStep] = useState(1); 
+  const [pepPublicationLink, setPepPublicationLink] = useState(() => loadInputState('pepPublicationLink', ''));
+  const [pepTopic, setPepTopic] = useState(() => loadInputState('pepTopic', ''));
+  const [pepOfferStudy, setPepOfferStudy] = useState(() => loadInputState('pepOfferStudy', false));
+  const [pepStudyBrochureLink, setPepStudyBrochureLink] = useState(() => loadInputState('pepStudyBrochureLink', ''));
+  const [pepCurrentAffairs, setPepCurrentAffairs] = useState(() => loadInputState('pepCurrentAffairs', ''));
+  const [pepStep, setPepStep] = useState(() => loadInputState('pepStep', 1)); 
 
   // Nouvelle Visite states
-  const [nvType, setNvType] = useState<'study' | 'question' | null>(null);
-  const [nvStudyLink, setNvStudyLink] = useState('');
-  const [nvStudyChapterParagraph, setNvStudyChapterParagraph] = useState('');
-  const [nvQuestionLeft, setNvQuestionLeft] = useState('');
-  const [nvBrochureLink, setNvBrochureLink] = useState('');
+  const [nvType, setNvType] = useState<'study' | 'question' | null>(() => loadInputState('nvType', null));
+  const [nvStudyLink, setNvStudyLink] = useState(() => loadInputState('nvStudyLink', ''));
+  const [nvStudyChapterParagraph, setNvStudyChapterParagraph] = useState(() => loadInputState('nvStudyChapterParagraph', ''));
+  const [nvQuestionLeft, setNvQuestionLeft] = useState(() => loadInputState('nvQuestionLeft', ''));
+  const [nvBrochureLink, setNvBrochureLink] = useState(() => loadInputState('nvBrochureLink', ''));
 
   // Cours Biblique states
-  const [cbType, setCbType] = useState<'new' | 'ongoing' | null>(null);
-  const [cbChapterParagraph, setCbChapterParagraph] = useState('');
-  const [cbPublicationLink, setCbPublicationLink] = useState('');
+  const [cbType, setCbType] = useState<'new' | 'ongoing' | null>(() => loadInputState('cbType', null));
+  const [cbChapterParagraph, setCbChapterParagraph] = useState(() => loadInputState('cbChapterParagraph', ''));
+  const [cbPublicationLink, setCbPublicationLink] = useState(() => loadInputState('cbPublicationLink', ''));
 
   useEffect(() => {
     if (cooldown > 0) {
@@ -42,6 +43,22 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
       return () => clearTimeout(timer);
     }
   }, [cooldown]);
+
+  useEffect(() => { saveInputState('predicationMode', predicationMode); }, [predicationMode]);
+  useEffect(() => { saveInputState('pepPublicationLink', pepPublicationLink); }, [pepPublicationLink]);
+  useEffect(() => { saveInputState('pepTopic', pepTopic); }, [pepTopic]);
+  useEffect(() => { saveInputState('pepOfferStudy', pepOfferStudy); }, [pepOfferStudy]);
+  useEffect(() => { saveInputState('pepStudyBrochureLink', pepStudyBrochureLink); }, [pepStudyBrochureLink]);
+  useEffect(() => { saveInputState('pepCurrentAffairs', pepCurrentAffairs); }, [pepCurrentAffairs]);
+  useEffect(() => { saveInputState('pepStep', pepStep); }, [pepStep]);
+  useEffect(() => { saveInputState('nvType', nvType); }, [nvType]);
+  useEffect(() => { saveInputState('nvStudyLink', nvStudyLink); }, [nvStudyLink]);
+  useEffect(() => { saveInputState('nvStudyChapterParagraph', nvStudyChapterParagraph); }, [nvStudyChapterParagraph]);
+  useEffect(() => { saveInputState('nvQuestionLeft', nvQuestionLeft); }, [nvQuestionLeft]);
+  useEffect(() => { saveInputState('nvBrochureLink', nvBrochureLink); }, [nvBrochureLink]);
+  useEffect(() => { saveInputState('cbType', cbType); }, [cbType]);
+  useEffect(() => { saveInputState('cbChapterParagraph', cbChapterParagraph); }, [cbChapterParagraph]);
+  useEffect(() => { saveInputState('cbPublicationLink', cbPublicationLink); }, [cbPublicationLink]);
 
   const resetAllStates = () => {
     setPredicationMode(null);
@@ -171,7 +188,10 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
               <div className="space-y-3">
                 <label className={getCommonLabelStyles()}>Lien direct de la publication souhaitée (jw.org) <span className="opacity-40 font-normal lowercase">(Optionnel)</span></label>
                 <div className="relative">
-                  <input type="text" value={pepPublicationLink} onChange={(e) => setPepPublicationLink(e.target.value)}
+                  <input type="text" value={pepPublicationLink} onChange={(e) => {
+                    setPepPublicationLink(e.target.value);
+                    saveInputState('pepPublicationLink', e.target.value);
+                  }}
                     placeholder="https://www.jw.org/fr/..." className={getCommonFormStyles()} />
                   <LinkIcon size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
                 </div>
@@ -179,13 +199,19 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
               <div className="space-y-3">
                 <label className={getCommonLabelStyles()}>Sujet en particulier (Ex: L'espoir pour l'avenir)</label>
                 <div className="relative">
-                  <input type="text" value={pepTopic} onChange={(e) => setPepTopic(e.target.value)}
+                  <input type="text" value={pepTopic} onChange={(e) => {
+                    setPepTopic(e.target.value);
+                    saveInputState('pepTopic', e.target.value);
+                  }}
                     placeholder="Votre sujet principal" className={getCommonFormStyles()} />
                   <BookOpen size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
                 </div>
               </div>
               <div className="flex items-center space-x-3 bg-black/20 p-4 rounded-xl border border-white/10">
-                <input type="checkbox" checked={pepOfferStudy} onChange={(e) => setPepOfferStudy(e.target.checked)}
+                <input type="checkbox" checked={pepOfferStudy} onChange={(e) => {
+                  setPepOfferStudy(e.target.checked);
+                  saveInputState('pepOfferStudy', e.target.checked);
+                }}
                   className="w-5 h-5 rounded-md text-[var(--btn-color)] bg-white/10 border-white/20 focus:ring-[var(--btn-color)]" />
                 <label className="text-sm font-medium">Souhaitez-vous proposer un cours biblique ?</label>
               </div>
@@ -193,7 +219,10 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
                 <div className="space-y-3 animate-in fade-in duration-300">
                   <label className={getCommonLabelStyles()}>Lien de la brochure 'Vivez pour toujours' (leçon 1) <span className="opacity-40 font-normal lowercase">(Optionnel)</span></label>
                   <div className="relative">
-                    <input type="text" value={pepStudyBrochureLink} onChange={(e) => setPepStudyBrochureLink(e.target.value)}
+                    <input type="text" value={pepStudyBrochureLink} onChange={(e) => {
+                      setPepStudyBrochureLink(e.target.value);
+                      saveInputState('pepStudyBrochureLink', e.target.value);
+                    }}
                       placeholder="https://www.jw.org/fr/publications/livres/vivez-pour-toujours-livre-de-base-du-cours-biblique/lecon-1/" className={getCommonFormStyles()} />
                     <LinkIcon size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
                   </div>
@@ -215,7 +244,10 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
               <p className="text-lg opacity-80 font-medium text-center">Fournissez un contexte ou générez directement :</p>
               <div className="space-y-3">
                 <label className={getCommonLabelStyles()}>Conditions d'actualités pour détailler le sujet (facultatif)</label>
-                <textarea value={pepCurrentAffairs} onChange={(e) => setPepCurrentAffairs(e.target.value)}
+                <textarea value={pepCurrentAffairs} onChange={(e) => {
+                  setPepCurrentAffairs(e.target.value);
+                  saveInputState('pepCurrentAffairs', e.target.value);
+                }}
                   placeholder="Ex: L'actualité récente sur les catastrophes naturelles montre le besoin d'espoir."
                   className="w-full h-24 bg-black/40 border border-white/10 rounded-xl py-3 px-4 focus:border-[var(--btn-color)] outline-none transition-all font-medium resize-none" />
               </div>
@@ -250,8 +282,14 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
           <div className="space-y-3">
             <label className={getCommonLabelStyles()}>Type de nouvelle visite</label>
             <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => setNvType('study')} className={getCommonButtonStyles(nvType === 'study')}>Enchaîner Cours Biblique</button>
-              <button onClick={() => setNvType('question')} className={getCommonButtonStyles(nvType === 'question')}>Question en suspens</button>
+              <button onClick={() => {
+                setNvType('study');
+                saveInputState('nvType', 'study');
+              }} className={getCommonButtonStyles(nvType === 'study')}>Enchaîner Cours Biblique</button>
+              <button onClick={() => {
+                setNvType('question');
+                saveInputState('nvType', 'question');
+              }} className={getCommonButtonStyles(nvType === 'question')}>Question en suspens</button>
             </div>
           </div>
 
@@ -260,7 +298,10 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
               <div className="space-y-3">
                 <label className={getCommonLabelStyles()}>Lien direct de l'article/publication (jw.org) <span className="opacity-40 font-normal lowercase">(Optionnel)</span></label>
                 <div className="relative">
-                  <input type="text" value={nvStudyLink} onChange={(e) => setNvStudyLink(e.target.value)}
+                  <input type="text" value={nvStudyLink} onChange={(e) => {
+                    setNvStudyLink(e.target.value);
+                    saveInputState('nvStudyLink', e.target.value);
+                  }}
                     placeholder="https://www.jw.org/fr/publications/livres/..." className={getCommonFormStyles()} />
                   <LinkIcon size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
                 </div>
@@ -268,7 +309,10 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
               <div className="space-y-3">
                 <label className={getCommonLabelStyles()}>Où en étiez-vous ? (Ex: Leçon 2, paragraphe 3)</label>
                 <div className="relative">
-                  <input type="text" value={nvStudyChapterParagraph} onChange={(e) => setNvStudyChapterParagraph(e.target.value)}
+                  <input type="text" value={nvStudyChapterParagraph} onChange={(e) => {
+                    setNvStudyChapterParagraph(e.target.value);
+                    saveInputState('nvStudyChapterParagraph', e.target.value);
+                  }}
                     placeholder="Leçon 2, paragraphe 3" className={getCommonFormStyles()} />
                   <BookOpen size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
                 </div>
@@ -290,14 +334,20 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
             <div className="space-y-6 animate-in fade-in duration-300">
               <div className="space-y-3">
                 <label className={getCommonLabelStyles()}>Question laissée en suspens</label>
-                <textarea value={nvQuestionLeft} onChange={(e) => setNvQuestionLeft(e.target.value)}
+                <textarea value={nvQuestionLeft} onChange={(e) => {
+                  setNvQuestionLeft(e.target.value);
+                  saveInputState('nvQuestionLeft', e.target.value);
+                }}
                   placeholder="Ex: Pourquoi Dieu permet-il la souffrance ?"
                   className="w-full h-24 bg-black/40 border border-white/10 rounded-xl py-3 px-4 focus:border-[var(--btn-color)] outline-none transition-all font-medium resize-none" />
               </div>
               <div className="space-y-3">
                 <label className={getCommonLabelStyles()}>Lien de la brochure 'Vivez pour toujours' (pour proposer l'étude) <span className="opacity-40 font-normal lowercase">(Optionnel)</span></label>
                 <div className="relative">
-                  <input type="text" value={nvBrochureLink} onChange={(e) => setNvBrochureLink(e.target.value)}
+                  <input type="text" value={nvBrochureLink} onChange={(e) => {
+                    setNvBrochureLink(e.target.value);
+                    saveInputState('nvBrochureLink', e.target.value);
+                  }}
                     placeholder="https://www.jw.org/fr/publications/livres/vivez-pour-toujours-livre-de-base-du-cours-biblique/lecon-1/" className={getCommonFormStyles()} />
                   <LinkIcon size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
                 </div>
@@ -332,8 +382,14 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
           <div className="space-y-3">
             <label className={getCommonLabelStyles()}>Progression de l'étude</label>
             <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => setCbType('new')} className={getCommonButtonStyles(cbType === 'new')}>Nouveau chapitre</button>
-              <button onClick={() => setCbType('ongoing')} className={getCommonButtonStyles(cbType === 'ongoing')}>En plein chapitre</button>
+              <button onClick={() => {
+                setCbType('new');
+                saveInputState('cbType', 'new');
+              }} className={getCommonButtonStyles(cbType === 'new')}>Nouveau chapitre</button>
+              <button onClick={() => {
+                setCbType('ongoing');
+                saveInputState('cbType', 'ongoing');
+              }} className={getCommonButtonStyles(cbType === 'ongoing')}>En plein chapitre</button>
             </div>
           </div>
 
@@ -343,7 +399,10 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
                 <div className="space-y-3">
                   <label className={getCommonLabelStyles()}>Où en êtes-vous ? (Ex: Chapitre 4, paragraphe 2)</label>
                   <div className="relative">
-                    <input type="text" value={cbChapterParagraph} onChange={(e) => setCbChapterParagraph(e.target.value)}
+                    <input type="text" value={cbChapterParagraph} onChange={(e) => {
+                      setCbChapterParagraph(e.target.value);
+                      saveInputState('cbChapterParagraph', e.target.value);
+                    }}
                       placeholder="Chapitre 4, paragraphe 2" className={getCommonFormStyles()} />
                     <BookOpen size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
                   </div>
@@ -352,7 +411,10 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
               <div className="space-y-3">
                 <label className={getCommonLabelStyles()}>Lien direct de la publication (jw.org) <span className="opacity-40 font-normal lowercase">(Optionnel)</span></label>
                 <div className="relative">
-                  <input type="text" value={cbPublicationLink} onChange={(e) => setCbPublicationLink(e.target.value)}
+                  <input type="text" value={cbPublicationLink} onChange={(e) => {
+                    setCbPublicationLink(e.target.value);
+                    saveInputState('cbPublicationLink', e.target.value);
+                  }}
                     placeholder="https://www.jw.org/fr/publications/livres/vivez-pour-toujours-livre-de-base-du-cours-biblique/" className={getCommonFormStyles()} />
                   <LinkIcon size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
                 </div>

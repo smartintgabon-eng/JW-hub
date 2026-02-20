@@ -42,7 +42,7 @@ export default async function handler(req, res) {
     ${type === 'MINISTRY' ? `
       Partie demandée : ${part}.
       - JOYAUX : Discours structuré, intro engageante, points principaux avec versets (TMN), conclusion pratique. Rédige le contenu complet prêt à être lu.
-      - PERLES SPIRITUELLES : Analyse la lecture biblique de la semaine indiquée. Donne impérativement 9 perles CONCRÈTES (3 sur Jéhovah, 3 sur le ministère, 3 sur la vie chrétienne). Chaque perle doit mentionner le chapitre et le verset exact concerné de la lecture biblique.
+      - PERLES SPIRITUELLES : Analyse la lecture biblique de la semaine indiquée, en te basant sur les chapitres spécifiques. Donne impérativement 9 perles CONCRÈTES (3 sur Jéhovah, 3 sur le ministère, 3 sur la vie chrétienne). Chaque perle doit mentionner le chapitre et le verset exact concerné de la lecture biblique.
       - APPLIQUE-TOI : Préparation pour l'exposé choisi. Rédige le contenu complet prêt à être lu.
       - VIE CHRÉTIENNE : Analyse profonde de l'article ou de la vidéo mentionnée et donne les réponses aux questions posées dans le cahier.
       - ÉTUDE BIBLIQUE DE L'ASSEMBLÉE : Réponds à TOUTES les questions de l'histoire (paragraphes) ET ajoute systématiquement les 5 leçons d'application (Soi-même, Famille, Prédication, Salle, Jéhovah, Jésus).

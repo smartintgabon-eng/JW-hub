@@ -3,8 +3,8 @@ import {
   History as HistoryIcon, Trash2, ChevronLeft, ChevronRight, FileText, Printer, Maximize2, Minimize2, 
   RefreshCw, Loader2, Download, FileSignature, Search, Globe, Link as LinkIcon 
 } from 'lucide-react';
-import { GeneratedStudy, AppSettings, StudyPart } from '../types'; 
-import { deleteFromHistory, saveToHistory } from '../utils/storage'; 
+import { GeneratedStudy, AppSettings, StudyPart } from '../types.ts'; 
+import { deleteFromHistory, saveToHistory } from '../utils/storage.ts'; 
 import saveAs from 'file-saver'; 
 import { Document, Paragraph, TextRun, Packer, AlignmentType, HeadingLevel } from 'docx'; 
 import jsPDF from 'jspdf';

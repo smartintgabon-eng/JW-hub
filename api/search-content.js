@@ -21,11 +21,15 @@ export default async function handler(req, res) {
     INFOS: [Informations pratiques comme "Étude du week-end du..." ou "X paragraphes"]
     ` : `
     MISSION DE RECHERCHE COMPLÈTE :
-    Pour chaque source trouvée, tu dois impérativement fournir :
-    NOM : [Titre de la publication]
-    LIEN : [URL directe jw.org ou wol.jw.org]
-    EXPLICATION : [Ton analyse détaillée qui synthétise l'information]
-    `}
+    Tu es un expert JW. Pour chaque recherche :
+    1. Trouve l'image de couverture (URL finissant par .jpg ou .png).
+    2. Format de réponse STRICT pour l'affichage :
+       # [TITRE DE LA PUBLICATION]
+       Lien : [URL directe jw.org ou wol.jw.org]
+       Image : [URL de l'image miniature associée sur jw.org]
+       ---
+       Résumé : [Ton explication détaillée]
+    `
   `;
 
   try {
@@ -56,11 +60,32 @@ export default async function handler(req, res) {
       });
     }
 
-    return res.status(200).json({ 
-      text: fullText, 
-      title: questionOrSubject,
-      aiExplanation: fullText
-    });
+      const results = [];
+      const entries = fullText.split('---').filter(entry => entry.trim() !== ''); // Split by the separator
+      for (const entry of entries) {
+        const titleMatch = entry.match(/#\s*\[(.*?)\]/);
+        const linkMatch = entry.match(/Lien\s*:\s*(.*)/);
+        const imageMatch = entry.match(/Image\s*:\s*(.*)/);
+        const summaryMatch = entry.match(/Résumé\s*:\s*(.*)/);
+
+        if (titleMatch && linkMatch && imageMatch && summaryMatch) {
+          results.push({
+            title: titleMatch[1].trim(),
+            uri: linkMatch[1].trim(),
+            image: imageMatch[1].trim(),
+            content: summaryMatch[1].trim(), // Using content for summary in rawSources
+          });
+        }
+      }
+
+      const aiExplanation = fullText; // The overall explanation can be the fullText
+
+      return res.status(200).json({
+        text: aiExplanation, // This will be the full markdown text
+        rawSources: results, // Array of parsed sources
+        title: questionOrSubject, // Original question as title
+        aiExplanation: aiExplanation // Redundant, but keeping for now
+      });
 
   } catch (error) {
     console.error("Search Error:", error);

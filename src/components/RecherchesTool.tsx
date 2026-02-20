@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Loader2, AlertTriangle, Info } from 'lucide-react';
-import { AppSettings, GeneratedStudy } from '../types';
-import { callSearchContentApi } from '../services/searchApiService'; // New service for this API
-import { saveInputState, loadInputState } from '../utils/storage'; // Import for persistence
+import { AppSettings, GeneratedStudy } from '../types.ts';
+import { callSearchContentApi } from '../services/searchApiService.ts'; // New service for this API
+import { saveInputState, loadInputState } from '../utils/storage.ts'; // Import for persistence
 
 
 interface Props {

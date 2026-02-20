@@ -1,7 +1,7 @@
 
 // src/utils/storage.ts
 // Fix: Import types from src/types.ts instead of defining them locally
-import { AppView, StudyPart, PredicationType, HistoryCategory, GeneratedStudy, AppSettings } from './types'; 
+import { AppView, StudyPart, PredicationType, HistoryCategory, GeneratedStudy, AppSettings } from './types.ts'; 
 
 const SETTINGS_KEY = 'jw_study_pro_settings';
 const HISTORY_KEY = 'jw_study_pro_history';

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Link as LinkIcon, Calendar, Loader2, Globe, Check, ShieldCheck, AlertTriangle, Plus, Minus, Type, Info } from 'lucide-react'; 
-import { StudyPart, GeneratedStudy, AppSettings } from '../types'; 
-import { saveInputState, loadInputState } from '../utils/storage'; // Import for persistence
+import { StudyPart, GeneratedStudy, AppSettings } from '../types.ts'; 
+import { saveInputState, loadInputState } from '../utils/storage.ts'; // Import for persistence
 
 interface Props {
   type: 'WATCHTOWER' | 'MINISTRY';
@@ -119,20 +119,30 @@ const getLocalizedText = (settings: AppSettings, key: string) => {
 
 
 const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoadingMessage }) => {
-  const [mainLink, setMainLink] = useState(loadInputState(`${type}-mainLink`, ''));
-  const [extraLinks, setExtraLinks] = useState<string[]>(loadInputState(`${type}-extraLinks`, []));
-  const [manualText, setManualText] = useState(loadInputState(`${type}-manualText`, ''));
+  const [mainLink, setMainLink] = useState('');
+  const [extraLinks, setExtraLinks] = useState<string[]>([]);
+  const [manualText, setManualText] = useState('');
   // Set useManual default based on type: true for WATCHTOWER, false for MINISTRY
-  const [useManual, setUseManual] = useState(loadInputState(`${type}-useManual`, type === 'WATCHTOWER')); 
+  const [useManual, setUseManual] = useState(type === 'WATCHTOWER');
   const [loading, setLoading] = useState(false);
   const [articleConfirmed, setArticleConfirmed] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Persistence effects
-  useEffect(() => { saveInputState(`${type}-mainLink`, mainLink); }, [mainLink, type]);
-  useEffect(() => { saveInputState(`${type}-extraLinks`, extraLinks); }, [extraLinks, type]);
-  useEffect(() => { saveInputState(`${type}-manualText`, manualText); }, [manualText, type]);
-  useEffect(() => { saveInputState(`${type}-useManual`, useManual); }, [useManual, type]);
+  useEffect(() => {
+    const savedMainLink = localStorage.getItem(`${type}-mainLink`);
+    if (savedMainLink) setMainLink(savedMainLink);
+    const savedExtraLinks = localStorage.getItem(`${type}-extraLinks`);
+    if (savedExtraLinks) setExtraLinks(JSON.parse(savedExtraLinks));
+    const savedManualText = localStorage.getItem(`${type}-manualText`);
+    if (savedManualText) setManualText(savedManualText);
+    const savedUseManual = localStorage.getItem(`${type}-useManual`);
+    if (savedUseManual) setUseManual(JSON.parse(savedUseManual));
+  }, [type]);
+
+  useEffect(() => { localStorage.setItem(`${type}-mainLink`, mainLink); }, [mainLink, type]);
+  useEffect(() => { localStorage.setItem(`${type}-extraLinks`, JSON.stringify(extraLinks)); }, [extraLinks, type]);
+  useEffect(() => { localStorage.setItem(`${type}-manualText`, manualText); }, [manualText, type]);
+  useEffect(() => { localStorage.setItem(`${type}-useManual`, JSON.stringify(useManual)); }, [useManual, type]);
 
   const addExtraLink = () => {
     if (extraLinks.length < 5) { // Limit extra links for sanity
@@ -252,7 +262,10 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
             {useManual ? (
               <textarea 
                 value={manualText} 
-                onChange={e => setManualText(e.target.value)}
+                onChange={e => {
+                  setManualText(e.target.value);
+                  localStorage.setItem(`${type}-manualText`, e.target.value);
+                }}
                 placeholder={type === 'WATCHTOWER' ? getLocalizedText(settings, 'manualTextPlaceholderWatchtower') : getLocalizedText(settings, 'manualTextPlaceholderMinistry')}
                 className="w-full h-64 bg-black/40 border border-white/10 rounded-2xl p-5 outline-none focus:border-[var(--btn-color)] transition-all resize-none"
               />
@@ -261,7 +274,10 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
                 <div>
                   <label className="text-[10px] font-black uppercase opacity-40 ml-2 tracking-widest">{getLocalizedText(settings, 'mainLinkLabel')}</label>
                   <div className="relative mt-2">
-                    <input type="text" value={mainLink} onChange={e => setMainLink(e.target.value)} placeholder={getLocalizedText(settings, 'mainLinkPlaceholder')} className="w-full bg-black/40 border border-white/10 rounded-2xl py-5 pl-14 pr-4 focus:border-[var(--btn-color)] outline-none" />
+                    <input type="text" value={mainLink} onChange={e => {
+                  setMainLink(e.target.value);
+                  localStorage.setItem(`${type}-mainLink`, e.target.value);
+                }} placeholder={getLocalizedText(settings, 'mainLinkPlaceholder')} className="w-full bg-black/40 border border-white/10 rounded-2xl py-5 pl-14 pr-4 focus:border-[var(--btn-color)] outline-none" />
                     <LinkIcon className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
                   </div>
                 </div>

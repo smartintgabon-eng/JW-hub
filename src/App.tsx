@@ -4,16 +4,16 @@ import {
   HelpCircle, Menu, X, Home as HomeIcon, WifiOff, Download, 
   Lightbulb, BellRing, Loader2, Megaphone, RefreshCw, Search, ChevronRight 
 } from 'lucide-react';
-import { AppView, GeneratedStudy, AppSettings } from './types'; 
-import { getSettings, getHistory, saveToHistory, loadInputState } from './utils/storage'; 
+import { AppView, GeneratedStudy, AppSettings } from './types.ts'; 
+import { getSettings, getHistory, saveToHistory, loadInputState } from './utils/storage.ts'; 
 
-import StudyTool from './components/StudyTool'; 
-import History from './components/History'; 
-import Settings from './components/Settings'; 
-import Tutorial from './components/Tutorial'; 
-import Updates from './components/Updates'; 
-import PredicationTool from './components/PredicationTool';
-import RecherchesTool from './components/RecherchesTool';
+import StudyTool from './components/StudyTool.tsx'; 
+import History from './components/History.tsx'; 
+import Settings from './components/Settings.tsx'; 
+import Tutorial from './components/Tutorial.tsx'; 
+import Updates from './components/Updates.tsx'; 
+import PredicationTool from './components/PredicationTool.tsx';
+import RecherchesTool from './components/RecherchesTool.tsx';
 
 const getContrastColor = (hex: string) => {
   if (!hex || hex.length < 6) return 'white';
@@ -100,8 +100,8 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const bgColor = settings.customHex || settings.backgroundColor || '#09090b';
-    const btnColor = settings.customButtonHex || settings.buttonColor || '#4a70b5';
+    const bgColor = settings.bgColor || '#09090b';
+    const btnColor = settings.btnColor || '#4a70b5';
     document.documentElement.style.setProperty('--bg-color', bgColor);
     document.documentElement.style.setProperty('--text-color', getContrastColor(bgColor));
     document.documentElement.style.setProperty('--btn-color', btnColor);
@@ -156,7 +156,7 @@ const App: React.FC = () => {
       <aside className={`flex flex-col h-screen bg-black/90 backdrop-blur-xl border-r border-white/10 transition-all duration-300 z-50 ${isExpanded ? 'w-72' : 'w-20'} ${isReadingModeActive ? 'hidden' : 'flex'} md:static`}>
         <div className="p-4 flex items-center justify-center mb-8">
           <button onClick={() => setIsExpanded(!isExpanded)} className="p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-all text-[var(--btn-color)]">
-            <Menu size={24} />
+            {isExpanded ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
 
@@ -179,7 +179,7 @@ const App: React.FC = () => {
             <div 
               style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
               className="w-32 h-32 text-5xl rounded-3xl flex items-center justify-center font-black shadow-2xl hover:scale-105 transition-transform cursor-pointer mb-12"
-              onClick={() => handleViewChange(AppView.TUTORIAL)}
+              onClick={handleInstallClick}
             >JW</div>
 
             <h1 className="text-5xl md:text-8xl font-black uppercase tracking-tighter mb-4 leading-none">
