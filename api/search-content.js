@@ -1,5 +1,5 @@
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ message: 'Method Not Allowed' });
@@ -13,12 +13,7 @@ export default async function handler(req, res) {
     Langue de la réponse : ${settings.language || 'fr'}.
     
     ${confirmMode ? `
-    MISSION : Identifier précisément l'article le plus pertinent pour la confirmation.
-    RÈGLE : Réponds EXCLUSIVEMENT sous le format suivant :
-    TITRE: [Le titre exact de l'article]
-    IMAGE: [URL de l'image miniature associée sur jw.org]
-    RÉSUMÉ: [Un résumé de 2 lignes maximum]
-    INFOS: [Informations pratiques comme "Étude du week-end du..." ou "X paragraphes"]
+    MISSION : Identifier précisément l'article le plus pertinent pour la confirmation.\n    RÈGLE : Renvoie EXCLUSIVEMENT un objet JSON avec les propriétés suivantes :\n    {\n      \"title\": \"[Le titre exact de l'article]\",\n      \"imageUrl\": \"[URL de l'image miniature associée sur jw.org ou wol.jw.org, finissant par .jpg ou .png]\",\n      \"summary\": \"[Un résumé concis de l'article, 2-3 phrases maximum]\",\n      \"infos\": \"[Informations pratiques comme 'Étude du week-end du...' ou 'X paragraphes']\"\n    }\n    Si aucune image n'est trouvée, utilise une URL d'image par défaut de jw.org.\n    Ne renvoie aucun texte supplémentaire en dehors du JSON.
     ` : `
     MISSION DE RECHERCHE COMPLÈTE :
     Tu es un assistant JW. Pour chaque recherche, identifie l'article le plus pertinent.
@@ -44,23 +39,26 @@ export default async function handler(req, res) {
         systemInstruction,
         tools: [{ googleSearch: {} }],
         temperature: 0.3,
-        responseMimeType: confirmMode ? undefined : "application/json" // Only request JSON for full search
+        responseMimeType: "application/json" // Always request JSON
       },
     });
 
     const fullText = response.text || "";
     
     if (confirmMode) {
-      const titleMatch = fullText.match(/TITRE\s*:\s*(.*)/i);
-      const imgMatch = fullText.match(/IMAGE\s*:\s*(.*)/i);
-      const sumMatch = fullText.match(/RÉSUMÉ\s*:\s*(.*)/i);
-      const infosMatch = fullText.match(/INFOS\s*:\s*(.*)/i);
+      let parsedResponse;
+      try {
+        parsedResponse = JSON.parse(fullText);
+      } catch (jsonError) {
+        console.error("Failed to parse JSON from AI response in confirmMode:", jsonError);
+        return res.status(500).json({ message: "Erreur: la réponse de l'IA n'est pas au format JSON attendu pour la confirmation." });
+      }
 
       return res.status(200).json({ 
-        previewTitle: titleMatch ? titleMatch[1].trim() : "Article trouvé",
-        previewImage: imgMatch ? imgMatch[1].trim() : "https://assets.jw.org/assets/m/jwb-og-image.png",
-        previewSummary: sumMatch ? sumMatch[1].trim() : "Prêt pour la génération.",
-        previewInfos: infosMatch ? infosMatch[1].trim() : ""
+        previewTitle: parsedResponse.title || "Article trouvé",
+        previewImage: parsedResponse.imageUrl || "https://assets.jw.org/assets/m/jwb-og-image.png",
+        previewSummary: parsedResponse.summary || "Prêt pour la génération.",
+        previewInfos: parsedResponse.infos || ""
       });
     }
 

@@ -14,6 +14,8 @@ import Tutorial from './components/Tutorial.tsx';
 import Updates from './components/Updates.tsx'; 
 import PredicationTool from './components/PredicationTool.tsx';
 import RecherchesTool from './components/RecherchesTool.tsx';
+import PreferenceManager from './components/PreferenceManager.tsx';
+import DiscoursTool from './components/DiscoursTool.tsx';
 
 const getContrastColor = (hex: string) => {
   if (!hex || hex.length < 6) return 'white';
@@ -50,6 +52,7 @@ const getLocalizedText = (settings: AppSettings, key: string) => {
     'latestVersion': { 'fr': 'Dernière version', 'en': 'Latest version', 'es': 'Última versión' },
     'newFeatures': { 'fr': 'Nouvelles Fonctionnalités', 'en': 'New Features', 'es': 'Nuevas características' },
     'advancedSearch': { 'fr': 'Recherches Avancées', 'en': 'Advanced Searches', 'es': 'Búsquedas avanzadas' },
+    'discours': { 'fr': 'Discours', 'en': 'Discourses', 'es': 'Discursos' },
   };
   return texts[key]?.[settings.language] || texts[key]?.['fr'];
 };
@@ -170,6 +173,7 @@ const App: React.FC = () => {
           <NavItem icon={BellRing} label={getLocalizedText(settings, 'updates')} viewId={AppView.UPDATES} />
           <NavItem icon={HelpCircle} label={getLocalizedText(settings, 'tutorial')} viewId={AppView.TUTORIAL} />
           <NavItem icon={SettingsIcon} label={getLocalizedText(settings, 'settings')} viewId={AppView.SETTINGS} />
+          <NavItem icon={Mic} label={getLocalizedText(settings, 'discours')} viewId={AppView.DISCOURS} />
         </nav>
       </aside>
 
@@ -234,6 +238,8 @@ const App: React.FC = () => {
         {view === AppView.SETTINGS && <Settings setSettings={setAppSettings} settings={settings} deferredPrompt={deferredPrompt} handleInstallClick={handleInstallClick} setView={setView} />}
         {view === AppView.TUTORIAL && <Tutorial deferredPrompt={deferredPrompt} handleInstallClick={handleInstallClick} navigateTo={handleViewChange} settings={settings} />}
         {view === AppView.UPDATES && <Updates settings={settings} />}
+        {view === AppView.PREFERENCE_MANAGER && <PreferenceManager settings={settings} setSettings={setAppSettings} onClose={() => handleViewChange(AppView.SETTINGS)} />}
+        {view === AppView.DISCOURS && <DiscoursTool onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
       </main>
     </div>
   );

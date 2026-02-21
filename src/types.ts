@@ -9,7 +9,9 @@ export enum AppView {
   SETTINGS = 'SETTINGS',
   HISTORY = 'HISTORY',
   UPDATES = 'UPDATES',
-  RECHERCHES = 'RECHERCHES' // New view for advanced search
+  RECHERCHES = 'RECHERCHES', // New view for advanced search
+  PREFERENCE_MANAGER = 'PREFERENCE_MANAGER',
+  DISCOURS = 'DISCOURS'
 }
 
 export type StudyPart =
@@ -31,11 +33,15 @@ export type HistoryCategory =
   | 'predication_porte_en_porte'
   | 'predication_nouvelle_visite'
   | 'predication_cours_biblique'
-  | 'recherches'; // New category for searches
+  | 'recherches' // New category for searches
+  | 'discours_normal'
+  | 'discours_jeudi'
+  | 'discours_dimanche'
+  | 'discours_special';
 
 export interface GeneratedStudy {
   id: string;
-  type: 'WATCHTOWER' | 'MINISTRY' | 'PREDICATION' | 'RECHERCHES'; // Added RECHERCHES
+  type: 'WATCHTOWER' | 'MINISTRY' | 'PREDICATION' | 'RECHERCHES' | 'DISCOURS'; // Added DISCOURS
   title: string;
   date: string;
   url?: string | string[]; // Can be a single string or an array of strings
