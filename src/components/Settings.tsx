@@ -1,112 +1,102 @@
-
 import React, { useState, useEffect } from 'react';
-/* Added Download to imports from lucide-react */
-import { Palette, CheckCircle, AlertTriangle, Trash2, Globe, Check, Settings as SettingsIcon, Save, Languages, Download, List as ListIcon } from 'lucide-react';
+import { Palette, Check, Settings as IconSettings, Trash2, RotateCcw, ListFilter, Globe, Smartphone } from 'lucide-react';
+import { saveSettings, clearHistoryOnly, totalReset } from '../utils/storage.ts';
 import { AppSettings, AppView } from '../types.ts';
-import { saveSettings, clearHistoryOnly } from '../utils/storage.ts';
 
-const baseColors = [
-  { name: "Bleu JW", hex: "#4a70b5" },
-  { name: "Indigo", hex: "#6366f1" },
-  { name: "Émeraude", hex: "#10b981" },
-  { name: "Ambre", hex: "#f59e0b" },
-  { name: "Rose", hex: "#ec4899" },
-  { name: "Nuit", hex: "#09090b" },
-  { name: "Lumière", hex: "#f4f4f5" },
+const colorSuggestions = [
+  { name: 'Bleu JW', hex: '#4a70b5' },
+  { name: 'Indigo', hex: '#6366f1' },
+  { name: 'Émeraude', hex: '#10b981' },
+  { name: 'Ambre', hex: '#f59e0b' },
+  { name: 'Rose', hex: '#ec4899' },
+  { name: 'Nuit', hex: '#09090b' }
 ];
 
-const Settings: React.FC<{ settings: AppSettings, setSettings: any, deferredPrompt: any, handleInstallClick: () => void }> = ({ settings, setSettings, deferredPrompt, handleInstallClick }) => {
+const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, setView }: { settings: AppSettings, setSettings: any, deferredPrompt: any, handleInstallClick: () => void, setView: (view: AppView) => void }) => {
   const [draft, setDraft] = useState<AppSettings>(settings);
-  const [colorQuery, setColorQuery] = useState('');
+  const [btnQuery, setBtnQuery] = useState('');
   const [bgQuery, setBgQuery] = useState('');
-  const [saved, setSaved] = useState(false);
 
-  const filterColors = (q: string) => baseColors.filter(c => c.name.toLowerCase().includes(q.toLowerCase())).slice(0, 3);
+  // Suggestions filtrées (4 max)
+  const getSuggestions = (q: string) => colorSuggestions.filter(c => c.name.toLowerCase().includes(q.toLowerCase())).slice(0, 4);
 
-  const handleQuickSave = () => {
+  const saveVisuals = () => {
     setSettings(draft);
     saveSettings(draft);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    // Appliquer immédiatement les couleurs au site
+    document.documentElement.style.setProperty('--btn-color', draft.btnColor);
+    document.documentElement.style.setProperty('--bg-color', draft.bgColor);
+    alert("Réglages visuels et langue enregistrés !");
+  };
+
+  const saveAiPrefs = () => {
+    setSettings(draft);
+    saveSettings(draft);
+    alert("Préférences IA sauvegardées !");
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8 pb-24 animate-in fade-in duration-500">
-      <h2 className="text-3xl font-black uppercase flex items-center gap-3"><SettingsIcon /> Paramètres Pro</h2>
-
-      {/* Couleurs et Langue */}
-      <section className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10 space-y-6">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="flex-1">
-            <label className="text-[10px] font-black uppercase opacity-40 ml-2">Langue de l'interface & IA</label>
-            <select 
-              value={draft.language} 
-              onChange={(e) => setDraft({...draft, language: e.target.value as any})}
-              className="w-full bg-black/20 border border-white/10 rounded-xl p-4 mt-1 outline-none focus:border-[var(--btn-color)]"
-            >
+    <div className="max-w-2xl mx-auto p-4 space-y-8">
+      {/* SECTION VISUELLE & LANGUE */}
+      <section className="bg-white/5 p-6 rounded-[2rem] border border-white/10 space-y-6">
+        <h3 className="flex items-center gap-2 font-black uppercase text-sm"><Palette size={18}/> Style & Langue</h3>
+        
+        {/* Langue (Point 9) */}
+        <div className="flex items-center justify-between bg-black/20 p-4 rounded-xl">
+           <div className="flex items-center gap-2"><Globe size={18}/> <span>Langue du site & IA</span></div>
+           <select value={draft.language} onChange={(e) => setDraft({...draft, language: e.target.value as any})} className="bg-transparent font-bold outline-none">
               <option value="fr">Français</option>
               <option value="en">English</option>
-              <option value="es">Español</option>
-            </select>
-          </div>
+           </select>
         </div>
 
+        {/* Boutons (Point 1) */}
         <div className="relative">
-          <label className="text-[10px] font-black uppercase opacity-40 ml-2">Couleur des boutons</label>
-          <input value={colorQuery} onChange={(e) => setColorQuery(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded-xl p-4 mt-1" placeholder="Chercher une couleur (ex: Indigo)..." />
+          <input value={btnQuery} onChange={(e) => {setBtnQuery(e.target.value); setDraft({...draft, btnColor: e.target.value})}} placeholder="Couleur boutons (Nom ou Hex)" className="w-full bg-black/20 p-4 rounded-xl outline-none border border-white/5 focus:border-[var(--btn-color)]"/>
           <div className="flex gap-2 mt-2">
-            {filterColors(colorQuery).map(c => (
-              <button key={c.hex} onClick={() => {setDraft({...draft, btnColor: c.hex}); setColorQuery(c.name)}} className="px-3 py-1 bg-white/10 rounded-full text-[10px] font-bold" style={{color: c.hex}}>● {c.name}</button>
+            {getSuggestions(btnQuery).map(c => (
+              <button key={c.hex} onClick={() => {setDraft({...draft, btnColor: c.hex}); setBtnQuery(c.name)}} className="text-[10px] px-2 py-1 rounded-full bg-white/5 border border-white/10">● {c.name}</button>
             ))}
           </div>
         </div>
 
+        {/* Fond (Point 2) */}
         <div className="relative">
-          <label className="text-[10px] font-black uppercase opacity-40 ml-2">Couleur du fond</label>
-          <input value={bgQuery} onChange={(e) => setBgQuery(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded-xl p-4 mt-1" placeholder="Ex: Nuit, #09090b" />
+          <input value={bgQuery} onChange={(e) => {setBgQuery(e.target.value); setDraft({...draft, bgColor: e.target.value})}} placeholder="Couleur fond (Nom ou Hex)" className="w-full bg-black/20 p-4 rounded-xl outline-none border border-white/5 focus:border-[var(--btn-color)]"/>
           <div className="flex gap-2 mt-2">
-            {filterColors(bgQuery).map(c => (
-              <button key={c.hex} onClick={() => {setDraft({...draft, bgColor: c.hex}); setBgQuery(c.name)}} className="px-3 py-1 bg-white/10 rounded-full text-[10px] font-bold">● {c.name}</button>
+            {getSuggestions(bgQuery).map(c => (
+              <button key={c.hex} onClick={() => {setDraft({...draft, bgColor: c.hex}); setBgQuery(c.name)}} className="text-[10px] px-2 py-1 rounded-full bg-white/5 border border-white/10">● {c.name}</button>
             ))}
           </div>
         </div>
+
+        <button onClick={saveVisuals} className="w-full py-4 bg-white/10 hover:bg-white/20 rounded-xl font-bold uppercase text-xs transition-all">Sauvegarder le style</button>
       </section>
 
-      {/* Préférences IA */}
-      <section className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10">
+      {/* SECTION PRÉFÉRENCES IA (Point 10) */}
+      <section className="bg-white/5 p-6 rounded-[2rem] border border-white/10">
         <div className="flex justify-between items-center mb-4">
-          <label className="text-xs font-black uppercase opacity-50">Préférences IA</label>
+          <h3 className="font-black uppercase text-sm">Préférences IA</h3>
           <div className="flex gap-2">
-            <button onClick={() => setSettings(prev => ({...prev, view: AppView.PREFERENCE_MANAGER}))} className="p-2 bg-white/5 rounded-lg hover:bg-white/10">
-              <ListIcon size={18} /> {/* Bouton Manager */}
-            </button>
-            <button onClick={handleQuickSave} className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg">
-              <Check size={18} /> {/* Crochet Vert */}
-            </button>
+            <button onClick={() => setView(AppView.PREFERENCE_MANAGER)} className="p-2 bg-white/5 rounded-lg"><ListFilter size={18}/></button>
+            <button onClick={saveAiPrefs} className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg"><Check size={18}/></button>
           </div>
         </div>
-        <textarea 
-          value={draft.answerPreferences} 
-          onChange={(e) => setDraft({...draft, answerPreferences: e.target.value})}
-          placeholder="Ex: Réponds toujours en français, sois encourageant..."
-          className="w-full bg-black/20 rounded-xl p-4 text-sm border-none focus:ring-2 focus:ring-emerald-500"
-        />
+        <textarea value={draft.answerPreferences} onChange={(e) => setDraft({...draft, answerPreferences: e.target.value})} className="w-full h-32 bg-black/20 p-4 rounded-xl outline-none resize-none text-sm" placeholder="Ex: Toujours citer la TMN..."/>
       </section>
 
-      {/* Zone de Danger */}
-      <div className="p-8 bg-red-500/5 border border-red-500/10 rounded-[2.5rem] space-y-4">
-        <h3 className="text-red-400 font-black uppercase text-xs tracking-widest flex items-center gap-2"><AlertTriangle size={14}/> Zone de Danger</h3>
-        <button onClick={() => {if(window.confirm("Voulez-vous supprimer TOUT votre historique d'étude ?")) { clearHistoryOnly(); window.location.reload(); }}} className="w-full py-4 border border-red-500/20 text-red-400 rounded-xl font-bold uppercase text-xs hover:bg-red-500/10 transition-all">
-          <Trash2 size={14} className="inline mr-2"/> Réinitialiser l'historique uniquement
-        </button>
+      {/* ZONE DE DANGER (Point 1 & 6) */}
+      <div className="grid grid-cols-2 gap-4">
+        <button onClick={() => {if(window.confirm("Réinitialiser l'historique ?")) clearHistoryOnly()}} className="py-4 bg-red-500/10 text-red-400 rounded-xl font-bold text-[10px] uppercase flex items-center justify-center gap-2"><Trash2 size={14}/> Historique Seul</button>
+        <button onClick={() => {if(window.confirm("Tout réinitialiser ?")) totalReset()}} className="py-4 bg-red-500/20 text-red-400 rounded-xl font-black text-[10px] uppercase flex items-center justify-center gap-2"><RotateCcw size={14}/> Réinitialisation Totale</button>
       </div>
 
+      {/* INSTALLATION (Point 3) */}
       {deferredPrompt && (
-        <button onClick={handleInstallClick} className="w-full py-6 bg-blue-600 text-white rounded-2xl font-black uppercase shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-3">
-          <Download size={24} /> Installer l'application
-        </button>
+        <button onClick={handleInstallClick} className="w-full py-6 bg-blue-600 rounded-2xl font-black uppercase flex items-center justify-center gap-3"><Smartphone/> Installer l'Application</button>
       )}
     </div>
   );
 };
+
 export default Settings;

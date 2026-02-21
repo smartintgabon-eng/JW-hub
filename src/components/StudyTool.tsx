@@ -139,7 +139,13 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
     if (savedUseManual) setUseManual(JSON.parse(savedUseManual));
   }, [type]);
 
-  useEffect(() => { localStorage.setItem(`${type}-mainLink`, mainLink); }, [mainLink, type]);
+  // Récupération au démarrage
+  useEffect(() => {
+    const saved = localStorage.getItem('cached_link_' + type);
+    if (saved) setMainLink(saved);
+  }, [type]);
+
+  useEffect(() => { localStorage.setItem('cached_link_' + type, mainLink); }, [mainLink, type]);
   useEffect(() => { localStorage.setItem(`${type}-extraLinks`, JSON.stringify(extraLinks)); }, [extraLinks, type]);
   useEffect(() => { localStorage.setItem(`${type}-manualText`, manualText); }, [manualText, type]);
   useEffect(() => { localStorage.setItem(`${type}-useManual`, JSON.stringify(useManual)); }, [useManual, type]);

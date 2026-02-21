@@ -21,14 +21,17 @@ export default async function handler(req, res) {
     INFOS: [Informations pratiques comme "Étude du week-end du..." ou "X paragraphes"]
     ` : `
     MISSION DE RECHERCHE COMPLÈTE :
-    Tu es un expert JW. Pour chaque recherche :
-    1. Trouve l'image de couverture (URL finissant par .jpg ou .png).
-    2. Format de réponse STRICT pour l'affichage :
-       # [TITRE DE LA PUBLICATION]
-       Lien : [URL directe jw.org ou wol.jw.org]
-       Image : [URL de l'image miniature associée sur jw.org]
-       ---
-       Résumé : [Ton explication détaillée]
+    Tu es un assistant JW. Pour chaque recherche, identifie l'article le plus pertinent.
+    RÈGLE : Renvoie EXCLUSIVEMENT un tableau JSON d'objets, même s'il n'y a qu'un seul article.
+    Chaque objet doit avoir le format suivant :
+    {
+      "title": "[Le titre exact de l'article]",
+      "link": "[URL directe jw.org ou wol.jw.org]",
+      "summary": "[Un résumé concis de l'article, 2-3 phrases maximum]",
+      "imageUrl": "[URL de l'image miniature associée sur jw.org ou wol.jw.org, finissant par .jpg ou .png]"
+    }
+    Si aucune image n'est trouvée, utilise une URL d'image par défaut de jw.org.
+    Ne renvoie aucun texte supplémentaire en dehors du JSON.
     `
   `;
 
@@ -38,9 +41,10 @@ export default async function handler(req, res) {
       model: 'gemini-3-flash-preview', 
       contents: [{ text: `Recherche sur : ${questionOrSubject}` }],
       config: { 
-        systemInstruction, 
+        systemInstruction,
         tools: [{ googleSearch: {} }],
-        temperature: 0.3
+        temperature: 0.3,
+        responseMimeType: confirmMode ? undefined : "application/json" // Only request JSON for full search
       },
     });
 
@@ -60,30 +64,33 @@ export default async function handler(req, res) {
       });
     }
 
-      const results = [];
-      const entries = fullText.split('---').filter(entry => entry.trim() !== ''); // Split by the separator
-      for (const entry of entries) {
-        const titleMatch = entry.match(/#\s*\[(.*?)\]/);
-        const linkMatch = entry.match(/Lien\s*:\s*(.*)/);
-        const imageMatch = entry.match(/Image\s*:\s*(.*)/);
-        const summaryMatch = entry.match(/Résumé\s*:\s*(.*)/);
-
-        if (titleMatch && linkMatch && imageMatch && summaryMatch) {
-          results.push({
-            title: titleMatch[1].trim(),
-            uri: linkMatch[1].trim(),
-            image: imageMatch[1].trim(),
-            content: summaryMatch[1].trim(), // Using content for summary in rawSources
-          });
+      let parsedResults;
+      try {
+        parsedResults = JSON.parse(fullText);
+        if (!Array.isArray(parsedResults)) {
+          parsedResults = [parsedResults]; // Ensure it's an array
         }
+      } catch (jsonError) {
+        console.error("Failed to parse JSON from AI response:", jsonError);
+        return res.status(500).json({ message: "Erreur: la réponse de l'IA n'est pas au format JSON attendu." });
       }
 
-      const aiExplanation = fullText; // The overall explanation can be the fullText
+      const rawSources = parsedResults.map((item) => ({
+        title: item.title,
+        uri: item.link,
+        image: item.imageUrl,
+        content: item.summary,
+      }));
+
+      // Construct a formatted string for the 'text' field to match previous frontend expectations
+      const aiExplanation = parsedResults.map((item) => 
+        `NOM : ${item.title}\nLIEN : ${item.link}\nIMAGE : ${item.imageUrl}\nEXPLICATION : ${item.summary}`
+      ).join('\n---\n');
 
       return res.status(200).json({
-        text: aiExplanation, // This will be the full markdown text
-        rawSources: results, // Array of parsed sources
-        title: questionOrSubject, // Original question as title
+        text: aiExplanation, // Formatted string for display
+        rawSources: rawSources, // Array of parsed sources
+        title: questionOrSubject,
         aiExplanation: aiExplanation // Redundant, but keeping for now
       });
 

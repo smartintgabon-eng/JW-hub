@@ -1,6 +1,6 @@
 {
-  "short_name": "JW Study",
-  "name": "JW Study Assistant Pro",
+  "short_name": "JW Study Pro",
+  "name": "JW Study Pro",
   "description": "Assistant spirituel pour l'étude biblique et les réunions.",
   "id": "jw-study-pro-v5",
   "start_url": "/",
@@ -19,13 +19,13 @@
       "src": "logo192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "logo512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }

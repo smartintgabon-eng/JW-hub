@@ -231,7 +231,7 @@ const App: React.FC = () => {
         {view === AppView.PREDICATION && <PredicationTool onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
         {view === AppView.RECHERCHES && <RecherchesTool onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
         {view === AppView.HISTORY && <History history={history} setHistory={setHistory} settings={settings} />}
-        {view === AppView.SETTINGS && <Settings setSettings={setAppSettings} settings={settings} deferredPrompt={deferredPrompt} handleInstallClick={handleInstallClick} />}
+        {view === AppView.SETTINGS && <Settings setSettings={setAppSettings} settings={settings} deferredPrompt={deferredPrompt} handleInstallClick={handleInstallClick} setView={setView} />}
         {view === AppView.TUTORIAL && <Tutorial deferredPrompt={deferredPrompt} handleInstallClick={handleInstallClick} navigateTo={handleViewChange} settings={settings} />}
         {view === AppView.UPDATES && <Updates settings={settings} />}
       </main>

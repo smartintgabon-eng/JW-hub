@@ -10,4 +10,11 @@ if (container) {
       <App />
     </React.StrictMode>
   );
+
+  // Service Worker update logic
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      window.location.reload(); // Reload the app when a new version is installed
+    });
+  }
 }
