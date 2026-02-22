@@ -11,8 +11,14 @@ if (container) {
     </React.StrictMode>
   );
 
-  // Service Worker update logic
+  // Service Worker registration and update logic
   if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('Service Worker enregistré avec succès:', reg))
+        .catch(err => console.log('Erreur d\'enregistrement du Service Worker:', err));
+    });
+
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       window.location.reload(); // Reload the app when a new version is installed
     });

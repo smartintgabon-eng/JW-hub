@@ -118,7 +118,7 @@ const Tutorial: React.FC<Props> = ({ navigateTo, handleInstallClick, settings })
         <p className="opacity-80 mb-8 max-w-lg mx-auto">{getLocalizedText(settings, 'savedAuto')}</p>
         <div className="flex flex-col sm:flex-row justify-center gap-4">
           <button onClick={() => navigateTo(AppView.HOME)} className="px-8 py-4 bg-white text-indigo-700 font-black uppercase text-xs tracking-widest rounded-2xl hover:scale-105 transition-all">{getLocalizedText(settings, 'returnHome')}</button>
-          <button onClick={handleInstallClick} className="px-8 py-4 bg-black/20 text-white border border-white/20 font-black uppercase text-xs tracking-widest rounded-2xl hover:bg-black/30 transition-all">{getLocalizedText(settings, 'installApp')}</button>
+          <button onClick={handleInstallClick} className="px-8 py-4 bg-[var(--btn-color)] text-[var(--btn-text)] font-black uppercase text-xs tracking-widest rounded-2xl hover:opacity-90 transition-opacity shadow-lg">{getLocalizedText(settings, 'installApp')}</button>
         </div>
       </div>
     </div>

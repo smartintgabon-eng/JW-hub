@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from "@google/genai";
 import * as cheerio from 'cheerio';
 
@@ -18,11 +17,26 @@ export default async function handler(req, res) {
     try {
       const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(input)}`;
       const response = await fetch(proxyUrl);
+      if (!response.ok) {
+        console.error(`Proxy request failed with status: ${response.status}`);
+        return;
+      }
       const data = await response.json();
-      const $ = cheerio.load(data.contents);
-      $('#article, .pGroup, .bodyTxt, .qu, .marker').each((i, el) => {
-        contextData += $(el).text() + "\n";
-      });
+
+      if (!data || !data.contents || typeof data.contents !== 'string') {
+        console.error('Proxy returned invalid content structure.');
+        return;
+      }
+
+      try {
+        const $ = cheerio.load(data.contents);
+        $('#article, .pGroup, .bodyTxt, .qu, .marker').each((i, el) => {
+          contextData += $(el).text() + "\n";
+        });
+      } catch (cheerioError) {
+        console.error('Cheerio parsing failed:', cheerioError);
+      }
+
     } catch (e) {
       console.error("Scraping failed");
     }
@@ -31,12 +45,14 @@ export default async function handler(req, res) {
   let systemInstruction = '';
   let contents: any[] = [];
 
+  const userPreferences = settings.answerPreferences.map(p => p.text).join(', ') || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.';
+
   if (type === 'DISCOURS_THEME') {
     systemInstruction = `\
       Tu es un assistant expert JW (Témoins de Jéhovah) spécialisé dans la génération de thèmes de discours.\
       MISSION : Proposer un thème de discours pertinent basé sur les critères fournis.\
       Langue de la réponse : ${settings.language || 'fr'}.\
-      Préférences utilisateur pour le style de réponse : \"${settings.answerPreferences || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.'}\".\
+      Préférences utilisateur pour le style de réponse : "${userPreferences}".\
 \
       RÈGLES D'OR :\
       - Propose UN SEUL thème clair et concis.\
@@ -45,9 +61,9 @@ export default async function handler(req, res) {
     contents = [{ text: `Critères pour le thème : ${input}` }];
   } else if (type === 'DISCOURS') {
     const references = [
-      ...articleReferences.map(ref => `Article: ${ref}`),
-      ...imageReferences.map(ref => `Image: ${ref}`),
-      ...videoReferences.map(ref => `Vidéo: ${ref}`),
+      ...articleReferences.map(ref => `Article: ${cleanUrl(ref)}`),
+      ...imageReferences.map(ref => `Image: ${cleanUrl(ref)}`),
+      ...videoReferences.map(ref => `Vidéo: ${cleanUrl(ref)}`),
     ].filter(Boolean).join('\n');
 
     const specialFields = [];
@@ -59,14 +75,14 @@ export default async function handler(req, res) {
       Tu es un assistant expert JW (Témoins de Jéhovah) spécialisé dans la rédaction de discours.\
       MISSION : Rédiger un discours complet et prêt à l'emploi.\
       Langue de la réponse : ${settings.language || 'fr'}.\
-      Préférences utilisateur pour le style de réponse : \"${settings.answerPreferences || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.'}\".\
+      Préférences utilisateur pour le style de réponse : "${userPreferences}".\
 \
       RÈGLES D'OR :\
       - Le discours doit être facile à comprendre, à expliquer et à utiliser.\
       - Utilise TOUJOURS la Bible. Cite les versets complets (ex: Psaume 105:5) et explique-les.\
       - Intègre les références (articles, images, vidéos) de manière fluide et explique leur contenu.\
       - Le discours doit respecter le temps imparti : ${time}.\
-      - Ne donne AUCUN texte d'introduction comme \"Voici votre discours...\" ou de conclusion comme \"J'espère que cela vous aidera...\". Commence directement le discours.\
+      - Ne donne AUCUN texte d'introduction comme "Voici votre discours..." ou de conclusion comme "J'espère que cela vous aidera...". Commence directement le discours.\
       - Formatage Markdown.\
 \
       INSTRUCTIONS SPÉCIFIQUES AU TYPE DE DISCOURS (${discoursType.toUpperCase()}) :\
@@ -93,12 +109,12 @@ export default async function handler(req, res) {
   } else {
     systemInstruction = `\
       Tu es un assistant expert JW (Témoins de Jéhovah). \
-      MISSION : Générer des réponses PRÊTES À L'EMPLOI pour l'étude \"${type}\".\
+      MISSION : Générer des réponses PRÊTES À L'EMPLOI pour l'étude "${type}".\
       Langue de la réponse : ${settings.language || 'fr'}.\
-      Préférences utilisateur pour le style de réponse : \"${settings.answerPreferences || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.'}\".\
+      Préférences utilisateur pour le style de réponse : "${userPreferences}".\
 \
       RÈGLES D'OR :\
-      - INTERDICTION de dire \"Vous pouvez répondre que...\" ou \"Préparez votre réponse\".\
+      - INTERDICTION de dire "Vous pouvez répondre que..." ou "Préparez votre réponse".\
       - Tu DOIS donner la réponse directement comme si l'utilisateur allait la lire ou l'écrire.\
 \
       INSTRUCTIONS PAR SECTION :\
@@ -117,7 +133,7 @@ export default async function handler(req, res) {
 \
       STYLE : Fidèle aux publications, encourageant et moderne. Formatage Markdown.\
     `;\
-\
+
     contents = contextData \
       ? [{ text: `BASE DE DONNÉES :\n${contextData}\n\nACTION : Génère le contenu pour ${input || 'le texte fourni'}.` }] \
       : [{ text: `Recherche et analyse sur jw.org : ${input}` }];
@@ -152,3 +168,5 @@ export default async function handler(req, res) {
     console.error("Gemini Error:", error);
     return res.status(500).json({ message: "Erreur de quota ou de connexion Gemini. Réessayez dans quelques instants." });
   }
+
+}

@@ -10,22 +10,31 @@ const LAST_VIEW_KEY = 'lastView'; // Key for last active view
 
 // Default settings
 const defaultSettings: AppSettings = {
-  backgroundColor: '#09090b',
-  customHex: '',
-  buttonColor: '#4a70b5',
-  customButtonHex: '',
+  bgColor: '#09090b',
+  btnColor: '#4a70b5',
   autoSave: true, 
-  /* Fix: Updated default model name to gemini-3-flash-preview as recommended for text tasks */
   modelName: 'gemini-3-flash-preview', 
-  answerPreferences: 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.',
-  // Fix: Add language default setting
+  answerPreferences: [], // Default to an empty array
   language: 'fr', // Default language
 };
 
 export const getSettings = (): AppSettings => {
   try {
     const savedSettings = localStorage.getItem(SETTINGS_KEY);
-    return savedSettings ? { ...defaultSettings, ...JSON.parse(savedSettings) } : defaultSettings;
+    let settings: AppSettings = savedSettings ? { ...defaultSettings, ...JSON.parse(savedSettings) } : defaultSettings;
+
+    // Migration for old string-based answerPreferences
+    if (typeof settings.answerPreferences === 'string') {
+      settings.answerPreferences = [
+        { id: 'default', text: settings.answerPreferences as string }
+      ];
+    }
+    // Ensure default preference exists if array is empty
+    if (settings.answerPreferences.length === 0) {
+      settings.answerPreferences.push({ id: 'default', text: 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.' });
+    }
+
+    return settings;
   } catch (error) {
     console.error("Error getting settings from localStorage:", error);
     return defaultSettings;

@@ -54,12 +54,16 @@ export interface GeneratedStudy {
   aiExplanation?: string; // For Recherches tab
 }
 
+export interface Preference {
+  id: string;
+  text: string;
+}
+
 export interface AppSettings {
   bgColor: string;
   btnColor: string;
   autoSave: boolean;
   modelName: string;
-  answerPreferences: string;
-  // Fix: Add language property to AppSettings interface
+  answerPreferences: Preference[];
   language: 'fr' | 'en' | 'es'; 
 }

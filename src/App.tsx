@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   BookOpen, Calendar, Settings as SettingsIcon, History as HistoryIcon, 
   HelpCircle, Menu, X, Home as HomeIcon, WifiOff, Download, 
-  Lightbulb, BellRing, Loader2, Megaphone, RefreshCw, Search, ChevronRight 
+  Lightbulb, BellRing, Loader2, Megaphone, RefreshCw, Search, ChevronRight, Mic 
 } from 'lucide-react';
 import { AppView, GeneratedStudy, AppSettings } from './types.ts'; 
 import { getSettings, getHistory, saveToHistory, loadInputState } from './utils/storage.ts'; 
@@ -15,7 +15,7 @@ import Updates from './components/Updates.tsx';
 import PredicationTool from './components/PredicationTool.tsx';
 import RecherchesTool from './components/RecherchesTool.tsx';
 import PreferenceManager from './components/PreferenceManager.tsx';
-import DiscoursTool from './components/DiscoursTool.tsx';
+import Discourse from './components/Discourse.tsx';
 
 const getContrastColor = (hex: string) => {
   if (!hex || hex.length < 6) return 'white';
@@ -112,6 +112,7 @@ const App: React.FC = () => {
   }, [settings]);
 
   const handleViewChange = (newView: AppView) => {
+    console.log('Changing view to:', newView);
     setView(newView);
     localStorage.setItem('lastView', newView);
   };
@@ -239,7 +240,7 @@ const App: React.FC = () => {
         {view === AppView.TUTORIAL && <Tutorial deferredPrompt={deferredPrompt} handleInstallClick={handleInstallClick} navigateTo={handleViewChange} settings={settings} />}
         {view === AppView.UPDATES && <Updates settings={settings} />}
         {view === AppView.PREFERENCE_MANAGER && <PreferenceManager settings={settings} setSettings={setAppSettings} onClose={() => handleViewChange(AppView.SETTINGS)} />}
-        {view === AppView.DISCOURS && <DiscoursTool onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
+        {view === AppView.DISCOURS && <Discourse />}
       </main>
     </div>
   );

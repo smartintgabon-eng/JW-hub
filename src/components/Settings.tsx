@@ -93,7 +93,7 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
 
       {/* INSTALLATION (Point 3) */}
       {deferredPrompt && (
-        <button onClick={handleInstallClick} className="w-full py-6 bg-blue-600 rounded-2xl font-black uppercase flex items-center justify-center gap-3"><Smartphone/> Installer l'Application</button>
+        <button onClick={handleInstallClick} className="w-full py-6 bg-[var(--btn-color)] text-[var(--btn-text)] rounded-2xl font-black uppercase flex items-center justify-center gap-3 shadow-lg hover:opacity-90 transition-opacity"><Smartphone/> Installer l'Application</button>
       )}
     </div>
   );
