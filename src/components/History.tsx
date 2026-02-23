@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  History as HistoryIcon, Trash2, ChevronLeft, ChevronRight, FileText
+  History as HistoryIcon, Trash2, ChevronLeft, ChevronRight, FileText, Minimize2, Maximize2, FileSignature, Download
 } from 'lucide-react';
-import { GeneratedStudy, AppSettings, StudyPart } from '../types.ts'; 
+import { GeneratedStudy, AppSettings } from '../types.ts'; 
 import { deleteFromHistory } from '../utils/storage.ts'; 
 import saveAs from 'file-saver'; 
 import { Document, Paragraph, TextRun, Packer, AlignmentType, HeadingLevel } from 'docx'; 
@@ -21,11 +21,11 @@ const getLocalizedText = (settings: AppSettings, key: string) => {
     'emptyContent': { 'fr': 'Contenu vide !', 'en': 'Empty content!', 'es': '¡Contenido vacío!' },
     'historyTitle': { 'fr': 'Historique Local', 'en': 'Local History', 'es': 'Historial Local' },
     'noStudySaved': { 'fr': 'Aucune étude sauvegardée', 'en': 'No study saved', 'es': 'Ningún estudio guardado' },
-    'partLabelJoyaux': { 'fr': 'Joyaux de la Parole de Dieu', 'en': 'Treasures from God\'s Word', 'es': 'Joyas de la Palabra de Dios' },
+    'partLabelJoyaux': { 'fr': 'Joyaux de la Parole de Dieu', 'en': 'Treasures from God\\'s Word', 'es': 'Joyas de la Palabra de Dios' },
     'partLabelPerles': { 'fr': 'Perles Spirituelles', 'en': 'Spiritual Gems', 'es': 'Perlas Espirituales' },
     'partLabelAppliqueToi': { 'fr': 'Applique-toi au Ministère', 'en': 'Apply Yourself to the Ministry', 'es': 'Aplicarse al Ministerio' },
     'partLabelVieChretienne': { 'fr': 'Vie Chrétienne', 'en': 'Christian Life', 'es': 'Vida Cristiana' },
-    'partLabelEtudeBiblique': { 'fr': 'Étude Biblique de l\'Assemblée', 'en': 'Congregation Bible Study', 'es': 'Estudio Bíblico de la Congregación' },
+    'partLabelEtudeBiblique': { 'fr': 'Étude Biblique de l\\'Assemblée', 'en': 'Congregation Bible Study', 'es': 'Estudio Bíblico de la Congregación' },
     'partLabelTout': { 'fr': 'Toutes les parties', 'en': 'All Parts', 'es': 'Todas las partes' },
     'articleTypeWatchtower': { 'fr': 'Tour de Garde', 'en': 'Watchtower', 'es': 'La Atalaya' },
     'articleTypeMinistry': { 'fr': 'Cahier de Réunion', 'en': 'Meeting Workbook', 'es': 'Cuaderno de Reuniones' },
@@ -57,9 +57,9 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
   // Helper for DOCX to format text with Markdown-like bold/italic
   const formatTextRunForDocx = (text: string, defaultTextColor: string) => {
     const children: TextRun[] = [];
-    const boldItalicRegex = /\*\*\*(.*?)\*\*\*/g; // Combined bold/italic
-    const boldRegex = /\*\*(.*?)\*\*/g;
-    const italicRegex = /\*(.*?)\*/g;
+    const boldItalicRegex = /\\*\\*\\*(.*?)\\*\\*\\*/g; // Combined bold/italic
+    const boldRegex = /\\*\\*(.*?)\\*\\*/g;
+    const italicRegex = /\\*(.*?)\\*/g;
 
 
     let match;
@@ -161,12 +161,12 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
         if (!block.trim() && i === 0) return; // Skip initial empty block if it exists
         if (!block.trim()) return;
 
-        const lines = block.split('\n');
+        const lines = block.split('\\n');
         const name = lines[0].trim();
         const linkLine = lines.find(l => l.includes('LIEN :')) || '';
         const link = linkLine.replace('LIEN :', '').trim();
         const explanationLines = lines.filter(l => l.includes('EXPLICATION :'));
-        const explanation = explanationLines.map(l => l.replace('EXPLICATION :', '').trim()).join('\n');
+        const explanation = explanationLines.map(l => l.replace('EXPLICATION :', '').trim()).join('\\n');
 
         if (name) {
           docChildren.push(new Paragraph({
@@ -189,7 +189,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
             children: [new TextRun({ text: 'EXPLICATION : ', bold: true, color: defaultTextColor })],
             spacing: { after: 60 },
           }));
-          explanation.split('\n').forEach(expLine => {
+          explanation.split('\\n').forEach(expLine => {
             docChildren.push(new Paragraph({
               children: formatTextRunForDocx(expLine, defaultTextColor),
               spacing: { after: 60 }
@@ -199,28 +199,28 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
       });
     } else {
       // Existing formatting for other study types
-      study.content.split('\n').forEach(line => {
+      study.content.split('\\n').forEach(line => {
         const trimmed = line.trim();
         if (!trimmed) {
           docChildren.push(new Paragraph({ text: '', spacing: { after: 60 } })); // Add empty line for spacing
           return;
         }
 
-        if (trimmed.startsWith('## Sources Brutes Trouvées :') || trimmed.startsWith('## Explication de l\'IA :') || trimmed.startsWith('## Liens des Sources :')) {
+        if (trimmed.startsWith('## Sources Brutes Trouvées :') || trimmed.startsWith('## Explication de l\\'IA :') || trimmed.startsWith('## Liens des Sources :')) {
           docChildren.push(new Paragraph({
-            children: [new TextRun({ text: trimmed.replace(/^##\s*/, ''), bold: true, color: btnColor, size: 36 })],
+            children: [new TextRun({ text: trimmed.replace(/^##\\s*/, ''), bold: true, color: btnColor, size: 36 })],
             spacing: { before: 360, after: 120 },
             heading: HeadingLevel.HEADING_2,
           }));
         } else if (trimmed.startsWith('# ')) {
           docChildren.push(new Paragraph({
-            children: [new TextRun({ text: trimmed.replace(/^#\s*/, ''), bold: true, color: btnColor, size: 32 })],
+            children: [new TextRun({ text: trimmed.replace(/^#\\s*/, ''), bold: true, color: btnColor, size: 32 })],
             spacing: { before: 240, after: 120 },
             heading: HeadingLevel.HEADING_3,
           }));
-        } else if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION|PORTE-EN-PORTE|NOUVELLE VISITE|COURS BIBLIQUE|SUJET|ENTRÉE EN MATIÈRE|MANIÈRE DE FAIRE|CONCLUSION|POINTS À DÉVELOPPER|POINTS PRINCIPAUX|QUESTION POUR REVENIR):/i)) {
+        } else if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L\\'ASSEMBLÉE|QUESTIONS DE RÉVISION|PORTE-EN-PORTE|NOUVELLE VISITE|COURS BIBLIQUE|SUJET|ENTRÉE EN MATIÈRE|MANIÈRE DE FAIRE|CONCLUSION|POINTS À DÉVELOPPER|POINTS PRINCIPAUX|QUESTION POUR REVENIR):/i)) {
           // Specific labels for different parts
-          const labelMatch = trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION|PORTE-EN-PORTE|NOUVELLE VISITE|COURS BIBLIQUE|SUJET|ENTRÉE EN MATIÈRE|MANIÈRE DE FAIRE|CONCLUSION|POINTS À DÉVELOPPER|POINTS PRINCIPAUX|QUESTION POUR REVENIR):/i);
+          const labelMatch = trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE ChrÉTIENNE|ÉTUDE BIBLIQUE DE L\\'ASSEMBLÉE|QUESTIONS DE RÉVISION|PORTE-EN-PORTE|NOUVELLE VISITE|COURS BIBLIQUE|SUJET|ENTRÉE EN MATIÈRE|MANIÈRE DE FAIRE|CONCLUSION|POINTS À DÉVELOPPER|POINTS PRINCIPAUX|QUESTION POUR REVENIR):/i);
           if (labelMatch) {
             const label = labelMatch[0];
             const rest = trimmed.substring(label.length).trim();
@@ -302,12 +302,12 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
         if (!block.trim() && i === 0) return;
         if (!block.trim()) return;
 
-        const lines = block.split('\n');
+        const lines = block.split('\\n');
         const name = lines[0].trim();
         const linkLine = lines.find(l => l.includes('LIEN :')) || '';
         const link = linkLine.replace('LIEN :', '').trim();
         const explanationLines = lines.filter(l => l.includes('EXPLICATION :'));
-        const explanation = explanationLines.map(l => l.replace('EXPLICATION :', '').trim()).join('\n');
+        const explanation = explanationLines.map(l => l.replace('EXPLICATION :', '').trim()).join('\\n');
 
         if (y > doc.internal.pageSize.getHeight() - margin) { doc.addPage(); y = margin; }
         
@@ -332,7 +332,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
         y += 10; // Extra space between research blocks
       });
     } else {
-      study.content.split('\n').forEach(line => {
+      study.content.split('\\n').forEach(line => {
         const trimmed = line.trim();
         if (!trimmed) {
           y += 5; // Spacing for empty lines
@@ -348,11 +348,11 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
           doc.setFontSize(11);
         }
 
-        if (trimmed.startsWith('## Sources Brutes Trouvées :') || trimmed.startsWith('## Explication de l\'IA :') || trimmed.startsWith('## Liens des Sources :')) {
+        if (trimmed.startsWith('## Sources Brutes Trouvées :') || trimmed.startsWith('## Explication de l\\'IA :') || trimmed.startsWith('## Liens des Sources :')) {
           doc.setFontSize(16);
           doc.setFont('helvetica', 'bold');
           doc.setTextColor(btnColor);
-          y = addTextWithLineBreaks(trimmed.replace(/^##\s*/, ''), margin, y + 5, pageWidth - 2 * margin, 7);
+          y = addTextWithLineBreaks(trimmed.replace(/^##\\s*/, ''), margin, y + 5, pageWidth - 2 * margin, 7);
           doc.setTextColor(defaultTextColor);
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(11);
@@ -360,11 +360,11 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
           doc.setFontSize(14);
           doc.setFont('helvetica', 'bold');
           doc.setTextColor(btnColor);
-          y = addTextWithLineBreaks(trimmed.replace(/^#\s*/, ''), margin, y + 5, pageWidth - 2 * margin, 7);
+          y = addTextWithLineBreaks(trimmed.replace(/^#\\s*/, ''), margin, y + 5, pageWidth - 2 * margin, 7);
           doc.setTextColor(defaultTextColor);
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(11);
-        } else if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION|PORTE-EN-PORTE|NOUVELLE VISITE|COURS BIBLIQUE|SUJET|ENTRÉE EN MATIÈRE|MANIÈRE DE FAIRE|CONCLUSION|POINTS À DÉVELOPPER|POINTS PRINCIPAUX|QUESTION POUR REVENIR):/i)) {
+        } else if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE ChrÉTIENNE|ÉTUDE BIBLIQUE DE L\\'ASSEMBLÉE|QUESTIONS DE RÉVISION|PORTE-EN-PORTE|NOUVELLE VISITE|COURS BIBLIQUE|SUJET|ENTRÉE EN MATIÈRE|MANIÈRE DE FAIRE|CONCLUSION|POINTS À DÉVELOPPER|POINTS PRINCIPAUX|QUESTION POUR REVENIR):/i)) {
           doc.setFontSize(12);
           doc.setFont('helvetica', 'bold');
           doc.setTextColor(btnColor);
@@ -440,12 +440,12 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
                 if (!block.trim() && i === 0) return null; // Skip initial empty block if it exists
                 if (!block.trim()) return null;
 
-                const lines = block.split('\n');
+                const lines = block.split('\\n');
                 const name = lines[0].trim();
                 const linkLine = lines.find(l => l.includes('LIEN :')) || '';
                 const link = linkLine.replace('LIEN :', '').trim();
                 const explanationLines = lines.filter(l => l.includes('EXPLICATION :'));
-                const explanation = explanationLines.map(l => l.replace('EXPLICATION :', '').trim()).join('\n');
+                const explanation = explanationLines.map(l => l.replace('EXPLICATION :', '').trim()).join('\\n');
 
                 return (
                   <div key={i} className="border-l-2 border-[var(--btn-color)] pl-4 py-2">
@@ -457,8 +457,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
                         </a>
                       </p>
                     )}
-                    {explanation && <p className="text-sm leading-relaxed">{explanation}</p>}
-                  </div>
+                    {explanation && <p className="text-sm leading-relaxed">{explanation}</p>}\n                  </div>
                 );
               })}
             </div>

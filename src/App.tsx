@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { getContrastTextColor } from './utils/colorUtils.ts';
 import { AppView, GeneratedStudy, AppSettings } from './types.ts'; 
-import { getSettings, getHistory, saveToHistory, loadInputState } from './utils/storage.ts'; 
+import { getSettings, getHistory, saveToHistory } from './utils/storage.ts'; 
 
 import StudyTool from './components/StudyTool.tsx'; 
 import History from './components/History.tsx'; 
@@ -34,12 +34,12 @@ const getLocalizedText = (settings: AppSettings, key: string) => {
     'midweekMeetings': { 'fr': 'Réunions de semaine', 'en': 'Midweek meetings', 'es': 'Reuniones de entre semana' },
     'weekendStudy': { 'fr': 'Étude de week-end', 'en': 'Weekend study', 'es': 'Estudio de fin de semana' },
     'installGuideAlert': { 'fr': "Installation : Cliquez sur 'Partager' (iOS) ou le Menu (Android) puis 'Ajouter à l'écran d'accueil'.", 'en': "Installation: Click 'Share' (iOS) or Menu (Android) then 'Add to Home Screen'.", 'es': "Instalación: Haga clic en 'Compartir' (iOS) o Menú (Android) y luego 'Añadir a pantalla de inicio'." },
-    'updateApp': { 'fr': 'Mettre à jour l\'App', 'en': 'Update App', 'es': 'Actualizar aplicación' },
-    'continueStudy': { 'fr': 'Continuer l\'étude en cours', 'en': 'Continue current study', 'es': 'Continuar estudio actual' },
+    'updateApp': { 'fr': 'Mettre à jour l\\'App', 'en': 'Update App', 'es': 'Actualizar aplicación' },
+    'continueStudy': { 'fr': 'Continuer l\\'étude en cours', 'en': 'Continue current study', 'es': 'Continuar estudio actual' },
     'lastUpdate': { 'fr': 'Dernière mise à jour', 'en': 'Last update', 'es': 'Última actualización' },
     'noCurrentStudy': { 'fr': 'Aucune étude en cours.', 'en': 'No current study.', 'es': 'No hay estudio en curso.' },
     'lastStudy': { 'fr': 'Dernière étude :', 'en': 'Last study:', 'es': 'Último estudio:' },
-    'viewHistory': { 'fr': 'Voir l\'historique', 'en': 'View history', 'es': 'Ver historial' },
+    'viewHistory': { 'fr': 'Voir l\\'historique', 'en': 'View history', 'es': 'Ver historial' },
     'latestVersion': { 'fr': 'Dernière version', 'en': 'Latest version', 'es': 'Última versión' },
     'newFeatures': { 'fr': 'Nouvelles Fonctionnalités', 'en': 'New Features', 'es': 'Nuevas características' },
     'advancedSearch': { 'fr': 'Recherches Avancées', 'en': 'Advanced Searches', 'es': 'Búsquedas avanzadas' },
@@ -80,7 +80,6 @@ const App: React.FC = () => {
   const [history, setHistory] = useState<GeneratedStudy[]>(getHistory());
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [globalLoadingMessage, setGlobalLoadingMessage] = useState<string | null>(null); 
-  const [newServiceWorkerReady, setNewServiceWorkerReady] = useState<ServiceWorker | null>(null);
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
@@ -90,7 +89,7 @@ const App: React.FC = () => {
           if (newWorker) {
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                setNewServiceWorkerReady(newWorker);
+                // Removed setNewServiceWorkerReady as it was unused
               }
             });
           }
@@ -156,7 +155,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <aside className={`flex flex-col h-screen bg-black/90 backdrop-blur-xl border-r border-white/10 transition-all duration-300 z-50 ${isExpanded ? 'w-72' : 'w-20'} ${isReadingModeActive ? 'hidden' : 'flex'} md:static`}>
+      <aside className={`flex flex-col h-screen bg-black/90 backdrop-blur-xl border-r border-white/10 transition-all duration-300 z-50 ${isExpanded ? 'w-72' : 'w-20'} md:static`}>
         <div className="p-4 flex items-center justify-center mb-8">
           <button onClick={() => setIsExpanded(!isExpanded)} className="p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-all text-[var(--btn-color)]">
             {isExpanded ? <X size={24} /> : <Menu size={24} />}
