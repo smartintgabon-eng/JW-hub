@@ -20,7 +20,7 @@ const defaultSettings: AppSettings = {
 export const getSettings = (): AppSettings => {
   try {
     const savedSettings = localStorage.getItem(SETTINGS_KEY);
-    let settings: AppSettings = savedSettings ? { ...defaultSettings, ...JSON.parse(savedSettings) } : defaultSettings;
+    const settings: AppSettings = savedSettings ? { ...defaultSettings, ...JSON.parse(savedSettings) } : defaultSettings;
 
     // Migration for old string-based answerPreferences
     if (typeof settings.answerPreferences === 'string') {
