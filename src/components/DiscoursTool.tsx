@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppSettings, GeneratedStudy } from '../types.ts';
 import { saveInputState, loadInputState } from '../utils/storage.ts';
-import { Mic, Search, Loader2, AlertTriangle, Check, BookOpen, Clock, Image, Video, Link as LinkIcon, Plus, Minus, ChevronRight } from 'lucide-react';
+import { Mic, Search, Loader2, AlertTriangle, Check, BookOpen, Plus, Minus } from 'lucide-react';
 
 interface Props {
   onGenerated: (study: GeneratedStudy) => void;

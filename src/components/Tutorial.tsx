@@ -1,5 +1,5 @@
 import React from 'react';
-import { Lightbulb, Link as LinkIcon, Search, Smartphone, Type, LayoutGrid, ChevronRight, History as HistoryIcon, Settings as SettingsIcon, Download } from 'lucide-react';
+import { Lightbulb, Link as LinkIcon, Search, Smartphone, LayoutGrid, ChevronRight, History as HistoryIcon, Settings as SettingsIcon } from 'lucide-react';
 import { AppSettings, AppView } from '../types.ts'; // Import AppSettings and AppView
 
 interface Props {

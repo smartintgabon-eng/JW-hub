@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
   BookOpen, Calendar, Settings as SettingsIcon, History as HistoryIcon, 
-  HelpCircle, Menu, X, Home as HomeIcon, WifiOff, Download, 
-  Lightbulb, BellRing, Loader2, Megaphone, RefreshCw, Search, ChevronRight, Mic 
+  HelpCircle, Menu, X, Home as HomeIcon, BellRing, Loader2, Search, ChevronRight, Mic 
 } from 'lucide-react';
+import { getContrastTextColor } from './utils/colorUtils.ts';
 import { AppView, GeneratedStudy, AppSettings } from './types.ts'; 
 import { getSettings, getHistory, saveToHistory, loadInputState } from './utils/storage.ts'; 
 
@@ -16,15 +16,6 @@ import PredicationTool from './components/PredicationTool.tsx';
 import RecherchesTool from './components/RecherchesTool.tsx';
 import PreferenceManager from './components/PreferenceManager.tsx';
 import Discourse from './components/Discourse.tsx';
-
-const getContrastColor = (hex: string) => {
-  if (!hex || hex.length < 6) return 'white';
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16); 
-  const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-  return (yiq >= 128) ? '#09090b' : 'white';
-};
 
 const getLocalizedText = (settings: AppSettings, key: string) => {
   const texts: { [key: string]: { [lang: string]: string } } = {
@@ -57,6 +48,28 @@ const getLocalizedText = (settings: AppSettings, key: string) => {
   return texts[key]?.[settings.language] || texts[key]?.['fr'];
 };
 
+interface NavItemProps {
+  icon: React.ElementType;
+  label: string;
+  viewId: AppView;
+  currentView: AppView;
+  handleViewChange: (view: AppView) => void;
+  isExpanded: boolean;
+  settings: AppSettings;
+}
+
+const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, viewId, currentView, handleViewChange, isExpanded }) => (
+  <button
+    onClick={() => handleViewChange(viewId)}
+    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 
+      ${currentView === viewId ? 'bg-[var(--btn-color)] text-[var(--btn-text)] shadow-lg' : 'opacity-50 hover:opacity-100 hover:bg-white/5'}
+      ${!isExpanded ? 'justify-center' : ''}`}
+  >
+    <Icon size={24} />
+    {isExpanded && <span className="text-sm font-bold uppercase tracking-wider truncate">{label}</span>}
+  </button>
+);
+
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>(() => {
     const savedView = localStorage.getItem('lastView');
@@ -65,9 +78,7 @@ const App: React.FC = () => {
   const [settings, setAppSettings] = useState<AppSettings>(getSettings());
   const [isExpanded, setIsExpanded] = useState(window.innerWidth >= 1024); 
   const [history, setHistory] = useState<GeneratedStudy[]>(getHistory());
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isReadingModeActive, setIsReadingModeActive] = useState(false); 
   const [globalLoadingMessage, setGlobalLoadingMessage] = useState<string | null>(null); 
   const [newServiceWorkerReady, setNewServiceWorkerReady] = useState<ServiceWorker | null>(null);
 
@@ -106,9 +117,9 @@ const App: React.FC = () => {
     const bgColor = settings.bgColor || '#09090b';
     const btnColor = settings.btnColor || '#4a70b5';
     document.documentElement.style.setProperty('--bg-color', bgColor);
-    document.documentElement.style.setProperty('--text-color', getContrastColor(bgColor));
+    document.documentElement.style.setProperty('--text-color', getContrastTextColor(bgColor));
     document.documentElement.style.setProperty('--btn-color', btnColor);
-    document.documentElement.style.setProperty('--btn-text', getContrastColor(btnColor));
+    document.documentElement.style.setProperty('--btn-text', getContrastTextColor(btnColor));
   }, [settings]);
 
   const handleViewChange = (newView: AppView) => {
@@ -134,19 +145,7 @@ const App: React.FC = () => {
     }
   };
 
-  const NavItem = ({ icon: Icon, label, viewId }: any) => (
-    <button
-      onClick={() => handleViewChange(viewId)}
-      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 
-        ${view === viewId ? 'bg-[var(--btn-color)] text-[var(--btn-text)] shadow-lg' : 'opacity-50 hover:opacity-100 hover:bg-white/5'}
-        ${!isExpanded ? 'justify-center' : ''}`}
-    >
-      <Icon size={24} />
-      {isExpanded && <span className="text-sm font-bold uppercase tracking-wider truncate">{label}</span>}
-    </button>
-  );
 
-  const lastStudy = history.length > 0 ? history[0] : null;
 
   return (
     <div className="min-h-screen flex flex-row bg-[var(--bg-color)] text-[var(--text-color)] overflow-hidden">
@@ -165,16 +164,16 @@ const App: React.FC = () => {
         </div>
 
         <nav className="flex-1 px-2 space-y-2 overflow-y-auto overflow-x-hidden">
-          <NavItem icon={HomeIcon} label={getLocalizedText(settings, 'home')} viewId={AppView.HOME} />
-          <NavItem icon={Calendar} label={getLocalizedText(settings, 'workbook')} viewId={AppView.MINISTRY} />
-          <NavItem icon={BookOpen} label={getLocalizedText(settings, 'watchtower')} viewId={AppView.WATCHTOWER} />
-          <NavItem icon={Megaphone} label={getLocalizedText(settings, 'preaching')} viewId={AppView.PREDICATION} />
-          <NavItem icon={Search} label={getLocalizedText(settings, 'searches')} viewId={AppView.RECHERCHES} />
-          <NavItem icon={HistoryIcon} label={getLocalizedText(settings, 'history')} viewId={AppView.HISTORY} />
-          <NavItem icon={BellRing} label={getLocalizedText(settings, 'updates')} viewId={AppView.UPDATES} />
-          <NavItem icon={HelpCircle} label={getLocalizedText(settings, 'tutorial')} viewId={AppView.TUTORIAL} />
-          <NavItem icon={SettingsIcon} label={getLocalizedText(settings, 'settings')} viewId={AppView.SETTINGS} />
-          <NavItem icon={Mic} label={getLocalizedText(settings, 'discours')} viewId={AppView.DISCOURS} />
+          <NavItem icon={HomeIcon} label={getLocalizedText(settings, 'home')} viewId={AppView.HOME} currentView={view} handleViewChange={handleViewChange} isExpanded={isExpanded} settings={settings} />
+          <NavItem icon={Calendar} label={getLocalizedText(settings, 'workbook')} viewId={AppView.MINISTRY} currentView={view} handleViewChange={handleViewChange} isExpanded={isExpanded} settings={settings} />
+          <NavItem icon={BookOpen} label={getLocalizedText(settings, 'watchtower')} viewId={AppView.WATCHTOWER} currentView={view} handleViewChange={handleViewChange} isExpanded={isExpanded} settings={settings} />
+          <NavItem icon={Megaphone} label={getLocalizedText(settings, 'preaching')} viewId={AppView.PREDICATION} currentView={view} handleViewChange={handleViewChange} isExpanded={isExpanded} settings={settings} />
+          <NavItem icon={Search} label={getLocalizedText(settings, 'searches')} viewId={AppView.RECHERCHES} currentView={view} handleViewChange={handleViewChange} isExpanded={isExpanded} settings={settings} />
+          <NavItem icon={HistoryIcon} label={getLocalizedText(settings, 'history')} viewId={AppView.HISTORY} currentView={view} handleViewChange={handleViewChange} isExpanded={isExpanded} settings={settings} />
+          <NavItem icon={BellRing} label={getLocalizedText(settings, 'updates')} viewId={AppView.UPDATES} currentView={view} handleViewChange={handleViewChange} isExpanded={isExpanded} settings={settings} />
+          <NavItem icon={HelpCircle} label={getLocalizedText(settings, 'tutorial')} viewId={AppView.TUTORIAL} currentView={view} handleViewChange={handleViewChange} isExpanded={isExpanded} settings={settings} />
+          <NavItem icon={SettingsIcon} label={getLocalizedText(settings, 'settings')} viewId={AppView.SETTINGS} currentView={view} handleViewChange={handleViewChange} isExpanded={isExpanded} settings={settings} />
+          <NavItem icon={Mic} label={getLocalizedText(settings, 'discours')} viewId={AppView.DISCOURS} currentView={view} handleViewChange={handleViewChange} isExpanded={isExpanded} settings={settings} />
         </nav>
       </aside>
 

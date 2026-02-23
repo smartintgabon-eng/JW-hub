@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Markdown from 'react-markdown';
 import { AppSettings } from '../types';
 
 interface NormalDiscourseProps {
@@ -20,6 +21,7 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
   const [themeInput, setThemeInput] = useState<string>('');
   const [generateTheme, setGenerateTheme] = useState<boolean>(false);
   const [generatedTheme, setGeneratedTheme] = useState<string | null>(null);
+  const [generatedDiscourse, setGeneratedDiscourse] = useState<string | null>(null);
 
   const handleTimeChange = (time: string) => {
     setSelectedTime(time);
@@ -35,6 +37,7 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
     setGenerateTheme(!generateTheme);
     setThemeInput('');
     setGeneratedTheme(null); // Clear generated theme when toggling
+    setGeneratedDiscourse(null); // Clear generated discourse when toggling
   };
 
   const handleSubmit = async () => {
@@ -48,23 +51,55 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
     try {
       let finalTheme = themeInput;
       if (generateTheme) {
-        const response = await fetch('/api/generate-discourse-theme', {
+        const themeResponse = await fetch('/api/generate-content', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            criteria: { time: selectedTime, themeCriteria: themeInput },
-            language: settings.language,
+            type: 'DISCOURS_THEME',
+            input: themeInput,
+            settings: settings,
           }),
         });
 
-        if (!response.ok) {
+        if (!themeResponse.ok) {
           throw new Error('Failed to generate theme');
         }
 
-        const data = await response.json();
-        finalTheme = data.theme;
+        const themeData = await themeResponse.json();
+        finalTheme = themeData.theme;
         setGeneratedTheme(finalTheme);
       }
+
+      if (!finalTheme) {
+        alert('Veuillez fournir ou générer un thème pour le discours.');
+        setGlobalLoadingMessage(null);
+        return;
+      }
+
+      const discourseResponse = await fetch('/api/generate-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'DISCOURS',
+          discoursType: 'normal',
+          time: selectedTime,
+          theme: finalTheme,
+          articleReferences: [], // Placeholder for future UI
+          imageReferences: [], // Placeholder for future UI
+          videoReferences: [], // Placeholder for future UI
+          pointsToReinforce: [], // Placeholder for future UI
+          strengths: [], // Placeholder for future UI
+          encouragements: '', // Placeholder for future UI
+          settings: settings,
+        }),
+      });
+
+      if (!discourseResponse.ok) {
+        throw new Error('Failed to generate discourse');
+      }
+
+      const discourseData = await discourseResponse.json();
+      setGeneratedDiscourse(discourseData.text);
 
       console.log({
         selectedTime,
@@ -72,6 +107,7 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
         generateTheme,
       });
       alert(`Discours généré avec le thème : ${finalTheme} (Placeholder)`);
+
     } catch (error) {
       console.error('Error in discourse generation:', error);
       alert(`Erreur lors de la génération du discours: ${error.message}`);
@@ -155,6 +191,13 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
       >
         Générer le Discours
       </button>
+
+      {generatedDiscourse && (
+        <div className="mt-8 p-4 bg-white/5 rounded-lg markdown-body">
+          <h4 className="text-xl font-bold mb-4">Discours Généré :</h4>
+          <Markdown>{generatedDiscourse}</Markdown>
+        </div>
+      )}
     </div>
   );
 };

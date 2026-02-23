@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Megaphone, Loader2, Check, AlertTriangle, Timer, BookOpen, Search, Link as LinkIcon, Handshake, CornerRightDown, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Megaphone, Loader2, Check, AlertTriangle, BookOpen, Link as LinkIcon, Handshake, CornerRightDown } from 'lucide-react';
 // Fix: Import types from src/types.ts
 import { AppSettings, GeneratedStudy, PredicationType } from '../types.ts';
 import { callGenerateContentApi } from '../services/apiService.ts'; 
@@ -141,10 +141,7 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
   const getCommonLabelStyles = () => "text-[10px] font-black uppercase opacity-40 ml-1 tracking-[0.2em]";
   const getCommonButtonStyles = (isActive: boolean) => `px-4 py-2 rounded-lg text-sm font-bold transition-all ${isActive ? 'bg-[var(--btn-color)] text-[var(--btn-text)] shadow' : 'bg-white/5 opacity-60 hover:opacity-100'}`;
 
-  // Check if main fields are empty for specific modes
-  const isPepGenerateDisabled = !pepTopic.trim();
-  const isNvGenerateDisabled = (nvType === 'study' && (!nvStudyChapterParagraph.trim())) || (nvType === 'question' && (!nvQuestionLeft.trim()));
-  const isCbGenerateDisabled = (cbType === 'new' && !cbPublicationLink.trim()) || (cbType === 'ongoing' && (!cbChapterParagraph.trim() || !cbPublicationLink.trim()));
+
 
 
   return (

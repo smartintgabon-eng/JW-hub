@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  History as HistoryIcon, Trash2, ChevronLeft, ChevronRight, FileText, Printer, Maximize2, Minimize2, 
-  RefreshCw, Loader2, Download, FileSignature, Search, Globe, Link as LinkIcon 
+  History as HistoryIcon, Trash2, ChevronLeft, ChevronRight, FileText
 } from 'lucide-react';
 import { GeneratedStudy, AppSettings, StudyPart } from '../types.ts'; 
-import { deleteFromHistory, saveToHistory } from '../utils/storage.ts'; 
+import { deleteFromHistory } from '../utils/storage.ts'; 
 import saveAs from 'file-saver'; 
 import { Document, Paragraph, TextRun, Packer, AlignmentType, HeadingLevel } from 'docx'; 
 import jsPDF from 'jspdf';
@@ -62,7 +61,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
     const boldRegex = /\*\*(.*?)\*\*/g;
     const italicRegex = /\*(.*?)\*/g;
 
-    let lastIndex = 0;
+
     let match;
 
     const segments: { text: string, bold?: boolean, italics?: boolean }[] = [];
@@ -402,17 +401,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
     doc.save(`${study.title.replace(/[\s\W]+/g, '_')}.pdf`);
   };
 
-  const getPartLabel = (part: StudyPart | undefined) => {
-    switch (part) {
-      case 'joyaux_parole_dieu': return getLocalizedText(settings, 'partLabelJoyaux');
-      case 'perles_spirituelles': return getLocalizedText(settings, 'partLabelPerles');
-      case 'applique_ministere': return getLocalizedText(settings, 'partLabelAppliqueToi');
-      case 'vie_chretienne': return getLocalizedText(settings, 'partLabelVieChretienne');
-      case 'etude_biblique_assemblee': return getLocalizedText(settings, 'partLabelEtudeBiblique');
-      case 'tout': return getLocalizedText(settings, 'partLabelTout');
-      default: return getLocalizedText(settings, 'partLabelTout');
-    }
-  };
+
 
   const getStudyTypeLabel = (type: GeneratedStudy['type']) => {
     switch (type) {

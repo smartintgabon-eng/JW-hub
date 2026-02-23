@@ -1,5 +1,5 @@
 import React from 'react';
-import { BellRing, CheckCircle, Bug, Rocket, Megaphone } from 'lucide-react'; // Added Megaphone for new feature
+import { BellRing, CheckCircle, Bug, Rocket } from 'lucide-react';
 import { AppSettings } from '../types.ts'; // Import AppSettings
 
 interface UpdateItem {
@@ -11,6 +11,21 @@ interface UpdateItem {
 }
 
 const updates: UpdateItem[] = [
+  {
+    version: "2.0.5",
+    date: "24 Février 2025",
+    features: [
+      "**PWA Complète** : L'application est désormais une Progressive Web App entièrement configurée, installable sur Android (WebAPK) et iOS, avec un `manifest.json` à jour et un Service Worker (`sw.js`) robuste pour le cache des assets et l'expérience hors ligne.",
+      "**Thème Dynamique Intelligent** : Le texte et les boutons s'adaptent automatiquement en noir ou blanc en fonction de la couleur de fond choisie, garantissant une lisibilité optimale et un contraste parfait.",
+      "**Suggestion de Cantiques par l'IA** : Lors de la génération de discours, l'IA propose désormais un cantique pertinent de la bibliothèque 'Chantons joyeusement' de jw.org, incluant le titre et le lien direct.",
+      "**Analyse de Couleurs par l'IA** : Dans les paramètres, l'IA peut maintenant 'deviner' et décrire une couleur (nom ou code hexadécimal) pour aider l'utilisateur à choisir ses thèmes visuels."
+    ],
+    fixes: [
+      "**Correction de la Recherche Hybride** : Amélioration de la gestion des erreurs pour la recherche hybride, empêchant les crashs dus aux réponses non-JSON (pages d'erreur HTML) de l'API.",
+      "**Fiabilité des Mises à Jour** : Le Service Worker a été mis à jour pour assurer une mise en cache correcte des nouvelles icônes PWA et du logo du site."
+    ]
+  },
+
   {
     version: "2.0.4",
     date: "23 Février 2025",

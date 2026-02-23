@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Palette, Check, Settings as IconSettings, Trash2, RotateCcw, ListFilter, Globe, Smartphone } from 'lucide-react';
+import React, { useState } from 'react';
+import { Palette, Check, Trash2, RotateCcw, ListFilter, Globe, Smartphone } from 'lucide-react';
 import { saveSettings, clearHistoryOnly, totalReset } from '../utils/storage.ts';
 import { AppSettings, AppView } from '../types.ts';
 
@@ -16,6 +16,8 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
   const [draft, setDraft] = useState<AppSettings>(settings);
   const [btnQuery, setBtnQuery] = useState('');
   const [bgQuery, setBgQuery] = useState('');
+  const [btnColorDescription, setBtnColorDescription] = useState<string | null>(null);
+  const [bgColorDescription, setBgColorDescription] = useState<string | null>(null);
 
   // Suggestions filtrées (4 max)
   const getSuggestions = (q: string) => colorSuggestions.filter(c => c.name.toLowerCase().includes(q.toLowerCase())).slice(0, 4);
@@ -35,6 +37,26 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
     alert("Préférences IA sauvegardées !");
   };
 
+  const handleGuessColor = async (colorInput: string, setColorDescription: (desc: string | null) => void) => {
+    if (!colorInput) {
+      setColorDescription(null);
+      return;
+    }
+    setColorDescription('Analyse en cours...');
+    try {
+      const response = await fetch('/api/guess-color', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ colorInput, language: draft.language }),
+      });
+      const data = await response.json();
+      setColorDescription(data.description || "Impossible d'analyser cette couleur.");
+    } catch (error) {
+      console.error('Error guessing color:', error);
+      setColorDescription("Erreur d'analyse de couleur.");
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto p-4 space-y-8">
       {/* SECTION VISUELLE & LANGUE */}
@@ -52,20 +74,28 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
 
         {/* Boutons (Point 1) */}
         <div className="relative">
-          <input value={btnQuery} onChange={(e) => {setBtnQuery(e.target.value); setDraft({...draft, btnColor: e.target.value})}} placeholder="Couleur boutons (Nom ou Hex)" className="w-full bg-black/20 p-4 rounded-xl outline-none border border-white/5 focus:border-[var(--btn-color)]"/>
+          <div className="flex items-center gap-2">
+            <input value={btnQuery} onChange={(e) => {setBtnQuery(e.target.value); setDraft({...draft, btnColor: e.target.value}); setBtnColorDescription(null);}} placeholder="Couleur boutons (Nom ou Hex)" className="w-full bg-black/20 p-4 rounded-xl outline-none border border-white/5 focus:border-[var(--btn-color)]"/>
+            <button onClick={() => handleGuessColor(btnQuery, setBtnColorDescription)} className="p-3 bg-white/10 hover:bg-white/20 rounded-xl text-xs uppercase font-bold">Deviner</button>
+          </div>
+          {btnColorDescription && <p className="text-xs opacity-70 mt-2">IA: {btnColorDescription}</p>}
           <div className="flex gap-2 mt-2">
             {getSuggestions(btnQuery).map(c => (
-              <button key={c.hex} onClick={() => {setDraft({...draft, btnColor: c.hex}); setBtnQuery(c.name)}} className="text-[10px] px-2 py-1 rounded-full bg-white/5 border border-white/10">● {c.name}</button>
+              <button key={c.hex} onClick={() => {setDraft({...draft, btnColor: c.hex}); setBtnQuery(c.name); setBtnColorDescription(null);}} className="text-[10px] px-2 py-1 rounded-full bg-white/5 border border-white/10">● {c.name}</button>
             ))}
           </div>
         </div>
 
         {/* Fond (Point 2) */}
         <div className="relative">
-          <input value={bgQuery} onChange={(e) => {setBgQuery(e.target.value); setDraft({...draft, bgColor: e.target.value})}} placeholder="Couleur fond (Nom ou Hex)" className="w-full bg-black/20 p-4 rounded-xl outline-none border border-white/5 focus:border-[var(--btn-color)]"/>
+          <div className="flex items-center gap-2">
+            <input value={bgQuery} onChange={(e) => {setBgQuery(e.target.value); setDraft({...draft, bgColor: e.target.value}); setBgColorDescription(null);}} placeholder="Couleur fond (Nom ou Hex)" className="w-full bg-black/20 p-4 rounded-xl outline-none border border-white/5 focus:border-[var(--btn-color)]"/>
+            <button onClick={() => handleGuessColor(bgQuery, setBgColorDescription)} className="p-3 bg-white/10 hover:bg-white/20 rounded-xl text-xs uppercase font-bold">Deviner</button>
+          </div>
+          {bgColorDescription && <p className="text-xs opacity-70 mt-2">IA: {bgColorDescription}</p>}
           <div className="flex gap-2 mt-2">
             {getSuggestions(bgQuery).map(c => (
-              <button key={c.hex} onClick={() => {setDraft({...draft, bgColor: c.hex}); setBgQuery(c.name)}} className="text-[10px] px-2 py-1 rounded-full bg-white/5 border border-white/10">● {c.name}</button>
+              <button key={c.hex} onClick={() => {setDraft({...draft, bgColor: c.hex}); setBgQuery(c.name); setBgColorDescription(null);}} className="text-[10px] px-2 py-1 rounded-full bg-white/5 border border-white/10">● {c.name}</button>
             ))}
           </div>
         </div>

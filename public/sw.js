@@ -1,10 +1,10 @@
-const CACHE_NAME = 'jw-study-pro-cache-v29'; // Incremented cache version
+const CACHE_NAME = 'jw-study-pro-cache-v30'; // Incremented cache version for new PWA icons
 const ASSETS = [
   '/',
   '/index.html',
-  '/logo192.png',
-  '/logo512.png',
-  '/favicon.ico',
+  '/logo.png',
+  '/pwa-192.png',
+  '/pwa-512.png',
   'https://cdn.tailwindcss.com',
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap' // Cache fonts
 ];

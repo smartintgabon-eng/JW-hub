@@ -3,6 +3,32 @@ import * as cheerio from 'cheerio';
 
 const cleanUrl = (url) => url?.trim().replace(/[,.;]+$/, '');
 
+async function findSongSuggestion(ai, theme, settings) {
+  const songSearchPrompt = `Trouve un cantique pertinent dans la bibliothèque "Chantons joyeusement" de jw.org (https://www.jw.org/fr/biblioth%C3%A8que/musique-chansons/chantons-joyeusement/) qui correspond au thème suivant : "${theme}". Donne uniquement le titre du cantique et son URL, formatés comme "Titre du cantique | URL du cantique". Si aucun cantique ne correspond, réponds "Aucun cantique trouvé".`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: [{ text: songSearchPrompt }],
+      config: {
+        tools: [{ googleSearch: {} }],
+        temperature: 0.1,
+      },
+    });
+
+    const text = response.text?.trim();
+    if (text && text !== "Aucun cantique trouvé") {
+      const parts = text.split('|').map(p => p.trim());
+      if (parts.length === 2) {
+        return { title: parts[0], url: parts[1] };
+      }
+    }
+  } catch (error) {
+    console.error("Error finding song suggestion:", error);
+  }
+  return null;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ message: 'Method Not Allowed' });
 
@@ -60,6 +86,17 @@ export default async function handler(req, res) {
     `;
     contents = [{ text: `Critères pour le thème : ${input}` }];
   } else if (type === 'DISCOURS') {
+    let songSuggestion = null;
+    if (theme) {
+      songSuggestion = await findSongSuggestion(ai, theme, settings);
+    }
+
+    let songInstruction = '';
+    if (songSuggestion) {
+        songInstruction = `\nSUGGESTION DE CANTIQUES :\nPropose le cantique suivant à la fin du discours, avec son titre et son lien : Cantique "${songSuggestion.title}" (${songSuggestion.url}).`;
+    } else {
+        songInstruction = `\nSUGGESTION DE CANTIQUES :\nRecherche un cantique pertinent dans la bibliothèque "Chantons joyeusement" de jw.org (https://www.jw.org/fr/biblioth%C3%A8que/musique-chansons/chantons-joyeusement/) qui correspond au thème du discours, et propose son titre et son lien à la fin du discours.`;
+    }
     const references = [
       ...articleReferences.map(ref => `Article: ${cleanUrl(ref)}`),
       ...imageReferences.map(ref => `Image: ${cleanUrl(ref)}`),
@@ -103,6 +140,7 @@ export default async function handler(req, res) {
       Thème : ${theme}\
       ${references ? `Références :\n${references}` : ''}\
       ${specialFields.length > 0 ? specialFields.join('\n') : ''}\
+      ${songInstruction}\
     `;
     contents = [{ text: `Rédige le discours sur le thème "${theme}" pour ${time}.` }];
 
