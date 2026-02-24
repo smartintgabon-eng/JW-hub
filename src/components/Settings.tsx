@@ -21,24 +21,23 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
   const [isGuessingBtn, setIsGuessingBtn] = useState(false);
   const [isGuessingBg, setIsGuessingBg] = useState(false);
 
-  // Debounced auto-guess
+  // Debounced auto-guess pour btnQuery
   useEffect(() => {
-    const handleGuess = async () => {
+    const timer = setTimeout(() => {
       if (btnQuery && btnQuery.length > 2) {
-        await handleGuessColor(btnQuery, setBtnColorDescription, setIsGuessingBtn);
+        handleGuessColor(btnQuery, setBtnColorDescription, setIsGuessingBtn, 'btn');
       }
-    };
-    const timer = setTimeout(handleGuess, 1000);
+    }, 1000);
     return () => clearTimeout(timer);
   }, [btnQuery, handleGuessColor]);
 
+  // Debounced auto-guess pour bgQuery
   useEffect(() => {
-    const handleGuess = async () => {
+    const timer = setTimeout(() => {
       if (bgQuery && bgQuery.length > 2) {
-        await handleGuessColor(bgQuery, setBgColorDescription, setIsGuessingBg);
+        handleGuessColor(bgQuery, setBgColorDescription, setIsGuessingBg, 'bg');
       }
-    };
-    const timer = setTimeout(handleGuess, 1000);
+    }, 1000);
     return () => clearTimeout(timer);
   }, [bgQuery, handleGuessColor]);
 
@@ -60,7 +59,7 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
     alert("Préférences IA sauvegardées !");
   };
 
-  const handleGuessColor = useCallback(async (colorInput: string, setColorDescription: (desc: string | null) => void, setLoader: (l: boolean) => void) => {
+  const handleGuessColor = useCallback(async (colorInput: string, setColorDescription: (desc: string | null) => void, setLoader: (l: boolean) => void, type: 'btn' | 'bg') => {
     if (!colorInput || colorInput.length < 3) {
       setColorDescription(null);
       return;
@@ -70,17 +69,26 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
       const response = await fetch('/api/guess-color', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ colorInput, language: draft.language }),
+        body: JSON.stringify({ colorInput, language: draft.language, type }),
       });
       const data = await response.json();
       setColorDescription(data.description || "Impossible d'analyser cette couleur.");
+      if (data.hex) {
+        if (type === 'btn') {
+          setDraft(prev => ({ ...prev, btnColor: data.hex }));
+          setBtnQuery(data.hex);
+        } else {
+          setDraft(prev => ({ ...prev, bgColor: data.hex }));
+          setBgQuery(data.hex);
+        }
+      }
     } catch (error) {
       console.error('Error guessing color:', error);
       setColorDescription("Erreur d'analyse de couleur.");
     } finally {
       setLoader(false);
     }
-  }, [draft.language]);
+  }, [draft.language, setDraft]);
 
   return (
     <div className="max-w-2xl mx-auto p-4 space-y-8">
@@ -104,8 +112,8 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
             <div className="relative flex-1">
               <input 
                 value={btnQuery} 
-                onChange={(e) => {setBtnQuery(e.target.value); setDraft({...draft, btnColor: e.target.value}); setBtnColorDescription(null);}} 
-                placeholder="Ex: #4a70b5 ou 'Bleu ciel'" 
+                onChange={(e) => {setBtnQuery(e.target.value); setBtnColorDescription(null);}} 
+                placeholder="Décrivez une couleur ou entrez un hex (ex: 'bleu océan' ou #123456)" 
                 className="w-full bg-black/20 p-4 rounded-xl outline-none border border-white/5 focus:border-[var(--btn-color)] transition-all"
               />
               {isGuessingBtn && <Loader2 size={16} className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin opacity-50" />}
@@ -131,8 +139,8 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
             <div className="relative flex-1">
               <input 
                 value={bgQuery} 
-                onChange={(e) => {setBgQuery(e.target.value); setDraft({...draft, bgColor: e.target.value}); setBgColorDescription(null);}} 
-                placeholder="Ex: #09090b ou 'Noir profond'" 
+                onChange={(e) => {setBgQuery(e.target.value); setBgColorDescription(null);}} 
+                placeholder="Décrivez une couleur ou entrez un hex (ex: 'vert forêt' ou #654321)" 
                 className="w-full bg-black/20 p-4 rounded-xl outline-none border border-white/5 focus:border-[var(--btn-color)] transition-all"
               />
               {isGuessingBg && <Loader2 size={16} className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin opacity-50" />}

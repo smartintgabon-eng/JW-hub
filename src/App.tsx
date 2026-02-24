@@ -92,7 +92,7 @@ const App: React.FC = () => {
           if (newWorker) {
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                setNewServiceWorkerReady(newWorker);
+
               }
             });
           }
