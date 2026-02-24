@@ -26,7 +26,7 @@ async function startServer() {
       return res.status(500).json({ error: 'API Gemini non initialisée.' });
     }
 
-    const { colorInput, language, type } = req.body;
+    const { colorInput } = req.body;
 
     if (!colorInput) {
       return res.status(400).json({ error: 'colorInput est requis.' });
