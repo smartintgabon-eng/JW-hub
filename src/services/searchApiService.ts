@@ -35,7 +35,7 @@ export const callSearchContentApi = async (
     let errorData;
     try {
       errorData = await response.json();
-    } catch (error) {
+    } catch {
       // If response.json() fails, it means the server didn't send JSON (e.g., HTML error page)
       throw new Error(`Server Error: ${response.status} - Non-JSON response received.`);
     }

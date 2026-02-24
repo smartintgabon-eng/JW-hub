@@ -118,7 +118,7 @@ const SundayDiscourse: React.FC<SundayDiscourseProps> = ({ settings, setGlobalLo
             onChange={handleGenerateThemeToggle}
             className="mr-2 w-5 h-5 text-[var(--btn-color)] focus:ring-[var(--btn-color)] border-gray-300 rounded"
           />
-          <label htmlFor="generateThemeSunday" className="text-base">Laisser l'IA générer le thème</label>
+          <label htmlFor="generateThemeSunday" className="text-base">Laisser l&apos;IA générer le thème</label>
         </div>
         {!generateTheme && (
           <input

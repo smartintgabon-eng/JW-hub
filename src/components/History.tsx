@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  History as HistoryIcon, Trash2, ChevronLeft, ChevronRight, FileText
+  History as HistoryIcon, Trash2, ChevronLeft, ChevronRight, FileText, Minimize2, Maximize2, FileSignature, Download
 } from 'lucide-react';
-import { GeneratedStudy, AppSettings, StudyPart } from '../types.ts'; 
+import { GeneratedStudy, AppSettings } from '../types.ts'; 
 import { deleteFromHistory } from '../utils/storage.ts'; 
 import saveAs from 'file-saver'; 
 import { Document, Paragraph, TextRun, Packer, AlignmentType, HeadingLevel } from 'docx'; 

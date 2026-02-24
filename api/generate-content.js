@@ -3,8 +3,14 @@ import * as cheerio from 'cheerio';
 
 const cleanUrl = (url) => url?.trim().replace(/[,.;]+$/, '');
 
-async function findSongSuggestion(ai, theme, settings) {
-  const songSearchPrompt = `Trouve un cantique pertinent dans la bibliothèque "Chantons joyeusement" de jw.org (https://www.jw.org/fr/biblioth%C3%A8que/musique-chansons/chantons-joyeusement/) qui correspond au thème suivant : "${theme}". Donne uniquement le titre du cantique et son URL, formatés comme "Titre du cantique | URL du cantique". Si aucun cantique ne correspond, réponds "Aucun cantique trouvé".`;
+async function findSongSuggestion(ai, theme) {
+  const songSearchPrompt = `Tu es un assistant JW. Ta mission est de trouver un cantique pertinent dans le recueil "Chantons joyeusement" (disponible sur https://www.jw.org/fr/biblioth%C3%A8que/musique-chansons/chantons-joyeusement/) qui correspond au thème : "${theme}".
+  
+  RÈGLES :
+  1. Recherche UNIQUEMENT dans le recueil "Chantons joyeusement".
+  2. Donne le titre exact et l'URL directe vers jw.org.
+  3. Format de réponse : "Titre du cantique | URL".
+  4. Si tu ne trouves rien de précis, propose le cantique le plus proche thématiquement.`;
 
   try {
     const response = await ai.models.generateContent({
@@ -12,14 +18,14 @@ async function findSongSuggestion(ai, theme, settings) {
       contents: [{ text: songSearchPrompt }],
       config: {
         tools: [{ googleSearch: {} }],
-        temperature: 0.1,
+        temperature: 0.2,
       },
     });
 
     const text = response.text?.trim();
-    if (text && text !== "Aucun cantique trouvé") {
+    if (text && text.includes('|')) {
       const parts = text.split('|').map(p => p.trim());
-      if (parts.length === 2) {
+      if (parts.length >= 2) {
         return { title: parts[0], url: parts[1] };
       }
     }
@@ -63,7 +69,7 @@ export default async function handler(req, res) {
         console.error('Cheerio parsing failed:', cheerioError);
       }
 
-    } catch (e) {
+    } catch {
       console.error("Scraping failed");
     }
   }
@@ -88,7 +94,7 @@ export default async function handler(req, res) {
   } else if (type === 'DISCOURS') {
     let songSuggestion = null;
     if (theme) {
-      songSuggestion = await findSongSuggestion(ai, theme, settings);
+      songSuggestion = await findSongSuggestion(ai, theme);
     }
 
     let songInstruction = '';
@@ -169,11 +175,11 @@ export default async function handler(req, res) {
         - Ajoute les questions de révision à la fin.\
       `}\
 \
-      STYLE : Fidèle aux publications, encourageant et moderne. Formatage Markdown.\
-    `;\
+      STYLE : Fidèle aux publications, encourageant et moderne. Formatage Markdown.
+    `;
 
-    contents = contextData \
-      ? [{ text: `BASE DE DONNÉES :\n${contextData}\n\nACTION : Génère le contenu pour ${input || 'le texte fourni'}.` }] \
+    contents = contextData
+      ? [{ text: `BASE DE DONNÉES :\n${contextData}\n\nACTION : Génère le contenu pour ${input || 'le texte fourni'}.` }]
       : [{ text: `Recherche et analyse sur jw.org : ${input}` }];
   }
 

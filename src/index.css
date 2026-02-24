@@ -5,11 +5,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  --primary-color: #3b82f6; /* Default blue */
-  --background-color: #09090b; /* Default dark background */
-  --text-color: #ffffff; /* Default light text */
-  --btn-bg-color: var(--primary-color);
-  --btn-text-color: var(--text-color);
+  --bg-color: #09090b;
+  --text-color: #ffffff;
+  --btn-color: #3b82f6;
+  --btn-text: #ffffff;
 }
 
 @theme {
@@ -18,7 +17,7 @@
 }
 
 body {
-  background-color: var(--background-color);
+  background-color: var(--bg-color);
   color: var(--text-color);
   font-family: var(--font-sans);
 }

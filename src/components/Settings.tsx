@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Palette, Check, Trash2, RotateCcw, ListFilter, Globe, Smartphone } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Palette, Check, Trash2, RotateCcw, ListFilter, Globe, Smartphone, Loader2 } from 'lucide-react';
 import { saveSettings, clearHistoryOnly, totalReset } from '../utils/storage.ts';
 import { AppSettings, AppView } from '../types.ts';
 
@@ -18,6 +18,29 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
   const [bgQuery, setBgQuery] = useState('');
   const [btnColorDescription, setBtnColorDescription] = useState<string | null>(null);
   const [bgColorDescription, setBgColorDescription] = useState<string | null>(null);
+  const [isGuessingBtn, setIsGuessingBtn] = useState(false);
+  const [isGuessingBg, setIsGuessingBg] = useState(false);
+
+  // Debounced auto-guess
+  useEffect(() => {
+    const handleGuess = async () => {
+      if (btnQuery && btnQuery.length > 2) {
+        await handleGuessColor(btnQuery, setBtnColorDescription, setIsGuessingBtn);
+      }
+    };
+    const timer = setTimeout(handleGuess, 1000);
+    return () => clearTimeout(timer);
+  }, [btnQuery, handleGuessColor]);
+
+  useEffect(() => {
+    const handleGuess = async () => {
+      if (bgQuery && bgQuery.length > 2) {
+        await handleGuessColor(bgQuery, setBgColorDescription, setIsGuessingBg);
+      }
+    };
+    const timer = setTimeout(handleGuess, 1000);
+    return () => clearTimeout(timer);
+  }, [bgQuery, handleGuessColor]);
 
   // Suggestions filtrées (4 max)
   const getSuggestions = (q: string) => colorSuggestions.filter(c => c.name.toLowerCase().includes(q.toLowerCase())).slice(0, 4);
@@ -37,12 +60,12 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
     alert("Préférences IA sauvegardées !");
   };
 
-  const handleGuessColor = async (colorInput: string, setColorDescription: (desc: string | null) => void) => {
-    if (!colorInput) {
+  const handleGuessColor = useCallback(async (colorInput: string, setColorDescription: (desc: string | null) => void, setLoader: (l: boolean) => void) => {
+    if (!colorInput || colorInput.length < 3) {
       setColorDescription(null);
       return;
     }
-    setColorDescription('Analyse en cours...');
+    setLoader(true);
     try {
       const response = await fetch('/api/guess-color', {
         method: 'POST',
@@ -54,8 +77,10 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
     } catch (error) {
       console.error('Error guessing color:', error);
       setColorDescription("Erreur d'analyse de couleur.");
+    } finally {
+      setLoader(false);
     }
-  };
+  }, [draft.language]);
 
   return (
     <div className="max-w-2xl mx-auto p-4 space-y-8">
@@ -74,28 +99,54 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
 
         {/* Boutons (Point 1) */}
         <div className="relative">
+          <label className="text-[10px] font-black uppercase opacity-40 ml-2 tracking-widest mb-2 block">Couleur des boutons</label>
           <div className="flex items-center gap-2">
-            <input value={btnQuery} onChange={(e) => {setBtnQuery(e.target.value); setDraft({...draft, btnColor: e.target.value}); setBtnColorDescription(null);}} placeholder="Couleur boutons (Nom ou Hex)" className="w-full bg-black/20 p-4 rounded-xl outline-none border border-white/5 focus:border-[var(--btn-color)]"/>
-            <button onClick={() => handleGuessColor(btnQuery, setBtnColorDescription)} className="p-3 bg-white/10 hover:bg-white/20 rounded-xl text-xs uppercase font-bold">Deviner</button>
+            <div className="relative flex-1">
+              <input 
+                value={btnQuery} 
+                onChange={(e) => {setBtnQuery(e.target.value); setDraft({...draft, btnColor: e.target.value}); setBtnColorDescription(null);}} 
+                placeholder="Ex: #4a70b5 ou 'Bleu ciel'" 
+                className="w-full bg-black/20 p-4 rounded-xl outline-none border border-white/5 focus:border-[var(--btn-color)] transition-all"
+              />
+              {isGuessingBtn && <Loader2 size={16} className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin opacity-50" />}
+            </div>
+            <div className="w-12 h-12 rounded-xl border border-white/10 shadow-inner" style={{ backgroundColor: draft.btnColor }}></div>
           </div>
-          {btnColorDescription && <p className="text-xs opacity-70 mt-2">IA: {btnColorDescription}</p>}
-          <div className="flex gap-2 mt-2">
+          {btnColorDescription && (
+            <div className="mt-3 p-4 bg-white/5 rounded-2xl border border-white/5 animate-in slide-in-from-top-2 duration-300">
+              <p className="text-xs leading-relaxed italic opacity-80">{btnColorDescription}</p>
+            </div>
+          )}
+          <div className="flex flex-wrap gap-2 mt-3">
             {getSuggestions(btnQuery).map(c => (
-              <button key={c.hex} onClick={() => {setDraft({...draft, btnColor: c.hex}); setBtnQuery(c.name); setBtnColorDescription(null);}} className="text-[10px] px-2 py-1 rounded-full bg-white/5 border border-white/10">● {c.name}</button>
+              <button key={c.hex} onClick={() => {setDraft({...draft, btnColor: c.hex}); setBtnQuery(c.name); setBtnColorDescription(null);}} className="text-[10px] px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all">● {c.name}</button>
             ))}
           </div>
         </div>
 
         {/* Fond (Point 2) */}
         <div className="relative">
+          <label className="text-[10px] font-black uppercase opacity-40 ml-2 tracking-widest mb-2 block">Couleur de fond</label>
           <div className="flex items-center gap-2">
-            <input value={bgQuery} onChange={(e) => {setBgQuery(e.target.value); setDraft({...draft, bgColor: e.target.value}); setBgColorDescription(null);}} placeholder="Couleur fond (Nom ou Hex)" className="w-full bg-black/20 p-4 rounded-xl outline-none border border-white/5 focus:border-[var(--btn-color)]"/>
-            <button onClick={() => handleGuessColor(bgQuery, setBgColorDescription)} className="p-3 bg-white/10 hover:bg-white/20 rounded-xl text-xs uppercase font-bold">Deviner</button>
+            <div className="relative flex-1">
+              <input 
+                value={bgQuery} 
+                onChange={(e) => {setBgQuery(e.target.value); setDraft({...draft, bgColor: e.target.value}); setBgColorDescription(null);}} 
+                placeholder="Ex: #09090b ou 'Noir profond'" 
+                className="w-full bg-black/20 p-4 rounded-xl outline-none border border-white/5 focus:border-[var(--btn-color)] transition-all"
+              />
+              {isGuessingBg && <Loader2 size={16} className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin opacity-50" />}
+            </div>
+            <div className="w-12 h-12 rounded-xl border border-white/10 shadow-inner" style={{ backgroundColor: draft.bgColor }}></div>
           </div>
-          {bgColorDescription && <p className="text-xs opacity-70 mt-2">IA: {bgColorDescription}</p>}
-          <div className="flex gap-2 mt-2">
+          {bgColorDescription && (
+            <div className="mt-3 p-4 bg-white/5 rounded-2xl border border-white/5 animate-in slide-in-from-top-2 duration-300">
+              <p className="text-xs leading-relaxed italic opacity-80">{bgColorDescription}</p>
+            </div>
+          )}
+          <div className="flex flex-wrap gap-2 mt-3">
             {getSuggestions(bgQuery).map(c => (
-              <button key={c.hex} onClick={() => {setDraft({...draft, bgColor: c.hex}); setBgQuery(c.name); setBgColorDescription(null);}} className="text-[10px] px-2 py-1 rounded-full bg-white/5 border border-white/10">● {c.name}</button>
+              <button key={c.hex} onClick={() => {setDraft({...draft, bgColor: c.hex}); setBgQuery(c.name); setBgColorDescription(null);}} className="text-[10px] px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all">● {c.name}</button>
             ))}
           </div>
         </div>
@@ -108,11 +159,29 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-black uppercase text-sm">Préférences IA</h3>
           <div className="flex gap-2">
-            <button onClick={() => setView(AppView.PREFERENCE_MANAGER)} className="p-2 bg-white/5 rounded-lg"><ListFilter size={18}/></button>
-            <button onClick={saveAiPrefs} className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg"><Check size={18}/></button>
+            <button onClick={() => setView(AppView.PREFERENCE_MANAGER)} className="p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-all"><ListFilter size={18}/></button>
+            <button onClick={saveAiPrefs} className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/30 transition-all"><Check size={18}/></button>
           </div>
         </div>
-        <textarea value={draft.answerPreferences} onChange={(e) => setDraft({...draft, answerPreferences: e.target.value})} className="w-full h-32 bg-black/20 p-4 rounded-xl outline-none resize-none text-sm" placeholder="Ex: Toujours citer la TMN..."/>
+        <div className="space-y-2">
+          {draft.answerPreferences.length === 0 ? (
+            <p className="text-sm opacity-50 italic">Aucune préférence enregistrée.</p>
+          ) : (
+            <div className="max-h-32 overflow-y-auto space-y-2 pr-2">
+              {draft.answerPreferences.map(p => (
+                <div key={p.id} className="text-xs bg-black/20 p-3 rounded-xl border border-white/5">
+                  {p.text}
+                </div>
+              ))}
+            </div>
+          )}
+          <button 
+            onClick={() => setView(AppView.PREFERENCE_MANAGER)}
+            className="w-full py-3 mt-2 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold uppercase transition-all flex items-center justify-center gap-2"
+          >
+            <ListFilter size={14} /> Gérer les préférences
+          </button>
+        </div>
       </section>
 
       {/* ZONE DE DANGER (Point 1 & 6) */}
@@ -123,7 +192,7 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
 
       {/* INSTALLATION (Point 3) */}
       {deferredPrompt && (
-        <button onClick={handleInstallClick} className="w-full py-6 bg-[var(--btn-color)] text-[var(--btn-text)] rounded-2xl font-black uppercase flex items-center justify-center gap-3 shadow-lg hover:opacity-90 transition-opacity"><Smartphone/> Installer l'Application</button>
+        <button onClick={handleInstallClick} className="w-full py-6 bg-[var(--btn-color)] text-[var(--btn-text)] rounded-2xl font-black uppercase flex items-center justify-center gap-3 shadow-lg hover:opacity-90 transition-opacity"><Smartphone/> Installer l&apos;Application</button>
       )}
     </div>
   );

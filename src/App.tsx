@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
   BookOpen, Calendar, Settings as SettingsIcon, History as HistoryIcon, 
-  HelpCircle, Menu, X, Home as HomeIcon, BellRing, Loader2, Search, ChevronRight, Mic 
+  HelpCircle, Menu, X, Home as HomeIcon, BellRing, Loader2, Search, ChevronRight, Mic,
+  Megaphone
 } from 'lucide-react';
 import { getContrastTextColor } from './utils/colorUtils.ts';
 import { AppView, GeneratedStudy, AppSettings } from './types.ts'; 
-import { getSettings, getHistory, saveToHistory, loadInputState } from './utils/storage.ts'; 
+import { getSettings, getHistory, saveToHistory } from './utils/storage.ts'; 
 
 import StudyTool from './components/StudyTool.tsx'; 
 import History from './components/History.tsx'; 
@@ -77,10 +78,11 @@ const App: React.FC = () => {
   });
   const [settings, setAppSettings] = useState<AppSettings>(getSettings());
   const [isExpanded, setIsExpanded] = useState(window.innerWidth >= 1024); 
+  const [isReadingModeActive] = useState(false);
   const [history, setHistory] = useState<GeneratedStudy[]>(getHistory());
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [globalLoadingMessage, setGlobalLoadingMessage] = useState<string | null>(null); 
-  const [newServiceWorkerReady, setNewServiceWorkerReady] = useState<ServiceWorker | null>(null);
+
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
@@ -239,7 +241,7 @@ const App: React.FC = () => {
         {view === AppView.TUTORIAL && <Tutorial deferredPrompt={deferredPrompt} handleInstallClick={handleInstallClick} navigateTo={handleViewChange} settings={settings} />}
         {view === AppView.UPDATES && <Updates settings={settings} />}
         {view === AppView.PREFERENCE_MANAGER && <PreferenceManager settings={settings} setSettings={setAppSettings} onClose={() => handleViewChange(AppView.SETTINGS)} />}
-        {view === AppView.DISCOURS && <Discourse />}
+        {view === AppView.DISCOURS && <Discourse settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
       </main>
     </div>
   );

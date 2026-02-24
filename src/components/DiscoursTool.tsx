@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppSettings, GeneratedStudy } from '../types.ts';
 import { saveInputState, loadInputState } from '../utils/storage.ts';
-import { Mic, Search, Loader2, AlertTriangle, Check, BookOpen, Plus, Minus } from 'lucide-react';
+import { Mic, Search, Loader2, BookOpen, Plus, Minus } from 'lucide-react';
 
 interface Props {
   onGenerated: (study: GeneratedStudy) => void;
@@ -244,6 +244,76 @@ const DiscoursTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoading
     return null;
   };
 
+  const handleGenerateDiscours = async () => {
+    if (!themeConfirmed) {
+      setError(getLocalizedText(settings, 'confirmTheme'));
+      return;
+    }
+    if (discoursType === 'jeudi' && time === 'custom' && (customTime === '' || customTime < 1 || customTime > 15)) {
+      setError(getLocalizedText(settings, 'invalidTime'));
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setGlobalLoadingMessage(getLocalizedText(settings, 'generatingDiscours'));
+
+    try {
+      const res = await fetch('/api/generate-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'DISCOURS',
+          discoursType,
+          time: time === 'custom' ? customTime : time,
+          theme: themeConfirmed,
+          articleReferences: articleReferences.filter(Boolean),
+          imageReferences: imageReferences.filter(Boolean),
+          videoReferences: videoReferences.filter(Boolean),
+          pointsToReinforce: pointsToReinforce.filter(Boolean),
+          strengths: strengths.filter(Boolean),
+          encouragements,
+          settings,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || getLocalizedText(settings, 'generationFailed'));
+
+      const study: GeneratedStudy = {
+        id: Date.now().toString(),
+        type: 'DISCOURS',
+        title: themeConfirmed,
+        date: new Date().toLocaleDateString(settings.language === 'fr' ? 'fr-FR' : settings.language === 'es' ? 'es-ES' : 'en-US'),
+        content: data.text,
+        timestamp: Date.now(),
+        category: `discours_${discoursType}` as any,
+        url: articleReferences.filter(Boolean).join(', ') || 'N/A',
+        aiExplanation: data.text,
+      };
+
+      onGenerated(study);
+      // Reset form
+      setDiscoursType('normal');
+      setTime('');
+      setCustomTime('');
+      setTheme('');
+      setThemeCriteria('');
+      setThemeConfirmed(null);
+      setArticleReferences(['']);
+      setImageReferences(['']);
+      setVideoReferences(['']);
+      setPointsToReinforce(['']);
+      setStrengths(['']);
+      setEncouragements('');
+
+    } catch (err: any) {
+      setError(err.message || getLocalizedText(settings, 'generationFailed'));
+    } finally {
+      setLoading(false);
+      setGlobalLoadingMessage(null);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-10 shadow-2xl relative overflow-hidden">
@@ -314,72 +384,3 @@ const DiscoursTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoading
 };
 
 export default DiscoursTool;
-  const handleGenerateDiscours = async () => {
-    if (!themeConfirmed) {
-      setError(getLocalizedText(settings, 'confirmTheme'));
-      return;
-    }
-    if (discoursType === 'jeudi' && time === 'custom' && (customTime === '' || customTime < 1 || customTime > 15)) {
-      setError(getLocalizedText(settings, 'invalidTime'));
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    setGlobalLoadingMessage(getLocalizedText(settings, 'generatingDiscours'));
-
-    try {
-      const res = await fetch('/api/generate-content', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'DISCOURS',
-          discoursType,
-          time: time === 'custom' ? customTime : time,
-          theme: themeConfirmed,
-          articleReferences: articleReferences.filter(Boolean),
-          imageReferences: imageReferences.filter(Boolean),
-          videoReferences: videoReferences.filter(Boolean),
-          pointsToReinforce: pointsToReinforce.filter(Boolean),
-          strengths: strengths.filter(Boolean),
-          encouragements,
-          settings,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || getLocalizedText(settings, 'generationFailed'));
-
-      const study: GeneratedStudy = {
-        id: Date.now().toString(),
-        type: 'DISCOURS',
-        title: themeConfirmed,
-        date: new Date().toLocaleDateString(settings.language === 'fr' ? 'fr-FR' : settings.language === 'es' ? 'es-ES' : 'en-US'),
-        content: data.text,
-        timestamp: Date.now(),
-        category: `discours_${discoursType}` as any,
-        url: articleReferences.filter(Boolean).join(', ') || 'N/A',
-        aiExplanation: data.text,
-      };
-
-      onGenerated(study);
-      // Reset form
-      setDiscoursType('normal');
-      setTime('');
-      setCustomTime('');
-      setTheme('');
-      setThemeCriteria('');
-      setThemeConfirmed(null);
-      setArticleReferences(['']);
-      setImageReferences(['']);
-      setVideoReferences(['']);
-      setPointsToReinforce(['']);
-      setStrengths(['']);
-      setEncouragements('');
-
-    } catch (err: any) {
-      setError(err.message || getLocalizedText(settings, 'generationFailed'));
-    } finally {
-      setLoading(false);
-      setGlobalLoadingMessage(null);
-    }
-  };

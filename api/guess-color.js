@@ -1,38 +1,23 @@
 import { GoogleGenAI } from "@google/genai";
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method Not Allowed' });
-  }
+  if (req.method !== 'POST') return res.status(405).json({ message: 'Method Not Allowed' });
 
   const { colorInput, language } = req.body;
-
-  if (!colorInput) {
-    return res.status(400).json({ message: 'Color input is required.' });
-  }
-
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-  const systemInstruction = `
-    Tu es un expert en couleurs. Ton rôle est d'analyser une entrée de couleur (nom ou code hexadécimal) et de fournir une description concise et pertinente de cette couleur. Si l'entrée est un nom de couleur, décris la couleur. Si c'est un code hexadécimal, identifie la couleur et décris-la. Si l'entrée est ambiguë ou invalide, indique-le.
-    Langue de la réponse : ${language || 'fr'}.
-    Format de la réponse : Une phrase descriptive courte, sans introduction ni conclusion.
-  `;
 
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: [{ text: `Analyse la couleur : ${colorInput}` }],
+      contents: [{ text: `Analyse cette couleur : "${colorInput}". Donne une description poétique et technique (nom de la couleur, ambiance, ce qu'elle évoque). Réponds en ${language === 'fr' ? 'français' : language === 'es' ? 'espagnol' : 'anglais'}. Sois concis (2-3 phrases).` }],
       config: {
-        systemInstruction,
-        temperature: 0.2,
+        temperature: 0.7,
       },
     });
 
-    const text = response.text || "Désolé, je n'ai pas pu analyser cette couleur.";
-    return res.status(200).json({ description: text });
+    return res.status(200).json({ description: response.text });
   } catch (error) {
-    console.error("Gemini Color Guessing Error:", error);
-    return res.status(500).json({ message: "Erreur de quota ou de connexion Gemini pour l'analyse de couleur. Réessayez dans quelques instants." });
+    console.error("Guess Color Error:", error);
+    return res.status(500).json({ message: "Erreur lors de l'analyse de la couleur." });
   }
 }

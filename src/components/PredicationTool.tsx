@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Megaphone, Loader2, Check, AlertTriangle, BookOpen, Link as LinkIcon, Handshake, CornerRightDown } from 'lucide-react';
+import { Megaphone, Loader2, AlertTriangle, BookOpen, Link as LinkIcon, Handshake, CornerRightDown, ChevronRight, ChevronLeft } from 'lucide-react';
 // Fix: Import types from src/types.ts
 import { AppSettings, GeneratedStudy, PredicationType } from '../types.ts';
 import { callGenerateContentApi } from '../services/apiService.ts'; 
@@ -194,7 +194,7 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
                 </div>
               </div>
               <div className="space-y-3">
-                <label className={getCommonLabelStyles()}>Sujet en particulier (Ex: L'espoir pour l'avenir)</label>
+                <label className={getCommonLabelStyles()}>Sujet en particulier (Ex: L&apos;espoir pour l&apos;avenir)</label>
                 <div className="relative">
                   <input type="text" value={pepTopic} onChange={(e) => {
                     setPepTopic(e.target.value);
@@ -214,7 +214,7 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
               </div>
               {pepOfferStudy && (
                 <div className="space-y-3 animate-in fade-in duration-300">
-                  <label className={getCommonLabelStyles()}>Lien de la brochure 'Vivez pour toujours' (leçon 1) <span className="opacity-40 font-normal lowercase">(Optionnel)</span></label>
+                  <label className={getCommonLabelStyles()}>Lien de la brochure &apos;Vivez pour toujours&apos; (leçon 1) <span className="opacity-40 font-normal lowercase">(Optionnel)</span></label>
                   <div className="relative">
                     <input type="text" value={pepStudyBrochureLink} onChange={(e) => {
                       setPepStudyBrochureLink(e.target.value);
@@ -240,12 +240,12 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
               </button>
               <p className="text-lg opacity-80 font-medium text-center">Fournissez un contexte ou générez directement :</p>
               <div className="space-y-3">
-                <label className={getCommonLabelStyles()}>Conditions d'actualités pour détailler le sujet (facultatif)</label>
+                <label className={getCommonLabelStyles()}>Conditions d&apos;actualités pour détailler le sujet (facultatif)</label>
                 <textarea value={pepCurrentAffairs} onChange={(e) => {
                   setPepCurrentAffairs(e.target.value);
                   saveInputState('pepCurrentAffairs', e.target.value);
                 }}
-                  placeholder="Ex: L'actualité récente sur les catastrophes naturelles montre le besoin d'espoir."
+                  placeholder="Ex: L&apos;actualité récente sur les catastrophes naturelles montre le besoin d&apos;espoir."
                   className="w-full h-24 bg-black/40 border border-white/10 rounded-xl py-3 px-4 focus:border-[var(--btn-color)] outline-none transition-all font-medium resize-none" />
               </div>
 
@@ -293,7 +293,7 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
           {nvType === 'study' && (
             <div className="space-y-6 animate-in fade-in duration-300">
               <div className="space-y-3">
-                <label className={getCommonLabelStyles()}>Lien direct de l'article/publication (jw.org) <span className="opacity-40 font-normal lowercase">(Optionnel)</span></label>
+                <label className={getCommonLabelStyles()}>Lien direct de l&apos;article/publication (jw.org) <span className="opacity-40 font-normal lowercase">(Optionnel)</span></label>
                 <div className="relative">
                   <input type="text" value={nvStudyLink} onChange={(e) => {
                     setNvStudyLink(e.target.value);
@@ -339,7 +339,7 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
                   className="w-full h-24 bg-black/40 border border-white/10 rounded-xl py-3 px-4 focus:border-[var(--btn-color)] outline-none transition-all font-medium resize-none" />
               </div>
               <div className="space-y-3">
-                <label className={getCommonLabelStyles()}>Lien de la brochure 'Vivez pour toujours' (pour proposer l'étude) <span className="opacity-40 font-normal lowercase">(Optionnel)</span></label>
+                <label className={getCommonLabelStyles()}>Lien de la brochure &apos;Vivez pour toujours&apos; (pour proposer l&apos;étude) <span className="opacity-40 font-normal lowercase">(Optionnel)</span></label>
                 <div className="relative">
                   <input type="text" value={nvBrochureLink} onChange={(e) => {
                     setNvBrochureLink(e.target.value);
@@ -377,7 +377,7 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
           <h3 className="text-2xl font-black uppercase tracking-tight mb-6" style={{ color: 'var(--btn-color)' }}>Préparation de Cours Biblique</h3>
 
           <div className="space-y-3">
-            <label className={getCommonLabelStyles()}>Progression de l'étude</label>
+            <label className={getCommonLabelStyles()}>Progression de l&apos;étude</label>
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => {
                 setCbType('new');

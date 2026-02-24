@@ -1,6 +1,5 @@
 import React from 'react';
 import { BellRing, CheckCircle, Bug, Rocket } from 'lucide-react';
-import { AppSettings } from '../types.ts'; // Import AppSettings
 
 interface UpdateItem {
   version: string;

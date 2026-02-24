@@ -5,7 +5,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { criteria, language } = req.body;
+  const { criteria } = req.body;
 
   if (!process.env.GEMINI_API_KEY) {
     return res.status(500).json({ message: 'Gemini API key not configured.' });

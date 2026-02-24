@@ -59,7 +59,7 @@ const PreferenceManager: React.FC<Props> = ({ settings, setSettings, onClose }) 
       </div>
 
       <div className="max-w-3xl mx-auto space-y-6">
-        <p className="opacity-70">Modifiez et enregistrez vos préférences pour l'IA. Ces instructions guideront l'IA dans toutes ses réponses.</p>
+        <p className="opacity-70">Modifiez et enregistrez vos préférences pour l&apos;IA. Ces instructions guideront l&apos;IA dans toutes ses réponses.</p>
 
         {/* Add New Preference */}
         <div className="flex gap-2">
