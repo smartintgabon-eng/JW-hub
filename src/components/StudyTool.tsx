@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Link as LinkIcon, Calendar, Loader2, ShieldCheck, AlertTriangle, Plus, Minus, Info } from 'lucide-react'; 
+import { Search, Link as LinkIcon, Calendar, Loader2, Check, ShieldCheck, AlertTriangle, Plus, Minus, Info } from 'lucide-react'; 
 import { StudyPart, GeneratedStudy, AppSettings } from '../types.ts'; 
 import { saveInputState, loadInputState } from '../utils/storage.ts'; // Import for persistence
 

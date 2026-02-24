@@ -1,6 +1,5 @@
 {
   "rewrites": [
-    { "source": "/_next/static/image/assets/icons/(.*)", "destination": "/assets/icons/$1" },
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
