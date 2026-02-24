@@ -29,8 +29,8 @@ export const getSettings = (): AppSettings => {
       ];
     }
     // Ensure default preference exists if array is empty
-    if (settings.answerPreferences.length === 0) {
-      settings.answerPreferences.push({ id: 'default', text: 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.' });
+    if (!settings.answerPreferences || settings.answerPreferences.length === 0) {
+      settings.answerPreferences = [{ id: 'default', text: 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.' }];
     }
 
     return settings;

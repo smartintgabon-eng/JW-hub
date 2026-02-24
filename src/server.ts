@@ -37,7 +37,7 @@ async function startServer() {
 
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: [{ parts: [{ text: prompt }] }],
+        contents: prompt,
         config: {
           responseMimeType: 'application/json',
           responseSchema: {

@@ -15,7 +15,7 @@ async function findSongSuggestion(ai, theme) {
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: [{ text: songSearchPrompt }],
+      contents: songSearchPrompt,
       config: {
         tools: [{ googleSearch: {} }],
         temperature: 0.2,
@@ -75,7 +75,7 @@ export default async function handler(req, res) {
   }
 
   let systemInstruction = '';
-  let contents: any[] = [];
+  let contents = '';
 
   const userPreferences = settings.answerPreferences.map(p => p.text).join(', ') || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.';
 
@@ -90,7 +90,7 @@ export default async function handler(req, res) {
       - Propose UN SEUL thème clair et concis.\
       - Ne donne AUCUN texte supplémentaire en dehors du thème.\
     `;
-    contents = [{ text: `Critères pour le thème : ${input}` }];
+    contents = `Critères pour le thème : ${input}`;
   } else if (type === 'DISCOURS') {
     let songSuggestion = null;
     if (theme) {
@@ -148,7 +148,7 @@ export default async function handler(req, res) {
       ${specialFields.length > 0 ? specialFields.join('\n') : ''}\
       ${songInstruction}\
     `;
-    contents = [{ text: `Rédige le discours sur le thème "${theme}" pour ${time}.` }];
+    contents = `Rédige le discours sur le thème "${theme}" pour ${time}.`;
 
   } else {
     systemInstruction = `\
@@ -179,8 +179,8 @@ export default async function handler(req, res) {
     `;
 
     contents = contextData
-      ? [{ text: `BASE DE DONNÉES :\n${contextData}\n\nACTION : Génère le contenu pour ${input || 'le texte fourni'}.` }]
-      : [{ text: `Recherche et analyse sur jw.org : ${input}` }];
+      ? `BASE DE DONNÉES :\n${contextData}\n\nACTION : Génère le contenu pour ${input || 'le texte fourni'}.`
+      : `Recherche et analyse sur jw.org : ${input}`;
   }
 
   try {

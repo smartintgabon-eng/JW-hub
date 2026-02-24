@@ -36,21 +36,20 @@ export default async function handler(req, res) {
   try {
     const config = {
       systemInstruction: confirmMode 
-        ? `MISSION : Identifier précisément l'article le plus pertinent pour la confirmation. ${baseSystemInstruction}`
-        : `MISSION DE RECHERCHE COMPLÈTE : Tu es un assistant JW. Pour chaque recherche, identifie l'article le plus pertinent. ${baseSystemInstruction}`,
+        ? `MISSION : Identifier précisément l'article le plus pertinent pour la confirmation. ${baseSystemInstruction}. Tu DOIS répondre UNIQUEMENT avec un objet JSON valide correspondant à ce schéma : {"title": "...", "imageUrl": "...", "summary": "...", "infos": "..."}`
+        : `MISSION DE RECHERCHE COMPLÈTE : Tu es un assistant JW. Pour chaque recherche, identifie l'article le plus pertinent. ${baseSystemInstruction}. Tu DOIS répondre UNIQUEMENT avec un tableau JSON valide d'objets correspondant à ce schéma : [{"title": "...", "link": "...", "summary": "...", "imageUrl": "..."}]`,
       tools: [{ googleSearch: {} }],
       temperature: 0.3,
-      responseMimeType: "application/json", // Always request JSON
-      responseSchema: confirmMode ? confirmResponseSchema : fullSearchResponseSchema,
     };
 
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview', 
-      contents: [{ text: `Recherche sur : ${questionOrSubject}` }],
+      contents: `Recherche sur : ${questionOrSubject}`,
       config,
     });
 
-    const fullText = response.text || "";
+    let fullText = response.text || "";
+    fullText = fullText.replace(/```json/g, '').replace(/```/g, '').trim();
     
     // Check if the response is likely HTML (e.g., an error page) instead of JSON
     if (fullText.trim().startsWith('<')) {
