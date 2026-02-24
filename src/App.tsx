@@ -116,8 +116,8 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const bgColor = settings.bgColor || '#09090b';
-    const btnColor = settings.btnColor || '#4a70b5';
+    const bgColor = settings.bgColor || '#f5f5f0'; // Un blanc cassé doux
+    const btnColor = settings.btnColor || '#5A5A40'; // Un vert olive doux
     document.documentElement.style.setProperty('--bg-color', bgColor);
     document.documentElement.style.setProperty('--text-color', getContrastTextColor(bgColor));
     document.documentElement.style.setProperty('--btn-color', btnColor);
