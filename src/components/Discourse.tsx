@@ -4,6 +4,7 @@ import ThursdayDiscourse from './ThursdayDiscourse.tsx';
 import SundayDiscourse from './SundayDiscourse.tsx';
 import SpecialDiscourse from './SpecialDiscourse.tsx';
 import { AppSettings } from '../types';
+import { Mic, Calendar, Sun, Star, ChevronLeft } from 'lucide-react';
 
 interface DiscourseProps {
   settings: AppSettings;
@@ -32,30 +33,46 @@ const Discourse: React.FC<DiscourseProps> = ({ settings, setGlobalLoadingMessage
         return <SpecialDiscourse settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />;
       default:
         return (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
             <button
               onClick={() => setSelectedType(DiscourseType.NORMAL)}
-              className="p-4 bg-[var(--btn-color)] text-[var(--btn-text)] rounded-lg shadow-md hover:opacity-90 transition-opacity"
+              className="group p-8 bg-white/5 border border-white/10 rounded-[2rem] hover:border-[var(--btn-color)] transition-all flex flex-col items-center text-center shadow-lg hover:shadow-xl"
             >
-              Discours Normal
+              <div className="w-16 h-16 rounded-full bg-[var(--btn-color)]/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <Mic size={32} className="text-[var(--btn-color)]" />
+              </div>
+              <h3 className="text-xl font-black uppercase tracking-wider mb-2">Discours Normal</h3>
+              <p className="text-sm opacity-60">Préparation standard pour un discours de l'assemblée.</p>
             </button>
             <button
               onClick={() => setSelectedType(DiscourseType.THURSDAY)}
-              className="p-4 bg-[var(--btn-color)] text-[var(--btn-text)] rounded-lg shadow-md hover:opacity-90 transition-opacity"
+              className="group p-8 bg-white/5 border border-white/10 rounded-[2rem] hover:border-[var(--btn-color)] transition-all flex flex-col items-center text-center shadow-lg hover:shadow-xl"
             >
-              Discours de Jeudi
+              <div className="w-16 h-16 rounded-full bg-[var(--btn-color)]/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <Calendar size={32} className="text-[var(--btn-color)]" />
+              </div>
+              <h3 className="text-xl font-black uppercase tracking-wider mb-2">Discours de Semaine</h3>
+              <p className="text-sm opacity-60">Pour les réunions de semaine (Cahier Vie et Ministère).</p>
             </button>
             <button
               onClick={() => setSelectedType(DiscourseType.SUNDAY)}
-              className="p-4 bg-[var(--btn-color)] text-[var(--btn-text)] rounded-lg shadow-md hover:opacity-90 transition-opacity"
+              className="group p-8 bg-white/5 border border-white/10 rounded-[2rem] hover:border-[var(--btn-color)] transition-all flex flex-col items-center text-center shadow-lg hover:shadow-xl"
             >
-              Discours de Dimanche
+              <div className="w-16 h-16 rounded-full bg-[var(--btn-color)]/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <Sun size={32} className="text-[var(--btn-color)]" />
+              </div>
+              <h3 className="text-xl font-black uppercase tracking-wider mb-2">Discours de Week-end</h3>
+              <p className="text-sm opacity-60">Préparation spécifique pour les discours publics du week-end.</p>
             </button>
             <button
               onClick={() => setSelectedType(DiscourseType.SPECIAL)}
-              className="p-4 bg-[var(--btn-color)] text-[var(--btn-text)] rounded-lg shadow-md hover:opacity-90 transition-opacity"
+              className="group p-8 bg-white/5 border border-white/10 rounded-[2rem] hover:border-[var(--btn-color)] transition-all flex flex-col items-center text-center shadow-lg hover:shadow-xl"
             >
-              Discours Spécial
+              <div className="w-16 h-16 rounded-full bg-[var(--btn-color)]/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <Star size={32} className="text-[var(--btn-color)]" />
+              </div>
+              <h3 className="text-xl font-black uppercase tracking-wider mb-2">Discours Spécial</h3>
+              <p className="text-sm opacity-60">Pour les événements spéciaux, assemblées ou commémorations.</p>
             </button>
           </div>
         );
@@ -63,19 +80,27 @@ const Discourse: React.FC<DiscourseProps> = ({ settings, setGlobalLoadingMessage
   };
 
   return (
-    <div className="p-4 text-[var(--text-color)]">
-      <h2 className="text-2xl font-bold mb-4">Discours</h2>
-      {!selectedType && (
-        <p className="text-lg mb-4">Veuillez choisir un type de discours pour commencer :</p>
-      )}
-      {selectedType && (
+    <div className="max-w-5xl mx-auto p-4 md:p-8 text-[var(--text-color)] animate-in fade-in duration-500">
+      <div className="flex items-center justify-between mb-8">
+        <h2 className="text-3xl font-black uppercase tracking-tighter flex items-center gap-3">
+          <Mic className="text-[var(--btn-color)]" size={36} />
+          Préparation de Discours
+        </h2>
+      </div>
+      
+      {!selectedType ? (
+        <p className="text-lg opacity-70 mb-8 max-w-2xl">
+          Sélectionnez le type de discours que vous devez préparer. L'assistant vous guidera à travers une structure adaptée à vos besoins.
+        </p>
+      ) : (
         <button
           onClick={() => setSelectedType(null)}
-          className="mb-4 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+          className="mb-8 px-6 py-3 bg-white/5 border border-white/10 text-[var(--text-color)] rounded-xl hover:bg-white/10 transition-all flex items-center gap-2 font-bold uppercase text-sm tracking-wider"
         >
-          Retour aux types de discours
+          <ChevronLeft size={18} /> Retour aux types de discours
         </button>
       )}
+      
       {renderDiscourseContent()}
     </div>
   );

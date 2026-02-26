@@ -139,8 +139,8 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
   const exportToDocx = async (study: GeneratedStudy) => {
     if (!study.content) return alert(getLocalizedText(settings, 'emptyContent'));
 
-    const defaultTextColor = (settings.backgroundColor === '#f4f4f5' || settings.backgroundColor === '#fef3c7') ? '000000' : 'FFFFFF';
-    const btnColor = (settings.customButtonHex || settings.buttonColor).replace('#', '');
+    const defaultTextColor = (settings.bgColor === '#f4f4f5' || settings.bgColor === '#fef3c7') ? '000000' : 'FFFFFF';
+    const btnColor = (settings.btnColor).replace('#', '');
 
     const docChildren = [
       new Paragraph({
@@ -269,8 +269,8 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
     const margin = 15;
     let y = 20;
     const pageWidth = doc.internal.pageSize.getWidth();
-    const defaultTextColor = (settings.backgroundColor === '#f4f4f5' || settings.backgroundColor === '#fef3c7') ? '#000000' : '#FFFFFF';
-    const btnColor = settings.customButtonHex || settings.buttonColor || '#4a70b5';
+    const defaultTextColor = (settings.bgColor === '#f4f4f5' || settings.bgColor === '#fef3c7') ? '#000000' : '#FFFFFF';
+    const btnColor = settings.btnColor || '#4a70b5';
 
     doc.setFont('helvetica');
     doc.setTextColor(defaultTextColor);

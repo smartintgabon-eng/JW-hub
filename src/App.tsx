@@ -76,7 +76,16 @@ const App: React.FC = () => {
     const savedView = localStorage.getItem('lastView');
     return savedView ? (savedView as AppView) : AppView.HOME;
   });
-  const [settings, setAppSettings] = useState<AppSettings>(getSettings());
+  const [settings, setAppSettings] = useState<AppSettings>(getSettings);
+
+  const handleSettingsChange = (newSettings: AppSettings) => {
+    // Failsafe to prevent child components from passing invalid settings
+    if (newSettings && typeof newSettings === 'object' && newSettings.language && Array.isArray(newSettings.answerPreferences)) {
+      setAppSettings(newSettings);
+    } else {
+      console.error("Ignored invalid settings update:", newSettings);
+    }
+  };
   const [isExpanded, setIsExpanded] = useState(window.innerWidth >= 1024); 
   const [isReadingModeActive] = useState(false);
   const [history, setHistory] = useState<GeneratedStudy[]>(getHistory());
@@ -237,10 +246,10 @@ const App: React.FC = () => {
         {view === AppView.PREDICATION && <PredicationTool onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
         {view === AppView.RECHERCHES && <RecherchesTool onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
         {view === AppView.HISTORY && <History history={history} setHistory={setHistory} settings={settings} />}
-        {view === AppView.SETTINGS && <Settings setSettings={setAppSettings} settings={settings} deferredPrompt={deferredPrompt} handleInstallClick={handleInstallClick} setView={setView} />}
+        {view === AppView.SETTINGS && <Settings setSettings={handleSettingsChange} settings={settings} deferredPrompt={deferredPrompt} handleInstallClick={handleInstallClick} setView={setView} />}
         {view === AppView.TUTORIAL && <Tutorial deferredPrompt={deferredPrompt} handleInstallClick={handleInstallClick} navigateTo={handleViewChange} settings={settings} />}
         {view === AppView.UPDATES && <Updates settings={settings} />}
-        {view === AppView.PREFERENCE_MANAGER && <PreferenceManager settings={settings} setSettings={setAppSettings} onClose={() => handleViewChange(AppView.SETTINGS)} />}
+        {view === AppView.PREFERENCE_MANAGER && <PreferenceManager settings={settings} setSettings={handleSettingsChange} onClose={() => handleViewChange(AppView.SETTINGS)} />}
         {view === AppView.DISCOURS && <Discourse settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
       </main>
     </div>

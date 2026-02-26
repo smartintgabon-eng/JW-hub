@@ -1,7 +1,6 @@
 
 // src/utils/storage.ts
-// Fix: Import types from src/types.ts instead of defining them locally
-import { HistoryCategory, GeneratedStudy, AppSettings } from './types.ts'; 
+import { HistoryCategory, GeneratedStudy, AppSettings } from '../types.ts'; 
 
 const SETTINGS_KEY = 'jw_study_pro_settings';
 const HISTORY_KEY = 'jw_study_pro_history';
@@ -20,16 +19,25 @@ const defaultSettings: AppSettings = {
 export const getSettings = (): AppSettings => {
   try {
     const savedSettings = localStorage.getItem(SETTINGS_KEY);
-    const settings: AppSettings = savedSettings ? { ...defaultSettings, ...JSON.parse(savedSettings) } : defaultSettings;
+    const parsed = savedSettings ? JSON.parse(savedSettings) : {};
 
-    // Migration for old string-based answerPreferences
-    if (typeof settings.answerPreferences === 'string') {
-      settings.answerPreferences = [
-        { id: 'default', text: settings.answerPreferences as string }
-      ];
+    const settings: AppSettings = {
+      ...defaultSettings,
+      ...parsed,
+      language: ['fr', 'en', 'es'].includes(parsed?.language) ? parsed.language : defaultSettings.language,
+      bgColor: parsed?.bgColor || defaultSettings.bgColor,
+      btnColor: parsed?.btnColor || defaultSettings.btnColor,
+    };
+
+    // Defensively clean up answerPreferences
+    if (Array.isArray(settings.answerPreferences)) {
+      settings.answerPreferences = settings.answerPreferences.filter(p => p && typeof p === 'object' && p.id && p.text);
+    } else {
+      settings.answerPreferences = [];
     }
+
     // Ensure default preference exists if array is empty
-    if (!settings.answerPreferences || settings.answerPreferences.length === 0) {
+    if (settings.answerPreferences.length === 0) {
       settings.answerPreferences = [{ id: 'default', text: 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.' }];
     }
 
@@ -51,8 +59,11 @@ export const saveSettings = (settings: AppSettings) => {
 export const getHistory = (): GeneratedStudy[] => {
   try {
     const savedHistory = localStorage.getItem(HISTORY_KEY);
-    const history: GeneratedStudy[] = savedHistory ? JSON.parse(savedHistory) : [];
+    let history: GeneratedStudy[] = savedHistory ? JSON.parse(savedHistory) : [];
     
+    // Failsafe: Filter out any invalid entries from corrupted storage
+    history = history.filter(study => study && typeof study === 'object');
+
     // Migration de données si nécessaire pour ajouter 'category' aux anciennes études
     return history.map(study => {
       if (!study.category) {

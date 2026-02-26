@@ -13,7 +13,7 @@ const colorSuggestions = [
 ];
 
 const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, setView }: { settings: AppSettings, setSettings: any, deferredPrompt: any, handleInstallClick: () => void, setView: (view: AppView) => void }) => {
-  const [draft, setDraft] = useState<AppSettings>(settings);
+  const [draft, setDraft] = useState<AppSettings>(() => settings || { language: 'fr', btnColor: '#4a70b5', bgColor: '#09090b', answerPreferences: [] });
   const [btnQuery, setBtnQuery] = useState('');
   const [bgQuery, setBgQuery] = useState('');
   const [btnColorDescription, setBtnColorDescription] = useState<string | null>(null);
@@ -21,27 +21,45 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
   const [isGuessingBtn, setIsGuessingBtn] = useState(false);
   const [isGuessingBg, setIsGuessingBg] = useState(false);
 
-  // Debounced auto-guess pour btnQuery
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (btnQuery && btnQuery.length > 2) {
-        handleGuessColor(btnQuery, setBtnColorDescription, setIsGuessingBtn, 'btn');
-      }
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [btnQuery, handleGuessColor]);
+    setDraft(settings);
+  }, [settings]);
 
-  // Debounced auto-guess pour bgQuery
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (bgQuery && bgQuery.length > 2) {
-        handleGuessColor(bgQuery, setBgColorDescription, setIsGuessingBg, 'bg');
-      }
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [bgQuery, handleGuessColor]);
+  const isHexCode = (str: string) => /^#([0-9A-F]{3}){1,2}$/i.test(str);
 
-  // Suggestions filtrées (4 max)
+  const handleGuessColor = useCallback(async (colorInput: string, setColorDescription: (desc: string | null) => void, setLoader: (l: boolean) => void, type: 'btn' | 'bg') => {
+    if (!colorInput || colorInput.length < 3) {
+      setColorDescription(null);
+      return;
+    }
+    setLoader(true);
+    try {
+      const response = await fetch('/api/guess-color', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: colorInput }), // The API expects 'text'
+      });
+      const data = await response.json();
+      if (data.hex) {
+        setColorDescription(`Couleur trouvée: ${data.hex}`);
+        if (type === 'btn') {
+          setDraft(prev => ({ ...prev, btnColor: data.hex }));
+          setBtnQuery(data.hex);
+        } else {
+          setDraft(prev => ({ ...prev, bgColor: data.hex }));
+          setBgQuery(data.hex);
+        }
+      } else {
+        setColorDescription("Impossible d'analyser cette couleur.");
+      }
+    } catch (error) {
+      console.error('Error guessing color:', error);
+      setColorDescription("Erreur d'analyse de couleur.");
+    } finally {
+      setLoader(false);
+    }
+  }, [setDraft]);
+
   const getSuggestions = (q: string) => colorSuggestions.filter(c => c.name.toLowerCase().includes(q.toLowerCase())).slice(0, 4);
 
   const saveVisuals = () => {
@@ -59,36 +77,25 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
     alert("Préférences IA sauvegardées !");
   };
 
-  const handleGuessColor = useCallback(async (colorInput: string, setColorDescription: (desc: string | null) => void, setLoader: (l: boolean) => void, type: 'btn' | 'bg') => {
-    if (!colorInput || colorInput.length < 3) {
-      setColorDescription(null);
-      return;
-    }
-    setLoader(true);
-    try {
-      const response = await fetch('/api/guess-color', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ colorInput, language: draft.language, type }),
-      });
-      const data = await response.json();
-      setColorDescription(data.description || "Impossible d'analyser cette couleur.");
-      if (data.hex) {
-        if (type === 'btn') {
-          setDraft(prev => ({ ...prev, btnColor: data.hex }));
-          setBtnQuery(data.hex);
-        } else {
-          setDraft(prev => ({ ...prev, bgColor: data.hex }));
-          setBgQuery(data.hex);
-        }
+  // Debounced auto-guess pour btnQuery
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (btnQuery && btnQuery.length > 2 && !isHexCode(btnQuery)) {
+        handleGuessColor(btnQuery, setBtnColorDescription, setIsGuessingBtn, 'btn');
       }
-    } catch (error) {
-      console.error('Error guessing color:', error);
-      setColorDescription("Erreur d'analyse de couleur.");
-    } finally {
-      setLoader(false);
-    }
-  }, [draft.language, setDraft]);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [btnQuery, handleGuessColor]);
+
+  // Debounced auto-guess pour bgQuery
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (bgQuery && bgQuery.length > 2 && !isHexCode(bgQuery)) {
+        handleGuessColor(bgQuery, setBgColorDescription, setIsGuessingBg, 'bg');
+      }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [bgQuery, handleGuessColor]);
 
   return (
     <div className="max-w-2xl mx-auto p-4 space-y-8">

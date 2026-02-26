@@ -15,6 +15,10 @@ const PreferenceManager: React.FC<Props> = ({ settings, setSettings, onClose }) 
   const [editingPreferenceId, setEditingPreferenceId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState<string>('');
 
+  useEffect(() => {
+    setCurrentPreferences(settings.answerPreferences);
+  }, [settings.answerPreferences]);
+
   const handleSave = () => {
     const newSettings = { ...settings, answerPreferences: currentPreferences };
     setSettings(newSettings);

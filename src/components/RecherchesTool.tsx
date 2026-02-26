@@ -138,7 +138,7 @@ const RecherchesTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadi
         aiExplanation: data.text, // aiExplanation can also point to the full structured text
         timestamp: Date.now(),
         category: 'recherches',
-        url: query // Store the search query as URL
+        url: [query] // Store the search query as URL
       };
 
       onGenerated(study); // This will also navigate to history and clear loading message

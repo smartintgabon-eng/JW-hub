@@ -1,120 +1,100 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from '@google/genai';
+import cheerio from 'cheerio';
+
+let aiClient;
+function getAiClient() {
+  if (!aiClient) {
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY is missing");
+    }
+    aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  }
+  return aiClient;
+}
+
+async function fetchArticleData(url) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch article, status: ${response.status}`);
+    }
+    const html = await response.text();
+    const $ = cheerio.load(html);
+
+    const title = $('h1').first().text().trim();
+    const summary = $('meta[name=description]').attr('content') || '';
+    let image = $('meta[property="og:image"]').attr('content') || null;
+    const firstArticleImage = $('#content img, .article-content img, article img').first().attr('src');
+    
+    if (firstArticleImage) {
+      if (firstArticleImage.startsWith('/')) {
+        const urlObj = new URL(url);
+        image = `${urlObj.origin}${firstArticleImage}`;
+      } else if (firstArticleImage.startsWith('http')) {
+        image = firstArticleImage;
+      }
+    }
+
+    const bodyText = $('#content .article-content').text().replace(/\s\s+/g, ' ').trim();
+
+    return { title, summary, image, bodyText };
+  } catch (error) {
+    console.error('Error fetching or parsing article:', error);
+    throw new Error('Could not retrieve article content.');
+  }
+}
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ message: 'Method Not Allowed' });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Method Not Allowed' });
+  }
 
   const { questionOrSubject, settings, confirmMode } = req.body;
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY }); 
 
-  const baseSystemInstruction = `Tu es un assistant de recherche expert JW spécialisé dans jw.org et wol.jw.org. Langue de la réponse : ${settings.language || 'fr'}. Si aucune image n'est trouvée, utilise une URL d'image par défaut de jw.org. Ne renvoie aucun texte supplémentaire en dehors du JSON.`;
-
-  const confirmResponseSchema = {
-    type: Type.OBJECT,
-    properties: {
-      title: { type: Type.STRING, description: "Le titre exact de l'article." },
-      imageUrl: { type: Type.STRING, description: "URL de l'image miniature associée sur jw.org ou wol.jw.org, finissant par .jpg ou .png." },
-      summary: { type: Type.STRING, description: "Un résumé concis de l'article, 2-3 phrases maximum." },
-      infos: { type: Type.STRING, description: "Informations pratiques comme 'Étude du week-end du...' ou 'X paragraphes'." },
-    },
-    required: ['title', 'imageUrl', 'summary', 'infos'],
-  };
-
-  const fullSearchResponseSchema = {
-    type: Type.ARRAY,
-    items: {
-      type: Type.OBJECT,
-      properties: {
-        title: { type: Type.STRING, description: "Le titre exact de l'article." },
-        link: { type: Type.STRING, description: "URL directe jw.org ou wol.jw.org." },
-        summary: { type: Type.STRING, description: "Un résumé concis de l'article, 2-3 phrases maximum." },
-        imageUrl: { type: Type.STRING, description: "URL de l'image miniature associée sur jw.org ou wol.jw.org, finissant par .jpg ou .png." },
-      },
-      required: ['title', 'link', 'summary', 'imageUrl'],
-    },
-  };
+  if (!questionOrSubject) {
+    return res.status(400).json({ message: 'Question or subject is required.' });
+  }
 
   try {
-    const config = {
-      systemInstruction: confirmMode 
-        ? `MISSION : Identifier précisément l'article le plus pertinent pour la confirmation. ${baseSystemInstruction}`
-        : `MISSION DE RECHERCHE COMPLÈTE : Tu es un assistant JW. Pour chaque recherche, identifie l'article le plus pertinent. ${baseSystemInstruction}`,
-      tools: [{ googleSearch: {} }],
-      temperature: 0.3,
-      responseMimeType: "application/json",
-      responseSchema: confirmMode ? confirmResponseSchema : fullSearchResponseSchema,
-    };
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview', 
-      contents: `Recherche sur : ${questionOrSubject}`,
-      config,
+    const ai = getAiClient();
+    const searchPrompt = `Based on the user's question "${questionOrSubject}" in language "${settings.language}", find the single most relevant article URL from wol.jw.org or jw.org. Return ONLY the URL.`;
+    
+    const urlResult = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: searchPrompt,
+        config: {
+          tools: [{ googleSearch: {} }]
+        }
     });
+    
+    const articleUrl = urlResult.text.trim();
 
-    let fullText = response.text || "";
-    
-    // Extract JSON using regex if there's extra text
-    const jsonMatch = fullText.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
-    if (jsonMatch) {
-      fullText = jsonMatch[0];
-    } else {
-      fullText = fullText.replace(/```json/g, '').replace(/```/g, '').trim();
+    if (!articleUrl.startsWith('http')) {
+      return res.status(404).json({ message: 'Could not find a relevant article URL.' });
     }
-    
-    // Check if the response is likely HTML (e.g., an error page) instead of JSON
-    if (fullText.trim().startsWith('<')) {
-      console.error("AI response was HTML, not JSON:", fullText);
-      return res.status(500).json({ message: "Erreur: La réponse de l'IA n'est pas au format JSON. Il pourrait s'agir d'une erreur de service." });
-    }
+
+    const { title, summary, image, bodyText } = await fetchArticleData(articleUrl);
 
     if (confirmMode) {
-      let parsedResponse;
-      try {
-        parsedResponse = JSON.parse(fullText);
-      } catch (jsonError) {
-        console.error("Failed to parse JSON from AI response in confirmMode:", jsonError);
-        return res.status(500).json({ message: "Erreur: la réponse de l'IA n'est pas au format JSON attendu pour la confirmation." });
-      }
+        return res.status(200).json({
+            previewTitle: title,
+            previewSummary: summary,
+            previewImage: image,
+            previewInfos: `Source: ${new URL(articleUrl).hostname}`
+        });
+    } else {
+      const explanationPrompt = `Based on the user's question "${questionOrSubject}" and the content of this article, provide a structured explanation.\nArticle Title: ${title}\nArticle Content: "${bodyText.substring(0, 8000)}"\nUser Preferences: ${JSON.stringify(settings.answerPreferences)}\nFormat the response as a single block of text containing the article title (NOM), the URL (LIEN), and the detailed explanation (EXPLICATION).`;
 
-      return res.status(200).json({ 
-        previewTitle: parsedResponse.title || "Article trouvé",
-        previewImage: parsedResponse.imageUrl || "https://assets.jw.org/assets/m/jwb-og-image.png",
-        previewSummary: parsedResponse.summary || "Prêt pour la génération.",
-        previewInfos: parsedResponse.infos || ""
+      const explanationResult = await ai.models.generateContent({
+          model: 'gemini-3-flash-preview',
+          contents: explanationPrompt
       });
+
+      return res.status(200).json({ text: explanationResult.text });
     }
-
-    let parsedResults;
-    try {
-      parsedResults = JSON.parse(fullText);
-      if (!Array.isArray(parsedResults)) {
-        parsedResults = [parsedResults]; // Ensure it's an array
-      }
-    } catch (jsonError) {
-      console.error("Failed to parse JSON from AI response:", jsonError);
-      return res.status(500).json({ message: "Erreur: la réponse de l'IA n'est pas au format JSON attendu." });
-    }
-
-    const rawSources = parsedResults.map((item) => ({
-      title: item.title,
-      uri: item.link,
-      image: item.imageUrl,
-      content: item.summary,
-    }));
-
-    // Construct a formatted string for the 'text' field to match previous frontend expectations
-    const aiExplanation = parsedResults.map((item) => 
-      `NOM : ${item.title}\nLIEN : ${item.link}\nIMAGE : ${item.imageUrl}\nEXPLICATION : ${item.summary}`
-    ).join('\n---\n');
-
-    return res.status(200).json({
-      text: aiExplanation, // Formatted string for display
-      rawSources: rawSources, // Array of parsed sources
-      title: questionOrSubject,
-      aiExplanation: aiExplanation // Redundant, but keeping for now
-    });
 
   } catch (error) {
-    console.error("Search Error:", error);
-    return res.status(500).json({ message: "Erreur lors de la recherche." });
+    console.error('API Error in search-content:', error);
+    res.status(500).json({ message: 'Failed to process search request.', details: error.message });
   }
 }

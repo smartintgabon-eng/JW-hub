@@ -1,12 +1,20 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
-import tailwindcss from '@tailwindcss/vite';
+import tailwindcss from '@tailwindcss/postcss';
+import autoprefixer from 'autoprefixer';
 
 export default defineConfig({
+  css: {
+    postcss: {
+      plugins: [
+        tailwindcss(),
+        autoprefixer(),
+      ],
+    },
+  },
   plugins: [
     react(),
-    tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
@@ -54,11 +62,6 @@ export default defineConfig({
   server: {
     port: 3000,
     host: '0.0.0.0',
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3000', // This is for local dev if needed, but in Vercel it's different
-        changeOrigin: true,
-      }
-    }
+
   }
 });
