@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import Markdown from 'react-markdown';
 import { AppSettings } from '../types';
+import ContentInclusion, { ContentOptions } from './ContentInclusion.tsx';
 
 interface SundayDiscourseProps {
   settings: AppSettings;
@@ -20,6 +22,14 @@ const SundayDiscourse: React.FC<SundayDiscourseProps> = ({ settings, setGlobalLo
   const [themeInput, setThemeInput] = useState<string>('');
   const [generateTheme, setGenerateTheme] = useState<boolean>(false);
   const [generatedTheme, setGeneratedTheme] = useState<string | null>(null);
+  const [generatedDiscourse, setGeneratedDiscourse] = useState<string | null>(null);
+  const [contentOptions, setContentOptions] = useState<ContentOptions>({
+    includeArticles: false,
+    includeImages: false,
+    includeVideos: false,
+    includeVerses: false,
+    articleLinks: [],
+  });
 
   const handleTimeChange = (time: string) => {
     setSelectedTime(time);
@@ -35,6 +45,7 @@ const SundayDiscourse: React.FC<SundayDiscourseProps> = ({ settings, setGlobalLo
     setGenerateTheme(!generateTheme);
     setThemeInput('');
     setGeneratedTheme(null);
+    setGeneratedDiscourse(null);
   };
 
   const handleSubmit = async () => {
@@ -48,30 +59,57 @@ const SundayDiscourse: React.FC<SundayDiscourseProps> = ({ settings, setGlobalLo
     try {
       let finalTheme = themeInput;
       if (generateTheme) {
-        const response = await fetch('/api/generate-discourse-theme', {
+        const themeResponse = await fetch('/api/generate-content', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            criteria: { time: selectedTime, themeCriteria: themeInput },
-            language: settings.language,
+            type: 'DISCOURS_THEME',
+            input: themeInput,
+            settings: settings,
           }),
         });
 
-        if (!response.ok) {
+        if (!themeResponse.ok) {
           throw new Error('Failed to generate theme');
         }
 
-        const data = await response.json();
-        finalTheme = data.theme;
+        const themeData = await themeResponse.json();
+        finalTheme = themeData.theme;
         setGeneratedTheme(finalTheme);
       }
 
-      console.log({
-        selectedTime,
-        finalTheme,
-        generateTheme,
+      if (!finalTheme) {
+        alert('Veuillez fournir ou générer un thème pour le discours.');
+        setGlobalLoadingMessage(null);
+        return;
+      }
+
+      const discourseResponse = await fetch('/api/generate-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'DISCOURS',
+          discoursType: 'dimanche',
+          time: selectedTime,
+          theme: finalTheme,
+          articleReferences: contentOptions.articleLinks,
+          imageReferences: [], // Placeholder for future UI
+          videoReferences: [], // Placeholder for future UI
+          pointsToReinforce: [], // Placeholder for future UI
+          strengths: [], // Placeholder for future UI
+          encouragements: '', // Placeholder for future UI
+          settings: settings,
+          contentOptions,
+        }),
       });
-      alert(`Discours de Dimanche généré avec le thème : ${finalTheme} (Placeholder)`);
+
+      if (!discourseResponse.ok) {
+        throw new Error('Failed to generate discourse');
+      }
+
+      const discourseData = await discourseResponse.json();
+      setGeneratedDiscourse(discourseData.text);
+
     } catch (error) {
       console.error('Error in Sunday discourse generation:', error);
       alert(`Erreur lors de la génération du discours de Dimanche: ${error.message}`);
@@ -151,11 +189,7 @@ const SundayDiscourse: React.FC<SundayDiscourseProps> = ({ settings, setGlobalLo
           )}
         </div>
 
-        {/* Content Inclusion (Placeholder) */}
-        <div className="mb-8 p-6 bg-black/20 border border-white/5 rounded-2xl">
-          <label className="text-[10px] font-black uppercase opacity-40 tracking-widest mb-2 block">Inclure du contenu</label>
-          <p className="text-sm opacity-60 italic">Fonctionnalité à venir : articles, images, vidéos, versets bibliques.</p>
-        </div>
+        <ContentInclusion options={contentOptions} onChange={setContentOptions} />
 
         <button
           onClick={handleSubmit}
@@ -163,6 +197,15 @@ const SundayDiscourse: React.FC<SundayDiscourseProps> = ({ settings, setGlobalLo
         >
           <span>Générer le Discours de Dimanche</span>
         </button>
+
+        {generatedDiscourse && (
+          <div className="mt-10 p-8 bg-black/40 border border-white/10 rounded-2xl animate-in fade-in slide-in-from-bottom-4">
+            <h4 className="text-xl font-black uppercase tracking-wider mb-6 text-[var(--btn-color)]">Discours Généré</h4>
+            <div className="markdown-body prose prose-invert max-w-none">
+              <Markdown>{generatedDiscourse}</Markdown>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

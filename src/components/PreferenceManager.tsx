@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppSettings, Preference } from '../types.ts';
 import { saveSettings } from '../utils/storage.ts';
 import { ListFilter, X, Check, Plus, Edit, Trash2 } from 'lucide-react';
@@ -10,13 +10,13 @@ interface Props {
 }
 
 const PreferenceManager: React.FC<Props> = ({ settings, setSettings, onClose }) => {
-  const [currentPreferences, setCurrentPreferences] = useState<Preference[]>(settings.answerPreferences);
+  const [currentPreferences, setCurrentPreferences] = useState<Preference[]>(settings.answerPreferences || []);
   const [newPreferenceText, setNewPreferenceText] = useState<string>('');
   const [editingPreferenceId, setEditingPreferenceId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState<string>('');
 
   useEffect(() => {
-    setCurrentPreferences(settings.answerPreferences);
+    setCurrentPreferences(settings.answerPreferences || []);
   }, [settings.answerPreferences]);
 
   const handleSave = () => {

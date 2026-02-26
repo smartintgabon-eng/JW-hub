@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Markdown from 'react-markdown';
 import { AppSettings } from '../types';
+import ContentInclusion, { ContentOptions } from './ContentInclusion.tsx';
 
 interface NormalDiscourseProps {
   settings: AppSettings;
@@ -22,6 +23,13 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
   const [generateTheme, setGenerateTheme] = useState<boolean>(false);
   const [generatedTheme, setGeneratedTheme] = useState<string | null>(null);
   const [generatedDiscourse, setGeneratedDiscourse] = useState<string | null>(null);
+  const [contentOptions, setContentOptions] = useState<ContentOptions>({
+    includeArticles: false,
+    includeImages: false,
+    includeVideos: false,
+    includeVerses: false,
+    articleLinks: [],
+  });
 
   const handleTimeChange = (time: string) => {
     setSelectedTime(time);
@@ -84,13 +92,14 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
           discoursType: 'normal',
           time: selectedTime,
           theme: finalTheme,
-          articleReferences: [], // Placeholder for future UI
+          articleReferences: contentOptions.articleLinks,
           imageReferences: [], // Placeholder for future UI
           videoReferences: [], // Placeholder for future UI
           pointsToReinforce: [], // Placeholder for future UI
           strengths: [], // Placeholder for future UI
           encouragements: '', // Placeholder for future UI
           settings: settings,
+          contentOptions,
         }),
       });
 
@@ -100,13 +109,6 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
 
       const discourseData = await discourseResponse.json();
       setGeneratedDiscourse(discourseData.text);
-
-      console.log({
-        selectedTime,
-        finalTheme,
-        generateTheme,
-      });
-      alert(`Discours généré avec le thème : ${finalTheme} (Placeholder)`);
 
     } catch (error) {
       console.error('Error in discourse generation:', error);
@@ -157,7 +159,7 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
             <div className={`w-6 h-6 rounded-md flex items-center justify-center border ${generateTheme ? 'bg-[var(--btn-color)] border-[var(--btn-color)]' : 'border-white/20'}`}>
               {generateTheme && <span className="text-[var(--btn-text)] text-sm">✓</span>}
             </div>
-            <span className="text-sm font-bold">Laisser l'IA générer le thème</span>
+            <span className="text-sm font-bold">Laisser l&apos;IA générer le thème</span>
           </div>
 
           {!generateTheme ? (
@@ -187,11 +189,7 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
           )}
         </div>
 
-        {/* Content Inclusion (Placeholder) */}
-        <div className="mb-8 p-6 bg-black/20 border border-white/5 rounded-2xl">
-          <label className="text-[10px] font-black uppercase opacity-40 tracking-widest mb-2 block">Inclure du contenu</label>
-          <p className="text-sm opacity-60 italic">Fonctionnalité à venir : articles, images, vidéos, versets bibliques.</p>
-        </div>
+        <ContentInclusion options={contentOptions} onChange={setContentOptions} />
 
         <button
           onClick={handleSubmit}
