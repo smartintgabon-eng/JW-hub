@@ -16,19 +16,26 @@ async function fetchArticleData(url) {
   try {
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       }
     });
     if (!response.ok) {
-      throw new Error(`Failed to fetch article, status: ${response.status}`);
+      throw new Error(`Failed to fetch article, status: ${response.status} ${response.statusText}`);
     }
     const html = await response.text();
-    const $ = load(html);
+    
+    let $;
+    try {
+      $ = load(html);
+    } catch (e) {
+      console.error("Cheerio load error:", e);
+      throw new Error("Failed to parse HTML content");
+    }
 
-    const title = $('h1').first().text().trim();
+    const title = $('h1').first().text().trim() || $('title').text().trim();
     const summary = $('meta[name=description]').attr('content') || '';
     let image = $('meta[property="og:image"]').attr('content') || null;
-    const firstArticleImage = $('#content img, .article-content img, article img').first().attr('src');
+    const firstArticleImage = $('#content img, .article-content img, article img, .main-content img').first().attr('src');
     
     if (firstArticleImage) {
       if (firstArticleImage.startsWith('/')) {
@@ -39,12 +46,16 @@ async function fetchArticleData(url) {
       }
     }
 
-    const bodyText = $('#content .article-content').text().replace(/\s\s+/g, ' ').trim();
+    const bodyText = $('#content .article-content, article, .main-content, #article, .pGroup, .document-body').text().replace(/\s\s+/g, ' ').trim();
+
+    if (!bodyText) {
+        console.warn("No body text found for URL:", url);
+    }
 
     return { title, summary, image, bodyText };
   } catch (error) {
     console.error('Error fetching or parsing article:', error);
-    throw new Error('Could not retrieve article content.');
+    throw new Error(`Could not retrieve article content: ${error.message}`);
   }
 }
 
@@ -69,36 +80,64 @@ export default async function handler(req, res) {
     if (!isUrl) {
       const searchPrompt = `Based on the user's question "${questionOrSubject}" in language "${settings?.language || 'fr'}", find the single most relevant article URL from wol.jw.org or jw.org. Return ONLY the URL.`;
       
-      const urlResult = await ai.models.generateContent({
-          model: 'gemini-3-flash-preview',
-          contents: searchPrompt,
-          config: {
-            tools: [{ googleSearch: {} }]
-          }
-      });
-      
-      articleUrl = urlResult.text.trim();
+      try {
+        const urlResult = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: searchPrompt,
+            config: {
+              tools: [{ googleSearch: {} }]
+            }
+        });
+        articleUrl = urlResult.text.trim();
+      } catch (aiError) {
+        console.error("AI Search Error:", aiError);
+        return res.status(500).json({ message: 'AI Search failed', details: aiError.message });
+      }
     }
 
-    if (!articleUrl.startsWith('http')) {
+    if (!articleUrl || !articleUrl.startsWith('http')) {
       return res.status(404).json({ message: 'Could not find a relevant article URL.' });
     }
 
-    const { title, summary, image, bodyText } = await fetchArticleData(articleUrl);
+    let articleData = null;
+    try {
+      articleData = await fetchArticleData(articleUrl);
+    } catch (scrapeError) {
+      console.warn("Scraping failed, falling back to AI search:", scrapeError);
+    }
 
     if (confirmMode) {
-        return res.status(200).json({
-            previewTitle: title,
-            previewSummary: summary,
-            previewImage: image,
-            previewInfos: `Source: ${new URL(articleUrl).hostname}`
-        });
+        if (articleData) {
+            return res.status(200).json({
+                previewTitle: articleData.title,
+                previewSummary: articleData.summary,
+                previewImage: articleData.image,
+                previewInfos: `Source: ${new URL(articleUrl).hostname}`
+            });
+        } else {
+             // Fallback preview if scraping fails
+             return res.status(200).json({
+                previewTitle: "Article trouvé (Accès limité)",
+                previewSummary: "Impossible d'afficher l'aperçu, mais l'IA peut analyser ce lien.",
+                previewImage: null,
+                previewInfos: `Source: ${new URL(articleUrl).hostname}`
+            });
+        }
     } else {
-      const explanationPrompt = `Based on the user's question "${questionOrSubject}" and the content of this article, provide a structured explanation.\nArticle Title: ${title}\nArticle Content: "${bodyText.substring(0, 8000)}"\nUser Preferences: ${JSON.stringify(settings?.answerPreferences || [])}\nFormat the response as a single block of text containing the article title (NOM), the URL (LIEN), and the detailed explanation (EXPLICATION).`;
+      let explanationPrompt;
+      if (articleData && articleData.bodyText) {
+        explanationPrompt = `Based on the user's question "${questionOrSubject}" and the content of this article, provide a structured explanation.\nArticle Title: ${articleData.title}\nArticle Content: "${articleData.bodyText.substring(0, 8000)}"\nUser Preferences: ${JSON.stringify(settings?.answerPreferences || [])}\nFormat the response in Markdown. Include the article title as a heading, the URL as a clickable link [Lien de l'article](URL), and then the detailed explanation.`;
+      } else {
+        // Fallback prompt using Google Search tool directly on the URL
+        explanationPrompt = `The user wants an analysis of this URL: ${articleUrl}. \nQuestion: "${questionOrSubject}"\nUser Preferences: ${JSON.stringify(settings?.answerPreferences || [])}\nUse your browsing tools to read the content of the URL if possible, or search for information about it. Format the response in Markdown. Include the article title as a heading, the URL as a clickable link [Lien de l'article](URL), and then the detailed explanation.`;
+      }
 
       const explanationResult = await ai.models.generateContent({
           model: 'gemini-3-flash-preview',
-          contents: explanationPrompt
+          contents: explanationPrompt,
+          config: {
+            tools: [{ googleSearch: {} }]
+          }
       });
 
       return res.status(200).json({ text: explanationResult.text });

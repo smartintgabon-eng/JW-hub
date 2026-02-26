@@ -58,6 +58,7 @@ async function startServer() {
   }
 
   // Error handling middleware
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
     console.error('Server Error:', err);
     res.status(500).json({ error: 'Internal Server Error', details: String(err) });

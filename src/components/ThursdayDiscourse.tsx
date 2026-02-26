@@ -70,7 +70,8 @@ const ThursdayDiscourse: React.FC<ThursdayDiscourseProps> = ({ settings, setGlob
         });
 
         if (!themeResponse.ok) {
-          throw new Error('Failed to generate theme');
+          const errorData = await themeResponse.json().catch(() => ({}));
+          throw new Error(errorData.message || errorData.details || 'Failed to generate theme');
         }
 
         const themeData = await themeResponse.json();
@@ -104,7 +105,8 @@ const ThursdayDiscourse: React.FC<ThursdayDiscourseProps> = ({ settings, setGlob
       });
 
       if (!discourseResponse.ok) {
-        throw new Error('Failed to generate discourse');
+        const errorData = await discourseResponse.json().catch(() => ({}));
+        throw new Error(errorData.message || errorData.details || 'Failed to generate discourse');
       }
 
       const discourseData = await discourseResponse.json();

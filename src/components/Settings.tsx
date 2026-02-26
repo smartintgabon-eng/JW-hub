@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Palette, Check, Trash2, RotateCcw, ListFilter, Globe, Smartphone, Loader2 } from 'lucide-react';
 import { saveSettings, clearHistoryOnly, totalReset } from '../utils/storage.ts';
 import { AppSettings, AppView } from '../types.ts';

@@ -16,7 +16,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { input, manualText, text, settings, type, part, discoursType, time, theme, articleReferences, imageReferences, videoReferences, pointsToReinforce, strengths, encouragements, contentOptions } = req.body;
+  const { input, manualText, text, settings, type, part, discoursType, time, theme, articleReferences, pointsToReinforce, strengths, encouragements, contentOptions } = req.body;
 
   try {
     const ai = getAiClient();
@@ -44,9 +44,9 @@ Le discours doit inclure :
 Assure-toi que le contenu est adapté à la durée prévue (${time}).`;
 
       if (contentOptions) {
-        if (contentOptions.includeArticles) prompt += `\n- Inclus des références à des articles pertinents de jw.org.`;
-        if (contentOptions.includeImages) prompt += `\n- Suggère des images ou illustrations visuelles à utiliser.`;
-        if (contentOptions.includeVideos) prompt += `\n- Suggère des vidéos pertinentes de jw.org à montrer.`;
+        if (contentOptions.includeArticles) prompt += `\n- Utilise Google Search pour trouver et inclure des références précises à des articles de jw.org ou wol.jw.org. Formatte-les comme des liens Markdown cliquables [Titre](URL).`;
+        if (contentOptions.includeImages) prompt += `\n- Suggère des images ou illustrations visuelles pertinentes.`;
+        if (contentOptions.includeVideos) prompt += `\n- Suggère des vidéos pertinentes de jw.org.`;
         if (contentOptions.includeVerses) prompt += `\n- Inclus de nombreux versets bibliques clés avec leur explication.`;
       }
 
@@ -55,10 +55,10 @@ Assure-toi que le contenu est adapté à la durée prévue (${time}).`;
         const otherLinks = articleReferences.filter(link => !link.includes('mwb') && !link.includes('vie-chretienne-et-ministere'));
         
         if (ministryLinks.length > 0) {
-          prompt += `\n\nIMPORTANT: Ce discours est basé sur le Cahier Vie et Ministère. Utilise ces liens spécifiques pour structurer ton discours selon les instructions du cahier : ${ministryLinks.join(', ')}`;
+          prompt += `\n\nIMPORTANT: Ce discours est basé sur le Cahier Vie et Ministère. Lis attentivement le contenu de ces liens pour structurer ton discours : ${ministryLinks.join(', ')}`;
         }
         if (otherLinks.length > 0) {
-          prompt += `\nUtilise les informations de ces articles comme base : ${otherLinks.join(', ')}`;
+          prompt += `\nUtilise les informations de ces articles comme base principale. Lis leur contenu via tes outils de recherche : ${otherLinks.join(', ')}`;
         }
       }
       if (pointsToReinforce) prompt += `\nPoints à renforcer : ${pointsToReinforce}`;
@@ -89,6 +89,10 @@ Assure-toi que le contenu est adapté à la durée prévue (${time}).`;
         }
     });
 
+    if (!result || !result.text) {
+      throw new Error("AI returned empty response");
+    }
+
     let title = "Generated Content";
     if (type === 'DISCOURS_THEME') {
       return res.status(200).json({ theme: result.text.trim() });
@@ -103,6 +107,6 @@ Assure-toi que le contenu est adapté à la durée prévue (${time}).`;
 
   } catch (error) {
     console.error('API Error in generate-content:', error);
-    res.status(500).json({ message: 'Failed to generate content.', details: error.message });
+    res.status(500).json({ message: 'Failed to generate content.', details: error.message || String(error) });
   }
 }
