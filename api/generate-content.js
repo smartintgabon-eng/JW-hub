@@ -77,7 +77,7 @@ export default async function handler(req, res) {
   let systemInstruction = '';
   let contents = '';
 
-  const userPreferences = settings.answerPreferences.map(p => p.text).join(', ') || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.';
+  const userPreferences = (settings.answerPreferences || []).map(p => p.text).join(', ') || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.';
 
   if (type === 'DISCOURS_THEME') {
     systemInstruction = `\

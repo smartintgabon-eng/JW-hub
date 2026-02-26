@@ -36,10 +36,12 @@ export default async function handler(req, res) {
   try {
     const config = {
       systemInstruction: confirmMode 
-        ? `MISSION : Identifier précisément l'article le plus pertinent pour la confirmation. ${baseSystemInstruction}. Tu DOIS répondre UNIQUEMENT avec un objet JSON valide correspondant à ce schéma : {"title": "...", "imageUrl": "...", "summary": "...", "infos": "..."}`
-        : `MISSION DE RECHERCHE COMPLÈTE : Tu es un assistant JW. Pour chaque recherche, identifie l'article le plus pertinent. ${baseSystemInstruction}. Tu DOIS répondre UNIQUEMENT avec un tableau JSON valide d'objets correspondant à ce schéma : [{"title": "...", "link": "...", "summary": "...", "imageUrl": "..."}]`,
+        ? `MISSION : Identifier précisément l'article le plus pertinent pour la confirmation. ${baseSystemInstruction}`
+        : `MISSION DE RECHERCHE COMPLÈTE : Tu es un assistant JW. Pour chaque recherche, identifie l'article le plus pertinent. ${baseSystemInstruction}`,
       tools: [{ googleSearch: {} }],
       temperature: 0.3,
+      responseMimeType: "application/json",
+      responseSchema: confirmMode ? confirmResponseSchema : fullSearchResponseSchema,
     };
 
     const response = await ai.models.generateContent({
@@ -49,7 +51,14 @@ export default async function handler(req, res) {
     });
 
     let fullText = response.text || "";
-    fullText = fullText.replace(/```json/g, '').replace(/```/g, '').trim();
+    
+    // Extract JSON using regex if there's extra text
+    const jsonMatch = fullText.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+    if (jsonMatch) {
+      fullText = jsonMatch[0];
+    } else {
+      fullText = fullText.replace(/```json/g, '').replace(/```/g, '').trim();
+    }
     
     // Check if the response is likely HTML (e.g., an error page) instead of JSON
     if (fullText.trim().startsWith('<')) {

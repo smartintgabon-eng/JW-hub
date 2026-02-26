@@ -172,7 +172,7 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
           </div>
         </div>
         <div className="space-y-2">
-          {draft.answerPreferences.length === 0 ? (
+          {!draft.answerPreferences || draft.answerPreferences.length === 0 ? (
             <p className="text-sm opacity-50 italic">Aucune préférence enregistrée.</p>
           ) : (
             <div className="max-h-32 overflow-y-auto space-y-2 pr-2">
