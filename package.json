@@ -15,6 +15,7 @@
     "@vitejs/plugin-react": "^4.3.1",
     "cheerio": "^1.0.0-rc.12",
     "docx": "^8.5.0",
+    "dotenv": "^17.3.1",
     "express": "^4.19.2",
     "file-saver": "^2.0.5",
     "jspdf": "^2.5.1",

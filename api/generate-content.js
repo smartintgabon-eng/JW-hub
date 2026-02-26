@@ -3,10 +3,22 @@ import { GoogleGenAI } from '@google/genai';
 let aiClient;
 function getAiClient() {
   if (!aiClient) {
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY is missing");
+    let apiKey = process.env.GEMINI_API_KEY || process.env.REACT_APP_GEMINI_API_KEY;
+    
+    // Fallback to the hardcoded key if env vars are missing or empty
+    if (!apiKey || !apiKey.trim()) {
+      apiKey = "AIzaSyCMEqPk4jrWMVMaVLov9Cq1CnygzhbeRis";
     }
-    aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY is missing. Please set it in your environment variables.");
+    }
+    // Trim the key to remove any accidental whitespace
+    const validApiKey = apiKey.trim();
+    if (!validApiKey) {
+      throw new Error("GEMINI_API_KEY is empty.");
+    }
+    aiClient = new GoogleGenAI({ apiKey: validApiKey });
   }
   return aiClient;
 }
@@ -78,13 +90,13 @@ ${commonInstructions}`;
       const containsUrl = /https?:\/\/[^\s]+/.test(contentString);
       let urlInstructions = "";
       if (containsUrl) {
-        urlInstructions = "The input contains URLs. Use your browsing tools to read the content of these URLs to inform your response. Do not just analyze the URL string itself.";
+        urlInstructions = "The input contains URLs. Use your Google Search tool to read the content of these URLs to inform your response. Do not just analyze the URL string itself. If the URL is from jw.org or wol.jw.org, prioritize the content from that source.";
       }
 
       prompt = `Analyze the following content and provide a structured explanation based on user preferences.\nContent/Context: "${contentString}"\n${urlInstructions}\nUser Preferences: ${userPreferences}\n${commonInstructions}\n`;
       
       if (type === 'WATCHTOWER') {
-        prompt += `This is a Watchtower study article. Format the response with a clear title, a summary, and a detailed, point-by-point explanation for each paragraph or section.`;
+        prompt += `This is a Watchtower study article. Format the response with a clear title, a summary, and a detailed, point-by-point explanation for each paragraph or section. IMPORTANT: Also include the revision questions at the end and provide answers based on the article content.`;
       } else if (type === 'MINISTRY') {
         prompt += `This is a Ministry Workbook meeting part (${part || 'full'}). Format the response appropriately for this specific part, providing practical points, scriptures, and clear explanations.`;
       } else if (type === 'PREDICATION') {
@@ -102,10 +114,10 @@ ${commonInstructions}`;
     }
 
     const result = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash-exp',
         contents: prompt,
         config: {
-          tools: [{ googleSearch: {} }, { urlContext: {} }]
+          tools: [{ googleSearch: {} }]
         }
     });
 

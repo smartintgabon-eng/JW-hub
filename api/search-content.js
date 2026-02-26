@@ -4,10 +4,22 @@ import { load } from 'cheerio';
 let aiClient;
 function getAiClient() {
   if (!aiClient) {
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY is missing");
+    let apiKey = process.env.GEMINI_API_KEY || process.env.REACT_APP_GEMINI_API_KEY;
+    
+    // Fallback to the hardcoded key if env vars are missing or empty
+    if (!apiKey || !apiKey.trim()) {
+      apiKey = "AIzaSyCMEqPk4jrWMVMaVLov9Cq1CnygzhbeRis";
     }
-    aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY is missing. Please set it in your environment variables.");
+    }
+    // Trim the key to remove any accidental whitespace
+    const validApiKey = apiKey.trim();
+    if (!validApiKey) {
+      throw new Error("GEMINI_API_KEY is empty.");
+    }
+    aiClient = new GoogleGenAI({ apiKey: validApiKey });
   }
   return aiClient;
 }
@@ -82,7 +94,7 @@ export default async function handler(req, res) {
       
       try {
         const urlResult = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
+            model: 'gemini-2.0-flash-exp',
             contents: searchPrompt,
             config: {
               tools: [{ googleSearch: {} }]
@@ -141,11 +153,11 @@ export default async function handler(req, res) {
         explanationPrompt = `Based on the user's question "${questionOrSubject}" and the content of this article, provide a structured explanation.\nArticle Title: ${articleData.title}\nArticle Content: "${articleData.bodyText.substring(0, 8000)}"\nUser Preferences: ${JSON.stringify(settings?.answerPreferences || [])}\n${contentInclusionInstructions}\nFormat the response in Markdown. Include the article title as a heading, the URL as a clickable link [Lien de l'article](${articleUrl}), and then the detailed explanation.`;
       } else {
         // Fallback prompt using Google Search tool directly on the URL
-        explanationPrompt = `The user wants an analysis of this URL: ${articleUrl}. \nQuestion: "${questionOrSubject}"\nUser Preferences: ${JSON.stringify(settings?.answerPreferences || [])}\n${contentInclusionInstructions}\nUse your browsing tools to read the content of the URL if possible, or search for information about it. Format the response in Markdown. Include the article title as a heading, the URL as a clickable link [Lien de l'article](${articleUrl}), and then the detailed explanation.`;
+        explanationPrompt = `The user wants an analysis of this URL: ${articleUrl}. \nQuestion: "${questionOrSubject}"\nUser Preferences: ${JSON.stringify(settings?.answerPreferences || [])}\n${contentInclusionInstructions}\nUse your Google Search tool to read the content of the URL if possible, or search for information about it. Prioritize content from jw.org or wol.jw.org. Format the response in Markdown. Include the article title as a heading, the URL as a clickable link [Lien de l'article](${articleUrl}), and then the detailed explanation.`;
       }
 
       const explanationResult = await ai.models.generateContent({
-          model: 'gemini-3-flash-preview',
+          model: 'gemini-2.0-flash-exp',
           contents: explanationPrompt,
           config: {
             tools: [{ googleSearch: {} }]

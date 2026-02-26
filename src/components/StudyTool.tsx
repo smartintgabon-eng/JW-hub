@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Link as LinkIcon, Calendar, Loader2, ShieldCheck, Plus, Minus, Info } from 'lucide-react'; 
 import { StudyPart, GeneratedStudy, AppSettings } from '../types.ts'; 
-import ContentInclusion, { ContentOptions } from './ContentInclusion.tsx';
 
 interface Props {
   type: 'WATCHTOWER' | 'MINISTRY';
@@ -127,13 +126,6 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
   const [loading, setLoading] = useState(false);
   const [articleConfirmed, setArticleConfirmed] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const [contentOptions, setContentOptions] = useState<ContentOptions>({
-    includeArticles: false,
-    includeImages: false,
-    includeVideos: false,
-    includeVerses: false,
-    articleLinks: [],
-  });
 
   useEffect(() => {
     const savedMainLink = localStorage.getItem(`${type}-mainLink`);
@@ -223,8 +215,14 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
           part, 
           settings, 
           manualText: useManual ? manualText : null,
-          contentOptions,
-          articleReferences: contentOptions.articleLinks
+          contentOptions: {
+            includeArticles: false,
+            includeImages: false,
+            includeVideos: false,
+            includeVerses: false,
+            articleLinks: []
+          },
+          articleReferences: []
         })
       });
       const data = await res.json();
@@ -350,8 +348,6 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
               </div>
               <button onClick={() => setArticleConfirmed(null)} className="text-xs font-bold opacity-30 hover:opacity-100 uppercase underline">{getLocalizedText(settings, 'change')}</button>
             </div>
-
-            <ContentInclusion options={contentOptions} onChange={setContentOptions} />
 
             {type === 'MINISTRY' ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

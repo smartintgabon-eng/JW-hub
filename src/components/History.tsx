@@ -7,6 +7,7 @@ import { deleteFromHistory } from '../utils/storage.ts';
 import saveAs from 'file-saver'; 
 import { Document, Paragraph, TextRun, Packer, AlignmentType, HeadingLevel } from 'docx'; 
 import jsPDF from 'jspdf';
+import { getContrastTextColor } from '../utils/colorUtils.ts';
 
 interface Props {
   history: GeneratedStudy[];
@@ -139,7 +140,8 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
   const exportToDocx = async (study: GeneratedStudy) => {
     if (!study.content) return alert(getLocalizedText(settings, 'emptyContent'));
 
-    const defaultTextColor = (settings.bgColor === '#f4f4f5' || settings.bgColor === '#fef3c7') ? '000000' : 'FFFFFF';
+    // Always use black text for DOCX as background is white by default
+    const defaultTextColor = '000000';
     const btnColor = (settings.btnColor).replace('#', '');
 
     const docChildren = [
@@ -269,7 +271,8 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
     const margin = 15;
     let y = 20;
     const pageWidth = doc.internal.pageSize.getWidth();
-    const defaultTextColor = (settings.bgColor === '#f4f4f5' || settings.bgColor === '#fef3c7') ? '#000000' : '#FFFFFF';
+    // Always use black text for PDF as background is white by default
+    const defaultTextColor = '#000000';
     const btnColor = settings.btnColor || '#4a70b5';
 
     doc.setFont('helvetica');
@@ -413,18 +416,27 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
     }
   }
 
+  const textColor = getContrastTextColor(settings.bgColor || '#f5f5f0');
+  const proseClass = textColor === 'white' ? 'prose-invert' : '';
+
   if (selectedStudy) {
     return (
       <div className={`animate-in fade-in duration-500 pb-24 ${readingMode ? 'fixed inset-0 z-[100] bg-[var(--bg-color)] overflow-y-auto p-6' : ''}`}>
-        <div className="flex items-center justify-between mb-10 sticky top-0 py-4 z-20 bg-[var(--bg-color)]">
+        <div className="flex items-center justify-between mb-10 sticky top-0 py-4 z-20 bg-[var(--bg-color)]/95 backdrop-blur-sm transition-all">
           <button onClick={() => setSelectedStudy(null)} className="flex items-center gap-2 opacity-50 hover:opacity-100 uppercase font-black text-xs">
             <ChevronLeft size={20} /> {getLocalizedText(settings, 'close')}
           </button>
           <div className="flex gap-2">
-            <button onClick={() => setReadingMode(!readingMode)} className="p-3 bg-white/5 rounded-xl border border-white/10">{readingMode ? <Minimize2 size={20}/> : <Maximize2 size={20}/>}</button>
-            <button onClick={() => exportToDocx(selectedStudy)} className="p-3 bg-white/5 rounded-xl border border-white/10"><FileSignature size={20}/></button>
-            <button onClick={() => exportToPdf(selectedStudy)} className="p-3 bg-white/5 rounded-xl border border-white/10"><Download size={20}/></button>
-            <button onClick={(e) => handleDelete(selectedStudy.id, e)} className="p-3 bg-white/5 rounded-xl border border-white/10 text-red-400"><Trash2 size={20}/></button>
+            <button 
+              onClick={() => setReadingMode(!readingMode)} 
+              className={`p-3 rounded-xl border border-white/10 transition-all ${readingMode ? 'bg-[var(--btn-color)] text-[var(--btn-text)] shadow-lg' : 'bg-white/5 hover:bg-white/10'}`}
+              title={readingMode ? "Quitter le mode lecture" : "Mode lecture"}
+            >
+              {readingMode ? <Minimize2 size={20}/> : <Maximize2 size={20}/>}
+            </button>
+            <button onClick={() => exportToDocx(selectedStudy)} className="p-3 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-all"><FileSignature size={20}/></button>
+            <button onClick={() => exportToPdf(selectedStudy)} className="p-3 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition-all"><Download size={20}/></button>
+            <button onClick={(e) => handleDelete(selectedStudy.id, e)} className="p-3 bg-white/5 rounded-xl border border-white/10 text-red-400 hover:bg-red-400/10 transition-all"><Trash2 size={20}/></button>
           </div>
         </div>
 
@@ -463,7 +475,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
               })}
             </div>
           ) : (
-            <div className="prose prose-invert max-w-none font-serif text-lg leading-relaxed whitespace-pre-wrap opacity-80">
+            <div className={`prose ${proseClass} max-w-none font-serif text-lg leading-relaxed whitespace-pre-wrap opacity-80`}>
               {selectedStudy.content}
             </div>
           )}

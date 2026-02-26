@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Markdown from 'react-markdown';
 import { AppSettings } from '../types';
 import ContentInclusion, { ContentOptions } from './ContentInclusion.tsx';
+import { getContrastTextColor } from '../utils/colorUtils.ts';
 
 interface ThursdayDiscourseProps {
   settings: AppSettings;
@@ -30,6 +31,9 @@ const ThursdayDiscourse: React.FC<ThursdayDiscourseProps> = ({ settings, setGlob
     includeVerses: false,
     articleLinks: [],
   });
+
+  const textColor = getContrastTextColor(settings.bgColor || '#f5f5f0');
+  const proseClass = textColor === 'white' ? 'prose-invert' : '';
 
   const handleTimeChange = (time: string) => {
     setSelectedTime(time);
@@ -203,7 +207,7 @@ const ThursdayDiscourse: React.FC<ThursdayDiscourseProps> = ({ settings, setGlob
         {generatedDiscourse && (
           <div className="mt-10 p-8 bg-black/40 border border-white/10 rounded-2xl animate-in fade-in slide-in-from-bottom-4">
             <h4 className="text-xl font-black uppercase tracking-wider mb-6 text-[var(--btn-color)]">Discours Généré</h4>
-            <div className="markdown-body prose prose-invert max-w-none">
+            <div className={`markdown-body prose ${proseClass} max-w-none`}>
               <Markdown>{generatedDiscourse}</Markdown>
             </div>
           </div>
