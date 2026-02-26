@@ -16,12 +16,29 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { input, manualText, text, settings, type, part, discoursType, time, theme, articleReferences, pointsToReinforce, strengths, encouragements, contentOptions } = req.body;
+  const { input, manualText, text, settings, type, part, discoursType, time, theme, articleReferences, pointsToReinforce, strengths, encouragements, contentOptions, preachingType } = req.body;
 
   try {
     const ai = getAiClient();
     let prompt = '';
     const userPreferences = (settings?.answerPreferences || []).map(p => p.text).join(', ') || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.';
+
+    // Helper to generate content inclusion instructions
+    const getContentInclusionInstructions = (options, refs) => {
+      let instructions = "";
+      if (options) {
+        if (options.includeArticles) instructions += `\n- Utilise Google Search pour trouver et inclure des références précises à des articles de jw.org ou wol.jw.org. Formatte-les comme des liens Markdown cliquables [Titre](URL).`;
+        if (options.includeImages) instructions += `\n- Suggère des images ou illustrations visuelles pertinentes.`;
+        if (options.includeVideos) instructions += `\n- Suggère des vidéos pertinentes de jw.org.`;
+        if (options.includeVerses) instructions += `\n- Inclus de nombreux versets bibliques clés avec leur explication.`;
+      }
+      if (refs && refs.length > 0) {
+        instructions += `\n\nIMPORTANT: Utilise les informations de ces articles comme base principale. Lis leur contenu via tes outils de recherche : ${refs.join(', ')}`;
+      }
+      return instructions;
+    };
+
+    const commonInstructions = getContentInclusionInstructions(contentOptions, articleReferences);
 
     if (type === 'DISCOURS_THEME') {
       prompt = `Génère un thème de discours biblique accrocheur et profond.
@@ -41,41 +58,44 @@ Le discours doit inclure :
 1. Une introduction captivante.
 2. Un développement structuré avec des sous-thèmes clairs et des versets bibliques pertinents.
 3. Une conclusion motivante.
-Assure-toi que le contenu est adapté à la durée prévue (${time}).`;
+Assure-toi que le contenu est adapté à la durée prévue (${time}).
+${commonInstructions}`;
 
-      if (contentOptions) {
-        if (contentOptions.includeArticles) prompt += `\n- Utilise Google Search pour trouver et inclure des références précises à des articles de jw.org ou wol.jw.org. Formatte-les comme des liens Markdown cliquables [Titre](URL).`;
-        if (contentOptions.includeImages) prompt += `\n- Suggère des images ou illustrations visuelles pertinentes.`;
-        if (contentOptions.includeVideos) prompt += `\n- Suggère des vidéos pertinentes de jw.org.`;
-        if (contentOptions.includeVerses) prompt += `\n- Inclus de nombreux versets bibliques clés avec leur explication.`;
-      }
-
-      if (articleReferences && articleReferences.length > 0) {
-        const ministryLinks = articleReferences.filter(link => link.includes('mwb') || link.includes('vie-chretienne-et-ministere'));
-        const otherLinks = articleReferences.filter(link => !link.includes('mwb') && !link.includes('vie-chretienne-et-ministere'));
-        
-        if (ministryLinks.length > 0) {
-          prompt += `\n\nIMPORTANT: Ce discours est basé sur le Cahier Vie et Ministère. Lis attentivement le contenu de ces liens pour structurer ton discours : ${ministryLinks.join(', ')}`;
-        }
-        if (otherLinks.length > 0) {
-          prompt += `\nUtilise les informations de ces articles comme base principale. Lis leur contenu via tes outils de recherche : ${otherLinks.join(', ')}`;
-        }
-      }
       if (pointsToReinforce) prompt += `\nPoints à renforcer : ${pointsToReinforce}`;
       if (strengths) prompt += `\nPoints forts : ${strengths}`;
       if (encouragements) prompt += `\nEncouragements : ${encouragements}`;
 
     } else {
       const contentToAnalyze = manualText || input || text;
-      if (!contentToAnalyze) {
-        return res.status(400).json({ message: 'Content for analysis is required.' });
+      // For PREDICATION, input might be an array or string, handle it gracefully
+      const contentString = Array.isArray(contentToAnalyze) ? contentToAnalyze.join('\n') : contentToAnalyze;
+
+      if (!contentString && type !== 'PREDICATION') { 
+         // Allow empty input if it's just a template generation, but usually we need something.
       }
-      prompt = `Analyze the following content and provide a structured explanation based on user preferences.\nContent: "${contentToAnalyze}"\nUser Preferences: ${userPreferences}\n`;
+
+      // Check if contentString contains URLs
+      const containsUrl = /https?:\/\/[^\s]+/.test(contentString);
+      let urlInstructions = "";
+      if (containsUrl) {
+        urlInstructions = "The input contains URLs. Use your browsing tools to read the content of these URLs to inform your response. Do not just analyze the URL string itself.";
+      }
+
+      prompt = `Analyze the following content and provide a structured explanation based on user preferences.\nContent/Context: "${contentString}"\n${urlInstructions}\nUser Preferences: ${userPreferences}\n${commonInstructions}\n`;
       
       if (type === 'WATCHTOWER') {
         prompt += `This is a Watchtower study article. Format the response with a clear title, a summary, and a detailed, point-by-point explanation for each paragraph or section.`;
       } else if (type === 'MINISTRY') {
         prompt += `This is a Ministry Workbook meeting part (${part || 'full'}). Format the response appropriately for this specific part, providing practical points, scriptures, and clear explanations.`;
+      } else if (type === 'PREDICATION') {
+         prompt += `This is a preparation for field ministry (${preachingType}). 
+         Context: ${contentString}
+         Provide a prepared presentation or discussion points suitable for this ministry type.
+         Include:
+         - An engaging opening question or remark.
+         - A scripture to share and explain.
+         - A transition to a publication or a follow-up question.
+         - Practical tips for handling common objections if applicable.`;
       } else {
         prompt += `Format the response with a clear title, a summary, and a detailed, point-by-point explanation.`;
       }

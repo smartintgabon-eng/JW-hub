@@ -1,11 +1,13 @@
 // src/services/searchApiService.ts
 import { AppSettings, GeneratedStudy } from '../types';
+import { ContentOptions } from '../components/ContentInclusion';
 
 export const callSearchContentApi = async (
   questionOrSubject: string,
   settings: AppSettings,
   // Fix: Add confirmMode parameter
   confirmMode: boolean, 
+  contentOptions?: ContentOptions
 ): Promise<{ 
     text: string; 
     title: string; 
@@ -28,6 +30,8 @@ export const callSearchContentApi = async (
       settings,
       // Fix: Pass confirmMode in the request body
       confirmMode, 
+      contentOptions,
+      articleReferences: contentOptions?.articleLinks
     }),
   });
 

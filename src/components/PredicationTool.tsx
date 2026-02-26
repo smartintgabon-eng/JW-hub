@@ -4,6 +4,7 @@ import { Megaphone, Loader2, AlertTriangle, BookOpen, Link as LinkIcon, Handshak
 import { AppSettings, GeneratedStudy, PredicationType } from '../types.ts';
 import { callGenerateContentApi } from '../services/apiService.ts'; 
 import { saveInputState, loadInputState } from '../utils/storage.ts';
+import ContentInclusion, { ContentOptions } from './ContentInclusion.tsx';
 
 interface Props {
   onGenerated: (study: GeneratedStudy) => void;
@@ -16,6 +17,13 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
+  const [contentOptions, setContentOptions] = useState<ContentOptions>({
+    includeArticles: false,
+    includeImages: false,
+    includeVideos: false,
+    includeVerses: false,
+    articleLinks: [],
+  });
 
   // Porte-en-porte states
   const [pepPublicationLink, setPepPublicationLink] = useState(() => loadInputState('pepPublicationLink', ''));
@@ -100,7 +108,7 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
     setError(null);
 
     try {
-      const result = await callGenerateContentApi('PREDICATION', inputDetails, 'tout', settings, false, preachingType);
+      const result = await callGenerateContentApi('PREDICATION', inputDetails, 'tout', settings, false, preachingType, contentOptions);
 
       setGlobalLoadingMessage('Enregistrement de la préparation et redirection...');
       const newStudy: GeneratedStudy = {
@@ -249,6 +257,8 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
                   className="w-full h-24 bg-black/40 border border-white/10 rounded-xl py-3 px-4 focus:border-[var(--btn-color)] outline-none transition-all font-medium resize-none" />
               </div>
 
+              <ContentInclusion options={contentOptions} onChange={setContentOptions} />
+
               <button onClick={() => handleGenerateContent(
                   `Prédication Porte-à-porte: ${pepTopic}`,
                   `Publication: ${pepPublicationLink || '(Non fournie)'}, Sujet: ${pepTopic}${pepOfferStudy && pepStudyBrochureLink ? `, Offre étude: ${pepStudyBrochureLink}` : ''}${pepCurrentAffairs ? `, Actualités: ${pepCurrentAffairs}` : ''}`,
@@ -314,6 +324,9 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
                   <BookOpen size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
                 </div>
               </div>
+
+              <ContentInclusion options={contentOptions} onChange={setContentOptions} />
+
               <button onClick={() => handleGenerateContent(
                   `Nouvelle Visite (Cours): ${nvStudyLink || nvStudyChapterParagraph}`,
                   `Cours Biblique: ${nvStudyLink || '(Non fournie)'}, Arrêté à: ${nvStudyChapterParagraph}`,
@@ -349,6 +362,9 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
                   <LinkIcon size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
                 </div>
               </div>
+
+              <ContentInclusion options={contentOptions} onChange={setContentOptions} />
+
               <button onClick={() => handleGenerateContent(
                   `Nouvelle Visite (Question): ${nvQuestionLeft}`,
                   `Question en suspens: ${nvQuestionLeft}${nvBrochureLink ? `, Offre étude: ${nvBrochureLink}` : ''}`,
@@ -416,6 +432,9 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
                   <LinkIcon size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
                 </div>
               </div>
+
+              <ContentInclusion options={contentOptions} onChange={setContentOptions} />
+
               <button onClick={() => handleGenerateContent(
                   `Cours Biblique: ${cbType === 'new' ? 'Nouveau Chapitre' : `Suite: ${cbChapterParagraph}`}`,
                   `Publication: ${cbPublicationLink || '(Non fournie)'}${cbType === 'ongoing' ? `, Arrêté à: ${cbChapterParagraph}` : ''}`,

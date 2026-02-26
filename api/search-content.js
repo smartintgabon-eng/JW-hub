@@ -64,7 +64,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { questionOrSubject, settings, confirmMode } = req.body;
+  const { questionOrSubject, settings, confirmMode, contentOptions } = req.body;
 
   if (!questionOrSubject) {
     return res.status(400).json({ message: 'Question or subject is required.' });
@@ -125,11 +125,23 @@ export default async function handler(req, res) {
         }
     } else {
       let explanationPrompt;
+      let contentInclusionInstructions = "";
+
+      if (contentOptions) {
+        if (contentOptions.includeArticles) contentInclusionInstructions += "Include references to other relevant articles.\n";
+        if (contentOptions.includeImages) contentInclusionInstructions += "Describe relevant images or visual aids that could be used.\n";
+        if (contentOptions.includeVideos) contentInclusionInstructions += "Suggest relevant videos from jw.org.\n";
+        if (contentOptions.includeVerses) contentInclusionInstructions += "Include key Bible verses.\n";
+        if (contentOptions.articleLinks && contentOptions.articleLinks.length > 0) {
+            contentInclusionInstructions += `Consider these additional articles: ${contentOptions.articleLinks.join(', ')}\n`;
+        }
+      }
+
       if (articleData && articleData.bodyText) {
-        explanationPrompt = `Based on the user's question "${questionOrSubject}" and the content of this article, provide a structured explanation.\nArticle Title: ${articleData.title}\nArticle Content: "${articleData.bodyText.substring(0, 8000)}"\nUser Preferences: ${JSON.stringify(settings?.answerPreferences || [])}\nFormat the response in Markdown. Include the article title as a heading, the URL as a clickable link [Lien de l'article](URL), and then the detailed explanation.`;
+        explanationPrompt = `Based on the user's question "${questionOrSubject}" and the content of this article, provide a structured explanation.\nArticle Title: ${articleData.title}\nArticle Content: "${articleData.bodyText.substring(0, 8000)}"\nUser Preferences: ${JSON.stringify(settings?.answerPreferences || [])}\n${contentInclusionInstructions}\nFormat the response in Markdown. Include the article title as a heading, the URL as a clickable link [Lien de l'article](${articleUrl}), and then the detailed explanation.`;
       } else {
         // Fallback prompt using Google Search tool directly on the URL
-        explanationPrompt = `The user wants an analysis of this URL: ${articleUrl}. \nQuestion: "${questionOrSubject}"\nUser Preferences: ${JSON.stringify(settings?.answerPreferences || [])}\nUse your browsing tools to read the content of the URL if possible, or search for information about it. Format the response in Markdown. Include the article title as a heading, the URL as a clickable link [Lien de l'article](URL), and then the detailed explanation.`;
+        explanationPrompt = `The user wants an analysis of this URL: ${articleUrl}. \nQuestion: "${questionOrSubject}"\nUser Preferences: ${JSON.stringify(settings?.answerPreferences || [])}\n${contentInclusionInstructions}\nUse your browsing tools to read the content of the URL if possible, or search for information about it. Format the response in Markdown. Include the article title as a heading, the URL as a clickable link [Lien de l'article](${articleUrl}), and then the detailed explanation.`;
       }
 
       const explanationResult = await ai.models.generateContent({

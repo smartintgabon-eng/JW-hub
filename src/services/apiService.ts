@@ -1,5 +1,6 @@
 // src/services/apiService.ts
 import { StudyPart, PredicationType, AppSettings, GeneratedStudy } from '../types'; // Import GeneratedStudy type
+import { ContentOptions } from '../components/ContentInclusion';
 
 export const callGenerateContentApi = async (
   type: 'WATCHTOWER' | 'MINISTRY' | 'PREDICATION',
@@ -7,7 +8,8 @@ export const callGenerateContentApi = async (
   part: StudyPart = 'tout',
   settings: AppSettings,
   isInitialSearchForPreview: boolean = false,
-  preachingType: PredicationType | undefined
+  preachingType: PredicationType | undefined,
+  contentOptions?: ContentOptions
 ): Promise<{ text: string; title: string; theme?: string; rawSources?: GeneratedStudy['rawSources']; aiExplanation?: string }> => { // Added optional rawSources and aiExplanation
 
   const response = await fetch('/api/generate-content', {
@@ -22,6 +24,8 @@ export const callGenerateContentApi = async (
       settings,
       isInitialSearchForPreview,
       preachingType,
+      contentOptions,
+      articleReferences: contentOptions?.articleLinks
     }),
   });
 
