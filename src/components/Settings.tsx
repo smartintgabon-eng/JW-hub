@@ -27,7 +27,7 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
 
   const isHexCode = (str: string) => /^#([0-9A-F]{3}){1,2}$/i.test(str);
 
-  const handleGuessColor = useCallback(async (colorInput: string, setColorDescription: (desc: string | null) => void, setLoader: (l: boolean) => void, type: 'btn' | 'bg') => {
+  const handleGuessColor = async (colorInput: string, setColorDescription: (desc: string | null) => void, setLoader: (l: boolean) => void, type: 'btn' | 'bg') => {
     if (!colorInput || colorInput.length < 3) {
       setColorDescription(null);
       return;
@@ -58,7 +58,7 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
     } finally {
       setLoader(false);
     }
-  }, [setDraft]);
+  };
 
   const getSuggestions = (q: string) => colorSuggestions.filter(c => c.name.toLowerCase().includes(q.toLowerCase())).slice(0, 4);
 
@@ -85,7 +85,7 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
       }
     }, 1000);
     return () => clearTimeout(timer);
-  }, [btnQuery, handleGuessColor]);
+  }, [btnQuery]); // Removed handleGuessColor from deps
 
   // Debounced auto-guess pour bgQuery
   useEffect(() => {
@@ -95,7 +95,7 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
       }
     }, 1000);
     return () => clearTimeout(timer);
-  }, [bgQuery, handleGuessColor]);
+  }, [bgQuery]); // Removed handleGuessColor from deps
 
   return (
     <div className="max-w-2xl mx-auto p-4 space-y-8">

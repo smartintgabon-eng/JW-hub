@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import cheerio from 'cheerio';
+import { load } from 'cheerio';
 
 let aiClient;
 function getAiClient() {
@@ -14,12 +14,16 @@ function getAiClient() {
 
 async function fetchArticleData(url) {
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
     if (!response.ok) {
       throw new Error(`Failed to fetch article, status: ${response.status}`);
     }
     const html = await response.text();
-    const $ = cheerio.load(html);
+    const $ = load(html);
 
     const title = $('h1').first().text().trim();
     const summary = $('meta[name=description]').attr('content') || '';
@@ -57,17 +61,24 @@ export default async function handler(req, res) {
 
   try {
     const ai = getAiClient();
-    const searchPrompt = `Based on the user's question "${questionOrSubject}" in language "${settings.language}", find the single most relevant article URL from wol.jw.org or jw.org. Return ONLY the URL.`;
-    
-    const urlResult = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: searchPrompt,
-        config: {
-          tools: [{ googleSearch: {} }]
-        }
-    });
-    
-    const articleUrl = urlResult.text.trim();
+    let articleUrl = questionOrSubject.trim();
+
+    // Check if the input is already a valid URL
+    const isUrl = /^https?:\/\/(wol\.jw\.org|jw\.org)/i.test(articleUrl);
+
+    if (!isUrl) {
+      const searchPrompt = `Based on the user's question "${questionOrSubject}" in language "${settings?.language || 'fr'}", find the single most relevant article URL from wol.jw.org or jw.org. Return ONLY the URL.`;
+      
+      const urlResult = await ai.models.generateContent({
+          model: 'gemini-3-flash-preview',
+          contents: searchPrompt,
+          config: {
+            tools: [{ googleSearch: {} }]
+          }
+      });
+      
+      articleUrl = urlResult.text.trim();
+    }
 
     if (!articleUrl.startsWith('http')) {
       return res.status(404).json({ message: 'Could not find a relevant article URL.' });
@@ -83,7 +94,7 @@ export default async function handler(req, res) {
             previewInfos: `Source: ${new URL(articleUrl).hostname}`
         });
     } else {
-      const explanationPrompt = `Based on the user's question "${questionOrSubject}" and the content of this article, provide a structured explanation.\nArticle Title: ${title}\nArticle Content: "${bodyText.substring(0, 8000)}"\nUser Preferences: ${JSON.stringify(settings.answerPreferences)}\nFormat the response as a single block of text containing the article title (NOM), the URL (LIEN), and the detailed explanation (EXPLICATION).`;
+      const explanationPrompt = `Based on the user's question "${questionOrSubject}" and the content of this article, provide a structured explanation.\nArticle Title: ${title}\nArticle Content: "${bodyText.substring(0, 8000)}"\nUser Preferences: ${JSON.stringify(settings?.answerPreferences || [])}\nFormat the response as a single block of text containing the article title (NOM), the URL (LIEN), and the detailed explanation (EXPLICATION).`;
 
       const explanationResult = await ai.models.generateContent({
           model: 'gemini-3-flash-preview',

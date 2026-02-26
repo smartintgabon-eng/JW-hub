@@ -26,7 +26,7 @@ export default async function handler(req, res) {
 
   try {
     const ai = getAiClient();
-    let prompt = `Analyze the following content and provide a structured explanation based on user preferences.\nContent: "${contentToAnalyze}"\nUser Preferences: ${JSON.stringify(settings.answerPreferences)}\n`;
+    let prompt = `Analyze the following content and provide a structured explanation based on user preferences.\nContent: "${contentToAnalyze}"\nUser Preferences: ${JSON.stringify(settings?.answerPreferences || [])}\n`;
     
     if (type === 'WATCHTOWER') {
       prompt += `This is a Watchtower study article. Format the response with a clear title, a summary, and a detailed, point-by-point explanation for each paragraph or section.`;
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
         model: 'gemini-3-flash-preview',
         contents: prompt,
         config: {
-          tools: [{ googleSearch: {} }]
+          tools: [{ googleSearch: {} }, { urlContext: {} }]
         }
     });
 

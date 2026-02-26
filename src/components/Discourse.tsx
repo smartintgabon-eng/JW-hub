@@ -42,7 +42,7 @@ const Discourse: React.FC<DiscourseProps> = ({ settings, setGlobalLoadingMessage
                 <Mic size={32} className="text-[var(--btn-color)]" />
               </div>
               <h3 className="text-xl font-black uppercase tracking-wider mb-2">Discours Normal</h3>
-              <p className="text-sm opacity-60">Préparation standard pour un discours de l'assemblée.</p>
+              <p className="text-sm opacity-60">Préparation standard pour un discours de l&apos;assemblée.</p>
             </button>
             <button
               onClick={() => setSelectedType(DiscourseType.THURSDAY)}
@@ -90,7 +90,7 @@ const Discourse: React.FC<DiscourseProps> = ({ settings, setGlobalLoadingMessage
       
       {!selectedType ? (
         <p className="text-lg opacity-70 mb-8 max-w-2xl">
-          Sélectionnez le type de discours que vous devez préparer. L'assistant vous guidera à travers une structure adaptée à vos besoins.
+          Sélectionnez le type de discours que vous devez préparer. L&apos;assistant vous guidera à travers une structure adaptée à vos besoins.
         </p>
       ) : (
         <button
