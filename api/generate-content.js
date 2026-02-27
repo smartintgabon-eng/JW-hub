@@ -8,12 +8,6 @@ export default async function handler(req, res) {
   
   // Utilisation de la clé API Vercel
   const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
-  // On utilise "gemini-1.5-flash" comme roue de secours si le 2.5 est instable dans ta région
-  const model = genAI.getGenerativeModel({ 
-    model: "gemini-1.5-flash", // Plus stable pour les fonctions API actuellement
-    tools: [{ googleSearch: {} }] 
-  });
-
   let scrapedText = manualText || "";
 
   // Tentative de récupération du texte sur jw.org
@@ -39,7 +33,16 @@ export default async function handler(req, res) {
   `;
 
   try {
-    const result = await model.generateContent(prompt);
+    const result = await genAI.models.generateContent({
+      model: "gemini-1.5-flash", // Plus stable pour les fonctions API actuellement
+      contents: [
+        { text: prompt },
+        ...(scrapedText ? [{ text: `TEXTE SCRAPÉ :\n${scrapedText}` }] : []),
+      ],
+      config: {
+        tools: [{ googleSearch: {} }],
+      },
+    });
     const response = await result.response;
     const text = response.text();
     res.status(200).json({ text, title: "Analyse terminée" });
