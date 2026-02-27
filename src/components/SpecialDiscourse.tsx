@@ -65,7 +65,7 @@ const SpecialDiscourse: React.FC<SpecialDiscourseProps> = ({ settings, setGlobal
       const data = await response.json();
       setGeneratedDiscourse(data.text);
       setStep(4);
-    } catch (e) {
+    } catch {
       alert('Erreur lors de la génération du discours.');
     } finally {
       setGlobalLoadingMessage(null);

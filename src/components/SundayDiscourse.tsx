@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Markdown from 'react-markdown';
 import { AppSettings } from '../types';
 import { getContrastTextColor } from '../utils/colorUtils.ts';
-import { Sun, Search, ChevronRight } from 'lucide-react';
+import { Sun, Search } from 'lucide-react';
 
 interface SundayDiscourseProps {
   settings: AppSettings;
@@ -34,7 +34,7 @@ const SundayDiscourse: React.FC<SundayDiscourseProps> = ({ settings, setGlobalLo
       const data = await response.json();
       setGeneratedTheme(data.text);
       setThemeInput(data.text);
-    } catch (e) {
+    } catch {
       alert('Erreur lors de la génération du thème.');
     } finally {
       setGlobalLoadingMessage(null);
@@ -72,7 +72,7 @@ const SundayDiscourse: React.FC<SundayDiscourseProps> = ({ settings, setGlobalLo
       const data = await response.json();
       setGeneratedDiscourse(data.text);
       setStep(3);
-    } catch (e) {
+    } catch {
       alert('Erreur lors de la génération du discours.');
     } finally {
       setGlobalLoadingMessage(null);

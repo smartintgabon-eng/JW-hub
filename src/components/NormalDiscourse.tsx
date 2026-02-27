@@ -50,7 +50,7 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
       const data = await response.json();
       setGeneratedTheme(data.text);
       setThemeInput(data.text);
-    } catch (e) {
+    } catch {
       alert('Erreur lors de la génération du thème.');
     } finally {
       setGlobalLoadingMessage(null);
@@ -88,7 +88,7 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
       const data = await response.json();
       setGeneratedDiscourse(data.text);
       setStep(4);
-    } catch (e) {
+    } catch {
       alert('Erreur lors de la génération du discours.');
     } finally {
       setGlobalLoadingMessage(null);
