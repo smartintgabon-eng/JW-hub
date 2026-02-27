@@ -3,7 +3,6 @@ import { Search, Loader2, AlertTriangle, Info } from 'lucide-react';
 import { AppSettings, GeneratedStudy } from '../types.ts';
 import { callSearchContentApi } from '../services/searchApiService.ts'; // New service for this API
 import { saveInputState, loadInputState } from '../utils/storage.ts'; // Import for persistence
-import ContentInclusion, { ContentOptions } from './ContentInclusion.tsx';
 
 
 interface Props {
@@ -89,13 +88,6 @@ const RecherchesTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadi
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [articleConfirmed, setArticleConfirmed] = useState<any>(null); // For preview
-  const [contentOptions, setContentOptions] = useState<ContentOptions>({
-    includeArticles: false,
-    includeImages: false,
-    includeVideos: false,
-    includeVerses: false,
-    articleLinks: [],
-  });
 
   // Persistence effect
   useEffect(() => { saveInputState('recherches-query', query); }, [query]);
@@ -134,7 +126,7 @@ const RecherchesTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadi
 
     try {
       // Call without confirmMode to get full structured content
-      const data = await callSearchContentApi(query, settings, false, contentOptions); 
+      const data = await callSearchContentApi(query, settings, false); 
       
       const study: GeneratedStudy = {
         id: Date.now().toString(),
@@ -208,8 +200,6 @@ const RecherchesTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadi
               </div>
               <button onClick={() => setArticleConfirmed(null)} className="text-xs font-bold opacity-30 hover:opacity-100 uppercase underline">{getLocalizedText(settings, 'changeSearch')}</button>
             </div>
-            
-            <ContentInclusion options={contentOptions} onChange={setContentOptions} />
 
             {error && (
               <div className="p-4 bg-red-500/10 text-red-400 rounded-xl mb-4 flex items-center gap-2">

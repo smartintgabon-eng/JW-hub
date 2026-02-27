@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import Markdown from 'react-markdown';
 import { AppSettings } from '../types';
-import ContentInclusion, { ContentOptions } from './ContentInclusion.tsx';
 import { getContrastTextColor } from '../utils/colorUtils.ts';
 
 interface SundayDiscourseProps {
@@ -24,13 +23,6 @@ const SundayDiscourse: React.FC<SundayDiscourseProps> = ({ settings, setGlobalLo
   const [generateTheme, setGenerateTheme] = useState<boolean>(false);
   const [generatedTheme, setGeneratedTheme] = useState<string | null>(null);
   const [generatedDiscourse, setGeneratedDiscourse] = useState<string | null>(null);
-  const [contentOptions, setContentOptions] = useState<ContentOptions>({
-    includeArticles: false,
-    includeImages: false,
-    includeVideos: false,
-    includeVerses: false,
-    articleLinks: [],
-  });
 
   const textColor = getContrastTextColor(settings.bgColor || '#f5f5f0');
   const proseClass = textColor === 'white' ? 'prose-invert' : '';
@@ -97,14 +89,12 @@ const SundayDiscourse: React.FC<SundayDiscourseProps> = ({ settings, setGlobalLo
           discoursType: 'dimanche',
           time: selectedTime,
           theme: finalTheme,
-          articleReferences: contentOptions.articleLinks,
           imageReferences: [], // Placeholder for future UI
           videoReferences: [], // Placeholder for future UI
           pointsToReinforce: [], // Placeholder for future UI
           strengths: [], // Placeholder for future UI
           encouragements: '', // Placeholder for future UI
           settings: settings,
-          contentOptions,
         }),
       });
 
@@ -195,7 +185,6 @@ const SundayDiscourse: React.FC<SundayDiscourseProps> = ({ settings, setGlobalLo
           )}
         </div>
 
-        <ContentInclusion options={contentOptions} onChange={setContentOptions} />
 
         <button
           onClick={handleSubmit}

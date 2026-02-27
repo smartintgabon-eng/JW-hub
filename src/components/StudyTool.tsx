@@ -214,15 +214,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
           input: combinedInput, 
           part, 
           settings, 
-          manualText: useManual ? manualText : null,
-          contentOptions: {
-            includeArticles: false,
-            includeImages: false,
-            includeVideos: false,
-            includeVerses: false,
-            articleLinks: []
-          },
-          articleReferences: []
+          manualText: useManual ? manualText : null
         })
       });
       const data = await res.json();
