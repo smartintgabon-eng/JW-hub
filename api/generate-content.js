@@ -2,55 +2,48 @@ import { GoogleGenAI } from "@google/genai";
 import * as cheerio from 'cheerio';
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ message: 'Méthode non autorisée' });
+  if (req.method !== 'POST') return res.status(405).send('Méthode non autorisée');
 
   const { type, input, settings, manualText } = req.body;
   
-  // Utilisation de la variable d'environnement définie dans Vercel
+  // Utilisation de la clé API Vercel
   const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
-  
-  let contextData = manualText || "";
+  // On utilise "gemini-1.5-flash" comme roue de secours si le 2.5 est instable dans ta région
+  const model = genAI.getGenerativeModel({ 
+    model: "gemini-1.5-flash", // Plus stable pour les fonctions API actuellement
+    tools: [{ googleSearch: {} }] 
+  });
 
-  // Scraping amélioré avec Proxy pour éviter les blocages de jw.org
-  if (!manualText && input?.startsWith('http')) {
+  let scrapedText = manualText || "";
+
+  // Tentative de récupération du texte sur jw.org
+  if (!manualText && input?.includes('jw.org')) {
     try {
-      const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(input)}`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 sec max
+      const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(input)}`, { signal: controller.signal });
       const data = await response.json();
       const $ = cheerio.load(data.contents);
-      $('#article, .pGroup, .bodyTxt, .qu').each((_, el) => {
-        contextData += $(el).text() + "\n";
-      });
-    } catch (e) {
-      console.log("Échec du scraping, l'IA utilisera la recherche directe.");
-    }
+      $('#article, .pGroup, .bodyTxt').each((_, el) => { scrapedText += $(el).text() + "\n"; });
+      clearTimeout(timeoutId);
+    } catch (e) { console.error("Scraping ignoré, passage au grounding"); }
   }
 
-  const systemInstruction = `
-    Tu es un assistant expert JW. 
-    Ton rôle est d'analyser le contenu fourni pour générer une réponse précise et pertinente en Markdown, en citant les versets en TMN. 
-    Si des informations sont fournies comme "TEXTE SOURCE", utilise-les en priorité. Sinon, utilise googleSearch pour trouver des informations sur jw.org. 
-    Respecte les préférences utilisateur: ${settings?.aiPreferences || "Aucune"}.
-    Si tu ne trouves rien, explique pourquoi clairement.
+  const prompt = `
+    Rôle: Expert JW. 
+    Tâche: Étude pour ${type}. 
+    Source: ${scrapedText || "Recherche sur jw.org pour " + input}.
+    Instructions: Génère les réponses en français, cite les versets TMN. 
+    Format: Markdown.
+    Préférences: ${settings?.aiPreferences || "Aucune"}.
   `;
 
   try {
-    const result = await genAI.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [
-        { text: systemInstruction },
-        ...(contextData ? [{ text: `TEXTE SOURCE :\n${contextData}` }] : []),
-        { text: `QUESTION/SUJET : ${input}` },
-      ],
-      config: {
-        tools: [{ googleSearch: {} }],
-      },
-    });
+    const result = await model.generateContent(prompt);
     const response = await result.response;
-    res.status(200).json({ text: response.text(), title: "Analyse réussie" });
+    const text = response.text();
+    res.status(200).json({ text, title: "Analyse terminée" });
   } catch (error) {
-    res.status(500).json({ 
-      message: "Erreur de génération avec Gemini 2.5 Flash", 
-      error: error.message 
-    });
+    res.status(500).json({ error: "L'IA ne répond pas. Vérifie ta clé API dans Vercel." });
   }
 }
