@@ -4,13 +4,7 @@ import { load } from 'cheerio';
 let aiClient;
 function getAiClient() {
   if (!aiClient) {
-    let apiKey = process.env.GEMINI_API_KEY || process.env.REACT_APP_GEMINI_API_KEY;
-    
-    // Fallback to the hardcoded key if env vars are missing or empty
-    if (!apiKey || !apiKey.trim()) {
-      apiKey = "AIzaSyCMEqPk4jrWMVMaVLov9Cq1CnygzhbeRis";
-    }
-
+    const apiKey = process.env.GEMINI_API_KEY || process.env.REACT_APP_GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error("GEMINI_API_KEY is missing. Please set it in your environment variables.");
     }
@@ -94,7 +88,7 @@ export default async function handler(req, res) {
       
       try {
         const urlResult = await ai.models.generateContent({
-            model: 'gemini-2.0-flash-exp',
+            model: 'gemini-2.5-flash',
             contents: searchPrompt,
             config: {
               tools: [{ googleSearch: {} }]
@@ -157,7 +151,7 @@ export default async function handler(req, res) {
       }
 
       const explanationResult = await ai.models.generateContent({
-          model: 'gemini-2.0-flash-exp',
+          model: 'gemini-2.5-flash',
           contents: explanationPrompt,
           config: {
             tools: [{ googleSearch: {} }]
