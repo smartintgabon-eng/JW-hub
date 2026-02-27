@@ -1,17 +1,35 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
-:root {
-  --bg-color: #09090b;
-  --text-color: #ffffff;
-  --btn-color: #3b82f6;
-  --btn-text: #ffffff;
+@theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
 body {
-  background-color: var(--bg-color);
-  color: var(--text-color);
-  font-family: var(--font-sans);
+  background-color: #1a1a1a;
+  color: #ffffff;
+}
+
+.markdown-body h1, .markdown-body h2, .markdown-body h3 {
+  font-weight: 800;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-body p {
+  margin-bottom: 1em;
+  line-height: 1.6;
+}
+
+.markdown-body ul {
+  list-style-type: disc;
+  padding-left: 1.5em;
+  margin-bottom: 1em;
+}
+
+.markdown-body blockquote {
+  border-left: 4px solid var(--btn-color, #4f46e5);
+  padding-left: 1em;
+  font-style: italic;
+  opacity: 0.8;
 }

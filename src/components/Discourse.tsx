@@ -3,19 +3,12 @@ import NormalDiscourse from './NormalDiscourse.tsx';
 import ThursdayDiscourse from './ThursdayDiscourse.tsx';
 import SundayDiscourse from './SundayDiscourse.tsx';
 import SpecialDiscourse from './SpecialDiscourse.tsx';
-import { AppSettings } from '../types';
+import { AppSettings, DiscourseType } from '../types';
 import { Mic, Calendar, Sun, Star, ChevronLeft } from 'lucide-react';
 
 interface DiscourseProps {
   settings: AppSettings;
   setGlobalLoadingMessage: (message: string | null) => void;
-}
-
-enum DiscourseType {
-  NORMAL = 'normal',
-  THURSDAY = 'thursday',
-  SUNDAY = 'sunday',
-  SPECIAL = 'special',
 }
 
 const Discourse: React.FC<DiscourseProps> = ({ settings, setGlobalLoadingMessage }) => {
