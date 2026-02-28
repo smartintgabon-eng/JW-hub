@@ -5,8 +5,8 @@ const Tutorial: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto p-6 md:p-12 space-y-12 animate-in fade-in duration-500">
       <div className="text-center mb-12">
-        <h2 className="text-4xl font-black uppercase tracking-tighter mb-4 text-white">Guide Expert</h2>
-        <p className="text-gray-400 text-lg">Maîtrisez votre assistant spirituel en 2 minutes.</p>
+        <h2 className="text-4xl font-black uppercase tracking-tighter mb-4 text-gray-900">Guide Expert</h2>
+        <p className="text-gray-500 text-lg">Maîtrisez votre assistant spirituel en 2 minutes.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -36,12 +36,12 @@ const Tutorial: React.FC = () => {
 };
 
 const TutorialCard = ({ icon, title, desc }: { icon: React.ReactNode, title: string, desc: string }) => (
-  <div className="bg-zinc-900 border border-white/5 rounded-2xl p-8 hover:border-blue-500/50 transition-colors group">
-    <div className="w-12 h-12 bg-zinc-800 rounded-xl flex items-center justify-center mb-6 text-blue-400 group-hover:scale-110 transition-transform">
+  <div className="bg-white border border-gray-200 rounded-2xl p-8 hover:border-[#4a6da7]/50 hover:shadow-md transition-all group">
+    <div className="w-12 h-12 bg-[#4a6da7]/10 rounded-xl flex items-center justify-center mb-6 text-[#4a6da7] group-hover:scale-110 transition-transform">
       {icon}
     </div>
-    <h3 className="text-xl font-bold text-white mb-3">{title}</h3>
-    <p className="text-gray-400 leading-relaxed">{desc}</p>
+    <h3 className="text-xl font-bold text-gray-900 mb-3">{title}</h3>
+    <p className="text-gray-600 leading-relaxed">{desc}</p>
   </div>
 );
 

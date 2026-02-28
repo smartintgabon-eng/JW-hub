@@ -72,26 +72,26 @@ const ThursdayDiscourse: React.FC<ThursdayDiscourseProps> = ({ settings, setGlob
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden">
+      <div className="bg-[#111] border border-white/10 rounded-[2.5rem] p-8 shadow-xl relative overflow-hidden">
         <div className="flex items-center justify-between mb-8">
-          <h3 className="text-2xl font-black uppercase flex items-center gap-3">
+          <h3 className="text-2xl font-black uppercase flex items-center gap-3 text-white">
             <div className="p-2 bg-[var(--btn-color)]/20 rounded-xl">
               <Calendar className="text-[var(--btn-color)]" />
             </div>
             Discours de Semaine (Jeudi)
           </h3>
-          <div className="text-sm font-bold opacity-50">Étape {step} / 3</div>
+          <div className="text-sm font-bold text-gray-500">Étape {step} / 3</div>
         </div>
 
         {step === 1 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right">
-            <h4 className="text-lg font-bold uppercase opacity-80">1. Choisissez la durée (Max 15 min)</h4>
+            <h4 className="text-lg font-bold uppercase text-gray-300">1. Choisissez la durée (Max 15 min)</h4>
             <div className="grid grid-cols-3 gap-4">
               {['1min', '4min', '5min', '10min', '15min'].map((time) => (
                 <button
                   key={time}
                   onClick={() => handleTimeChange(time)}
-                  className={`p-4 rounded-xl font-bold border transition-all ${selectedTime === time ? 'bg-[var(--btn-color)] border-[var(--btn-color)] text-[var(--btn-text)]' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
+                  className={`p-4 rounded-xl font-bold border transition-all ${selectedTime === time ? 'bg-[var(--btn-color)] border-[var(--btn-color)] text-[var(--btn-text)]' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'}`}
                 >
                   {time}
                 </button>
@@ -101,10 +101,10 @@ const ThursdayDiscourse: React.FC<ThursdayDiscourseProps> = ({ settings, setGlob
                 placeholder="Autre (ex: 8min)"
                 value={customTime}
                 onChange={(e) => { setCustomTime(e.target.value); setSelectedTime(null); }}
-                className="p-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-[var(--btn-color)] text-center font-bold"
+                className="p-4 bg-black/50 border border-white/10 rounded-xl focus:outline-none focus:border-[var(--btn-color)] focus:ring-1 focus:ring-[var(--btn-color)] text-center font-bold text-white placeholder-gray-600"
               />
             </div>
-            <button onClick={handleNextStep} className="w-full py-4 bg-[var(--btn-color)] text-[var(--btn-text)] rounded-xl font-black uppercase tracking-widest mt-4">
+            <button onClick={handleNextStep} className="w-full py-4 bg-[var(--btn-color)] text-[var(--btn-text)] rounded-xl font-black uppercase tracking-widest mt-4 hover:opacity-90 transition-opacity">
               Suivant <ChevronRight className="inline ml-2" />
             </button>
           </div>
@@ -112,27 +112,27 @@ const ThursdayDiscourse: React.FC<ThursdayDiscourseProps> = ({ settings, setGlob
 
         {step === 2 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right">
-            <h4 className="text-lg font-bold uppercase opacity-80">2. Thème et Références</h4>
+            <h4 className="text-lg font-bold uppercase text-gray-300">2. Thème et Références</h4>
             <div className="space-y-4">
               <input
                 type="text"
                 value={themeInput}
                 onChange={(e) => setThemeInput(e.target.value)}
                 placeholder="Thème du discours..."
-                className="w-full p-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-[var(--btn-color)]"
+                className="w-full p-4 bg-black/50 border border-white/10 rounded-xl focus:outline-none focus:border-[var(--btn-color)] focus:ring-1 focus:ring-[var(--btn-color)] text-white placeholder-gray-600"
               />
               <div className="bg-white/5 p-4 rounded-xl border border-white/10">
-                <label className="flex items-center gap-2 mb-2 font-bold opacity-70"><FileText size={18} /> Article de référence (optionnel)</label>
+                <label className="flex items-center gap-2 mb-2 font-bold text-gray-400"><FileText size={18} /> Article de référence (optionnel)</label>
                 <input
                   type="text"
                   value={articleRef}
                   onChange={(e) => setArticleRef(e.target.value)}
                   placeholder="Lien vers l'article..."
-                  className="w-full p-3 bg-black/20 rounded-lg border border-white/5 focus:border-[var(--btn-color)] outline-none"
+                  className="w-full p-3 bg-black/50 rounded-lg border border-white/10 focus:border-[var(--btn-color)] focus:ring-1 focus:ring-[var(--btn-color)] outline-none text-white placeholder-gray-600"
                 />
               </div>
             </div>
-            <button onClick={handleNextStep} className="w-full py-4 bg-[var(--btn-color)] text-[var(--btn-text)] rounded-xl font-black uppercase tracking-widest mt-4">
+            <button onClick={handleNextStep} className="w-full py-4 bg-[var(--btn-color)] text-[var(--btn-text)] rounded-xl font-black uppercase tracking-widest mt-4 hover:opacity-90 transition-opacity">
               Suivant <ChevronRight className="inline ml-2" />
             </button>
           </div>
@@ -140,26 +140,26 @@ const ThursdayDiscourse: React.FC<ThursdayDiscourseProps> = ({ settings, setGlob
 
         {step === 3 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right">
-            <h4 className="text-lg font-bold uppercase opacity-80">3. Points Spécifiques</h4>
+            <h4 className="text-lg font-bold uppercase text-gray-300">3. Points Spécifiques</h4>
             <div className="space-y-4">
               <div className="bg-white/5 p-4 rounded-xl border border-white/10">
-                <label className="flex items-center gap-2 mb-2 font-bold opacity-70"><Target size={18} /> Point à renforcer (optionnel)</label>
+                <label className="flex items-center gap-2 mb-2 font-bold text-gray-400"><Target size={18} /> Point à renforcer (optionnel)</label>
                 <input
                   type="text"
                   value={pointToReinforce}
                   onChange={(e) => setPointToReinforce(e.target.value)}
                   placeholder="Ex: Être plus régulier..."
-                  className="w-full p-3 bg-black/20 rounded-lg border border-white/5 focus:border-[var(--btn-color)] outline-none"
+                  className="w-full p-3 bg-black/50 rounded-lg border border-white/10 focus:border-[var(--btn-color)] focus:ring-1 focus:ring-[var(--btn-color)] outline-none text-white placeholder-gray-600"
                 />
               </div>
               <div className="bg-white/5 p-4 rounded-xl border border-white/10">
-                <label className="flex items-center gap-2 mb-2 font-bold opacity-70"><Heart size={18} /> Encouragements (optionnel)</label>
+                <label className="flex items-center gap-2 mb-2 font-bold text-gray-400"><Heart size={18} /> Encouragements (optionnel)</label>
                 <input
                   type="text"
                   value={encouragements}
                   onChange={(e) => setEncouragements(e.target.value)}
                   placeholder="Ex: Féliciter pour l'effort..."
-                  className="w-full p-3 bg-black/20 rounded-lg border border-white/5 focus:border-[var(--btn-color)] outline-none"
+                  className="w-full p-3 bg-black/50 rounded-lg border border-white/10 focus:border-[var(--btn-color)] focus:ring-1 focus:ring-[var(--btn-color)] outline-none text-white placeholder-gray-600"
                 />
               </div>
             </div>
@@ -174,7 +174,7 @@ const ThursdayDiscourse: React.FC<ThursdayDiscourseProps> = ({ settings, setGlob
             <div className={`markdown-body prose ${proseClass} max-w-none`}>
               <Markdown>{generatedDiscourse}</Markdown>
             </div>
-            <button onClick={() => setStep(1)} className="mt-8 w-full py-4 bg-white/10 rounded-xl font-bold hover:bg-white/20">
+            <button onClick={() => setStep(1)} className="mt-8 w-full py-4 bg-white/5 text-gray-300 rounded-xl font-bold hover:bg-white/10 transition-colors">
               Préparer un autre discours
             </button>
           </div>

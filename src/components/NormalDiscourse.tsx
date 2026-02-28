@@ -97,26 +97,26 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden">
+      <div className="bg-[#111] border border-white/10 rounded-[2.5rem] p-8 shadow-xl relative overflow-hidden">
         <div className="flex items-center justify-between mb-8">
-          <h3 className="text-2xl font-black uppercase flex items-center gap-3">
+          <h3 className="text-2xl font-black uppercase flex items-center gap-3 text-white">
             <div className="p-2 bg-[var(--btn-color)]/20 rounded-xl">
               <Mic className="text-[var(--btn-color)]" />
             </div>
             Discours Normal
           </h3>
-          <div className="text-sm font-bold opacity-50">Étape {step} / 3</div>
+          <div className="text-sm font-bold text-gray-500">Étape {step} / 3</div>
         </div>
 
         {step === 1 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right">
-            <h4 className="text-lg font-bold uppercase opacity-80">1. Choisissez la durée</h4>
+            <h4 className="text-lg font-bold uppercase text-gray-300">1. Choisissez la durée</h4>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {['5min', '10min', '30min', '40min', '1h'].map((time) => (
                 <button
                   key={time}
                   onClick={() => handleTimeChange(time)}
-                  className={`p-4 rounded-xl font-bold border transition-all ${selectedTime === time ? 'bg-[var(--btn-color)] border-[var(--btn-color)] text-[var(--btn-text)]' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
+                  className={`p-4 rounded-xl font-bold border transition-all ${selectedTime === time ? 'bg-[var(--btn-color)] border-[var(--btn-color)] text-[var(--btn-text)]' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'}`}
                 >
                   {time}
                 </button>
@@ -126,10 +126,10 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
                 placeholder="Autre (ex: 25min)"
                 value={customTime}
                 onChange={(e) => { setCustomTime(e.target.value); setSelectedTime(null); }}
-                className="p-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-[var(--btn-color)] text-center font-bold"
+                className="p-4 bg-black/50 border border-white/10 rounded-xl focus:outline-none focus:border-[var(--btn-color)] focus:ring-1 focus:ring-[var(--btn-color)] text-center font-bold text-white placeholder-gray-600"
               />
             </div>
-            <button onClick={handleNextStep} className="w-full py-4 bg-[var(--btn-color)] text-[var(--btn-text)] rounded-xl font-black uppercase tracking-widest mt-4">
+            <button onClick={handleNextStep} className="w-full py-4 bg-[var(--btn-color)] text-[var(--btn-text)] rounded-xl font-black uppercase tracking-widest mt-4 hover:opacity-90 transition-opacity">
               Suivant <ChevronRight className="inline ml-2" />
             </button>
           </div>
@@ -137,17 +137,17 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
 
         {step === 2 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right">
-            <h4 className="text-lg font-bold uppercase opacity-80">2. Définissez le thème</h4>
+            <h4 className="text-lg font-bold uppercase text-gray-300">2. Définissez le thème</h4>
             <div className="flex gap-4">
               <button
                 onClick={() => setGenerateTheme(false)}
-                className={`flex-1 p-4 rounded-xl font-bold border transition-all ${!generateTheme ? 'bg-[var(--btn-color)] border-[var(--btn-color)] text-[var(--btn-text)]' : 'bg-white/5 border-white/10'}`}
+                className={`flex-1 p-4 rounded-xl font-bold border transition-all ${!generateTheme ? 'bg-[var(--btn-color)] border-[var(--btn-color)] text-[var(--btn-text)]' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'}`}
               >
                 Je l'ai déjà
               </button>
               <button
                 onClick={() => setGenerateTheme(true)}
-                className={`flex-1 p-4 rounded-xl font-bold border transition-all ${generateTheme ? 'bg-[var(--btn-color)] border-[var(--btn-color)] text-[var(--btn-text)]' : 'bg-white/5 border-white/10'}`}
+                className={`flex-1 p-4 rounded-xl font-bold border transition-all ${generateTheme ? 'bg-[var(--btn-color)] border-[var(--btn-color)] text-[var(--btn-text)]' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'}`}
               >
                 Suggère-moi un thème
               </button>
@@ -159,7 +159,7 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
                 value={themeInput}
                 onChange={(e) => setThemeInput(e.target.value)}
                 placeholder="Entrez votre thème ici..."
-                className="w-full p-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-[var(--btn-color)]"
+                className="w-full p-4 bg-black/50 border border-white/10 rounded-xl focus:outline-none focus:border-[var(--btn-color)] focus:ring-1 focus:ring-[var(--btn-color)] text-white placeholder-gray-600"
               />
             ) : (
               <div className="space-y-4">
@@ -168,14 +168,14 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
                   value={themeInput}
                   onChange={(e) => setThemeInput(e.target.value)}
                   placeholder="Critères (ex: encouragement, jeunesse, foi...)"
-                  className="w-full p-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-[var(--btn-color)]"
+                  className="w-full p-4 bg-black/50 border border-white/10 rounded-xl focus:outline-none focus:border-[var(--btn-color)] focus:ring-1 focus:ring-[var(--btn-color)] text-white placeholder-gray-600"
                 />
-                <button onClick={generateThemeSuggestion} className="w-full py-3 bg-white/10 rounded-xl font-bold hover:bg-white/20">
+                <button onClick={generateThemeSuggestion} className="w-full py-3 bg-white/5 text-gray-300 rounded-xl font-bold hover:bg-white/10 transition-colors">
                   Générer une proposition
                 </button>
               </div>
             )}
-            <button onClick={handleNextStep} className="w-full py-4 bg-[var(--btn-color)] text-[var(--btn-text)] rounded-xl font-black uppercase tracking-widest mt-4">
+            <button onClick={handleNextStep} className="w-full py-4 bg-[var(--btn-color)] text-[var(--btn-text)] rounded-xl font-black uppercase tracking-widest mt-4 hover:opacity-90 transition-opacity">
               Suivant <ChevronRight className="inline ml-2" />
             </button>
           </div>
@@ -183,36 +183,36 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
 
         {step === 3 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right">
-            <h4 className="text-lg font-bold uppercase opacity-80">3. Enrichissez le discours</h4>
+            <h4 className="text-lg font-bold uppercase text-gray-300">3. Enrichissez le discours</h4>
             <div className="space-y-4">
               <div className="bg-white/5 p-4 rounded-xl border border-white/10">
-                <label className="flex items-center gap-2 mb-2 font-bold opacity-70"><FileText size={18} /> Article de référence (optionnel)</label>
+                <label className="flex items-center gap-2 mb-2 font-bold text-gray-400"><FileText size={18} /> Article de référence (optionnel)</label>
                 <input
                   type="text"
                   value={articleRef}
                   onChange={(e) => setArticleRef(e.target.value)}
                   placeholder="Lien ou titre de l'article..."
-                  className="w-full p-3 bg-black/20 rounded-lg border border-white/5 focus:border-[var(--btn-color)] outline-none"
+                  className="w-full p-3 bg-black/50 rounded-lg border border-white/10 focus:border-[var(--btn-color)] focus:ring-1 focus:ring-[var(--btn-color)] outline-none text-white placeholder-gray-600"
                 />
               </div>
               <div className="bg-white/5 p-4 rounded-xl border border-white/10">
-                <label className="flex items-center gap-2 mb-2 font-bold opacity-70"><ImageIcon size={18} /> Image (optionnel)</label>
+                <label className="flex items-center gap-2 mb-2 font-bold text-gray-400"><ImageIcon size={18} /> Image (optionnel)</label>
                 <input
                   type="text"
                   value={imageRef}
                   onChange={(e) => setImageRef(e.target.value)}
                   placeholder="Description ou lien de l'image..."
-                  className="w-full p-3 bg-black/20 rounded-lg border border-white/5 focus:border-[var(--btn-color)] outline-none"
+                  className="w-full p-3 bg-black/50 rounded-lg border border-white/10 focus:border-[var(--btn-color)] focus:ring-1 focus:ring-[var(--btn-color)] outline-none text-white placeholder-gray-600"
                 />
               </div>
               <div className="bg-white/5 p-4 rounded-xl border border-white/10">
-                <label className="flex items-center gap-2 mb-2 font-bold opacity-70"><Video size={18} /> Vidéo (optionnel)</label>
+                <label className="flex items-center gap-2 mb-2 font-bold text-gray-400"><Video size={18} /> Vidéo (optionnel)</label>
                 <input
                   type="text"
                   value={videoRef}
                   onChange={(e) => setVideoRef(e.target.value)}
                   placeholder="Titre ou lien de la vidéo..."
-                  className="w-full p-3 bg-black/20 rounded-lg border border-white/5 focus:border-[var(--btn-color)] outline-none"
+                  className="w-full p-3 bg-black/50 rounded-lg border border-white/10 focus:border-[var(--btn-color)] focus:ring-1 focus:ring-[var(--btn-color)] outline-none text-white placeholder-gray-600"
                 />
               </div>
             </div>
@@ -227,7 +227,7 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
             <div className={`markdown-body prose ${proseClass} max-w-none`}>
               <Markdown>{generatedDiscourse}</Markdown>
             </div>
-            <button onClick={() => setStep(1)} className="mt-8 w-full py-4 bg-white/10 rounded-xl font-bold hover:bg-white/20">
+            <button onClick={() => setStep(1)} className="mt-8 w-full py-4 bg-white/5 text-gray-300 rounded-xl font-bold hover:bg-white/10 transition-colors">
               Préparer un autre discours
             </button>
           </div>

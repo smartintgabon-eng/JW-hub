@@ -81,30 +81,30 @@ const SundayDiscourse: React.FC<SundayDiscourseProps> = ({ settings, setGlobalLo
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden">
+      <div className="bg-[#111] border border-white/10 rounded-[2.5rem] p-8 shadow-xl relative overflow-hidden">
         <div className="flex items-center justify-between mb-8">
-          <h3 className="text-2xl font-black uppercase flex items-center gap-3">
+          <h3 className="text-2xl font-black uppercase flex items-center gap-3 text-white">
             <div className="p-2 bg-[var(--btn-color)]/20 rounded-xl">
               <Sun className="text-[var(--btn-color)]" />
             </div>
             Discours de Week-end (Dimanche)
           </h3>
-          <div className="text-sm font-bold opacity-50">Étape {step} / 2</div>
+          <div className="text-sm font-bold text-gray-500">Étape {step} / 2</div>
         </div>
 
         {step === 1 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right">
-            <h4 className="text-lg font-bold uppercase opacity-80">1. Définissez le thème (30 min fixe)</h4>
+            <h4 className="text-lg font-bold uppercase text-gray-300">1. Définissez le thème (30 min fixe)</h4>
             <div className="flex gap-4">
               <button
                 onClick={() => setGenerateTheme(false)}
-                className={`flex-1 p-4 rounded-xl font-bold border transition-all ${!generateTheme ? 'bg-[var(--btn-color)] border-[var(--btn-color)] text-[var(--btn-text)]' : 'bg-white/5 border-white/10'}`}
+                className={`flex-1 p-4 rounded-xl font-bold border transition-all ${!generateTheme ? 'bg-[var(--btn-color)] border-[var(--btn-color)] text-[var(--btn-text)]' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'}`}
               >
                 Je l'ai déjà
               </button>
               <button
                 onClick={() => setGenerateTheme(true)}
-                className={`flex-1 p-4 rounded-xl font-bold border transition-all ${generateTheme ? 'bg-[var(--btn-color)] border-[var(--btn-color)] text-[var(--btn-text)]' : 'bg-white/5 border-white/10'}`}
+                className={`flex-1 p-4 rounded-xl font-bold border transition-all ${generateTheme ? 'bg-[var(--btn-color)] border-[var(--btn-color)] text-[var(--btn-text)]' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'}`}
               >
                 Suggère-moi un thème
               </button>
@@ -116,7 +116,7 @@ const SundayDiscourse: React.FC<SundayDiscourseProps> = ({ settings, setGlobalLo
                 value={themeInput}
                 onChange={(e) => setThemeInput(e.target.value)}
                 placeholder="Entrez votre thème ici..."
-                className="w-full p-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-[var(--btn-color)]"
+                className="w-full p-4 bg-black/50 border border-white/10 rounded-xl focus:outline-none focus:border-[var(--btn-color)] focus:ring-1 focus:ring-[var(--btn-color)] text-white placeholder-gray-600"
               />
             ) : (
               <div className="space-y-4">
@@ -125,17 +125,17 @@ const SundayDiscourse: React.FC<SundayDiscourseProps> = ({ settings, setGlobalLo
                   value={themeInput}
                   onChange={(e) => setThemeInput(e.target.value)}
                   placeholder="Critères (ex: famille, prophétie, amour...)"
-                  className="w-full p-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-[var(--btn-color)]"
+                  className="w-full p-4 bg-black/50 border border-white/10 rounded-xl focus:outline-none focus:border-[var(--btn-color)] focus:ring-1 focus:ring-[var(--btn-color)] text-white placeholder-gray-600"
                 />
-                <button onClick={generateThemeSuggestion} className="w-full py-3 bg-white/10 rounded-xl font-bold hover:bg-white/20">
+                <button onClick={generateThemeSuggestion} className="w-full py-3 bg-white/5 text-gray-300 rounded-xl font-bold hover:bg-white/10 transition-colors">
                   Générer une proposition
                 </button>
               </div>
             )}
             
             <div className="bg-[var(--btn-color)]/10 p-4 rounded-xl border border-[var(--btn-color)]/20 mt-4">
-              <p className="text-sm opacity-80 flex items-start gap-2">
-                <Search size={16} className="mt-1 shrink-0" />
+              <p className="text-sm text-gray-300 flex items-start gap-2">
+                <Search size={16} className="mt-1 shrink-0 text-[var(--btn-color)]" />
                 L'IA recherchera automatiquement des articles, images et vidéos pertinents sur jw.org pour enrichir ce discours de 30 minutes.
               </p>
             </div>
@@ -151,7 +151,7 @@ const SundayDiscourse: React.FC<SundayDiscourseProps> = ({ settings, setGlobalLo
             <div className={`markdown-body prose ${proseClass} max-w-none`}>
               <Markdown>{generatedDiscourse}</Markdown>
             </div>
-            <button onClick={() => setStep(1)} className="mt-8 w-full py-4 bg-white/10 rounded-xl font-bold hover:bg-white/20">
+            <button onClick={() => setStep(1)} className="mt-8 w-full py-4 bg-white/5 text-gray-300 rounded-xl font-bold hover:bg-white/10 transition-colors">
               Préparer un autre discours
             </button>
           </div>

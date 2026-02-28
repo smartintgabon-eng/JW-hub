@@ -20,7 +20,7 @@ async function startServer() {
       }
 
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      let prompt = input;
+      const prompt = input;
       let scrapedContent = "";
 
       // 1. Analyse de lien direct (Mode 'link')
