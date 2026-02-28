@@ -84,7 +84,7 @@ const getLocalizedText = (settings: AppSettings, key: string) => {
 };
 
 const RecherchesTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadingMessage }) => {
-  const [query, setQuery] = useState(loadInputState('recherches-query', ''));
+  const [query, setQuery] = useState(loadInputState('recherches-query') || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [articleConfirmed, setArticleConfirmed] = useState<any>(null); // For preview

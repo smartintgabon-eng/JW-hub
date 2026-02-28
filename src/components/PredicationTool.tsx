@@ -12,30 +12,30 @@ interface Props {
 }
 
 const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadingMessage }) => {
-  const [predicationMode, setPredicationMode] = useState<PredicationType | null>(() => loadInputState('predicationMode', null));
+  const [predicationMode, setPredicationMode] = useState<PredicationType | null>(() => loadInputState('predicationMode') || null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
 
   // Porte-en-porte states
-  const [pepPublicationLink, setPepPublicationLink] = useState(() => loadInputState('pepPublicationLink', ''));
-  const [pepTopic, setPepTopic] = useState(() => loadInputState('pepTopic', ''));
-  const [pepOfferStudy, setPepOfferStudy] = useState(() => loadInputState('pepOfferStudy', false));
-  const [pepStudyBrochureLink, setPepStudyBrochureLink] = useState(() => loadInputState('pepStudyBrochureLink', ''));
-  const [pepCurrentAffairs, setPepCurrentAffairs] = useState(() => loadInputState('pepCurrentAffairs', ''));
-  const [pepStep, setPepStep] = useState(() => loadInputState('pepStep', 1)); 
+  const [pepPublicationLink, setPepPublicationLink] = useState(() => loadInputState('pepPublicationLink') || '');
+  const [pepTopic, setPepTopic] = useState(() => loadInputState('pepTopic') || '');
+  const [pepOfferStudy, setPepOfferStudy] = useState(() => loadInputState('pepOfferStudy') || false);
+  const [pepStudyBrochureLink, setPepStudyBrochureLink] = useState(() => loadInputState('pepStudyBrochureLink') || '');
+  const [pepCurrentAffairs, setPepCurrentAffairs] = useState(() => loadInputState('pepCurrentAffairs') || '');
+  const [pepStep, setPepStep] = useState(() => loadInputState('pepStep') || 1); 
 
   // Nouvelle Visite states
-  const [nvType, setNvType] = useState<'study' | 'question' | null>(() => loadInputState('nvType', null));
-  const [nvStudyLink, setNvStudyLink] = useState(() => loadInputState('nvStudyLink', ''));
-  const [nvStudyChapterParagraph, setNvStudyChapterParagraph] = useState(() => loadInputState('nvStudyChapterParagraph', ''));
-  const [nvQuestionLeft, setNvQuestionLeft] = useState(() => loadInputState('nvQuestionLeft', ''));
-  const [nvBrochureLink, setNvBrochureLink] = useState(() => loadInputState('nvBrochureLink', ''));
+  const [nvType, setNvType] = useState<'study' | 'question' | null>(() => loadInputState('nvType') || null);
+  const [nvStudyLink, setNvStudyLink] = useState(() => loadInputState('nvStudyLink') || '');
+  const [nvStudyChapterParagraph, setNvStudyChapterParagraph] = useState(() => loadInputState('nvStudyChapterParagraph') || '');
+  const [nvQuestionLeft, setNvQuestionLeft] = useState(() => loadInputState('nvQuestionLeft') || '');
+  const [nvBrochureLink, setNvBrochureLink] = useState(() => loadInputState('nvBrochureLink') || '');
 
   // Cours Biblique states
-  const [cbType, setCbType] = useState<'new' | 'ongoing' | null>(() => loadInputState('cbType', null));
-  const [cbChapterParagraph, setCbChapterParagraph] = useState(() => loadInputState('cbChapterParagraph', ''));
-  const [cbPublicationLink, setCbPublicationLink] = useState(() => loadInputState('cbPublicationLink', ''));
+  const [cbType, setCbType] = useState<'new' | 'ongoing' | null>(() => loadInputState('cbType') || null);
+  const [cbChapterParagraph, setCbChapterParagraph] = useState(() => loadInputState('cbChapterParagraph') || '');
+  const [cbPublicationLink, setCbPublicationLink] = useState(() => loadInputState('cbPublicationLink') || '');
 
   useEffect(() => {
     if (cooldown > 0) {

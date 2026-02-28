@@ -47,18 +47,18 @@ const getLocalizedText = (settings: AppSettings, key: string) => {
 };
 
 const DiscoursTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadingMessage }) => {
-  const [discoursType, setDiscoursType] = useState<DiscoursType>(loadInputState('discours-type', 'normal'));
-  const [time, setTime] = useState<DiscoursTime | string>(loadInputState('discours-time', ''));
-  const [customTime, setCustomTime] = useState<number | ''>(loadInputState('discours-custom-time', ''));
-  const [theme, setTheme] = useState(loadInputState('discours-theme', ''));
-  const [themeCriteria, setThemeCriteria] = useState(loadInputState('discours-theme-criteria', ''));
-  const [themeConfirmed, setThemeConfirmed] = useState<string | null>(loadInputState('discours-theme-confirmed', null));
-  const [articleReferences, setArticleReferences] = useState<string[]>(loadInputState('discours-article-refs', ['']));
-  const [imageReferences, setImageReferences] = useState<string[]>(loadInputState('discours-image-refs', ['']));
-  const [videoReferences, setVideoReferences] = useState<string[]>(loadInputState('discours-video-refs', ['']));
-  const [pointsToReinforce, setPointsToReinforce] = useState<string[]>(loadInputState('discours-points-reinforce', ['']));
-  const [strengths, setStrengths] = useState<string[]>(loadInputState('discours-strengths', ['']));
-  const [encouragements, setEncouragements] = useState(loadInputState('discours-encouragements', ''));
+  const [discoursType, setDiscoursType] = useState<DiscoursType>(loadInputState('discours-type') || 'normal');
+  const [time, setTime] = useState<DiscoursTime | string>(loadInputState('discours-time') || '');
+  const [customTime, setCustomTime] = useState<number | ''>(loadInputState('discours-custom-time') || '');
+  const [theme, setTheme] = useState(loadInputState('discours-theme') || '');
+  const [themeCriteria, setThemeCriteria] = useState(loadInputState('discours-theme-criteria') || '');
+  const [themeConfirmed, setThemeConfirmed] = useState<string | null>(loadInputState('discours-theme-confirmed') || null);
+  const [articleReferences, setArticleReferences] = useState<string[]>(loadInputState('discours-article-refs') || ['']);
+  const [imageReferences, setImageReferences] = useState<string[]>(loadInputState('discours-image-refs') || ['']);
+  const [videoReferences, setVideoReferences] = useState<string[]>(loadInputState('discours-video-refs') || ['']);
+  const [pointsToReinforce, setPointsToReinforce] = useState<string[]>(loadInputState('discours-points-reinforce') || ['']);
+  const [strengths, setStrengths] = useState<string[]>(loadInputState('discours-strengths') || ['']);
+  const [encouragements, setEncouragements] = useState(loadInputState('discours-encouragements') || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

@@ -6,7 +6,7 @@ interface UpdatesProps {
   settings: AppSettings;
 }
 
-const Updates: React.FC<UpdatesProps> = ({ _settings }) => {
+const Updates: React.FC<UpdatesProps> = () => {
   const updates = [
     {
       version: "2.1.0",

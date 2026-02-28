@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { AppSettings, AppView } from './types';
+import React, { useState, useEffect } from 'react';
+import { AppSettings, AppView, GeneratedStudy } from './types';
 import Discourse from './components/Discourse.tsx';
 import Updates from './components/Updates.tsx';
 import StudyTool from './components/StudyTool.tsx';
@@ -7,11 +7,17 @@ import PreferenceManager from './components/PreferenceManager.tsx';
 import History from './components/History.tsx';
 import Tutorial from './components/Tutorial.tsx';
 import { Settings, Mic, Search, BookOpen, Home as HomeIcon, Bell, Menu, X, Clock, HelpCircle, Calendar } from 'lucide-react';
+import { getHistory } from './utils/storage.ts';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>(AppView.HOME);
   const [globalLoadingMessage, setGlobalLoadingMessage] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [history, setHistory] = useState<GeneratedStudy[]>([]);
+
+  useEffect(() => {
+    setHistory(getHistory());
+  }, [currentView]);
   
   const [settings, setSettings] = useState<AppSettings>({
     bgColor: '#0a0a0a',
@@ -122,9 +128,9 @@ const App: React.FC = () => {
           onGenerationComplete={() => setCurrentView(AppView.HISTORY)}
         />;
       case AppView.HISTORY:
-        return <History settings={settings} />;
+        return <History history={history} setHistory={setHistory} settings={settings} />;
       case AppView.TUTORIAL:
-        return <Tutorial settings={settings} />;
+        return <Tutorial />;
       case AppView.UPDATES: 
         return <Updates settings={settings} />;
       case AppView.SETTINGS:

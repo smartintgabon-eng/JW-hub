@@ -39,3 +39,31 @@ export const deleteStudy = (id: string): void => {
 export const clearHistory = (): void => {
   localStorage.removeItem(STORAGE_KEY);
 };
+
+export const saveSettings = (settings: any) => {
+  localStorage.setItem('jw_settings', JSON.stringify(settings));
+};
+
+export const totalReset = () => {
+  localStorage.clear();
+};
+
+export const deleteFromHistory = (id: string) => {
+  const history = JSON.parse(localStorage.getItem('jw_history') || '[]');
+  const newHistory = history.filter((h: any) => h.id !== id);
+  localStorage.setItem('jw_history', JSON.stringify(newHistory));
+};
+
+export const saveInputState = (key: string, data: any) => {
+  localStorage.setItem(`input_${key}`, JSON.stringify(data));
+};
+
+export const loadInputState = (key: string) => {
+  const data = localStorage.getItem(`input_${key}`);
+  return data ? JSON.parse(data) : null;
+};
+
+export const clearHistoryOnly = () => {
+  localStorage.removeItem('jw_history');
+  localStorage.removeItem('jw_study_history');
+};

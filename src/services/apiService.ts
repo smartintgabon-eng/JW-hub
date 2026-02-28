@@ -7,8 +7,7 @@ export const callGenerateContentApi = async (
   part: string,
   settings: AppSettings,
   useManual: boolean,
-  preachingType?: PredicationType,
-  _contentOptions?: any // This will be ignored by the new API, but kept for compatibility
+  preachingType?: PredicationType
 ): Promise<{ text: string; title: string; theme?: string }> => {
 
   const response = await fetch('/api/generate-content', {

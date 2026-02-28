@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import Markdown from 'react-markdown';
+import React, { useState } from 'react';
 import { AppSettings, GeneratedStudy, HistoryCategory, StudyPart, PredicationType } from '../types';
-import { saveStudy, getHistoryByCategory, deleteStudy } from '../utils/storage.ts';
-import { Search, Link as LinkIcon, Calendar, Trash2, Clock } from 'lucide-react';
+import { saveStudy } from '../utils/storage.ts';
+import { Search } from 'lucide-react';
 
 interface StudyToolProps {
   category: HistoryCategory;
