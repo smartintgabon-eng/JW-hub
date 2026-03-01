@@ -249,7 +249,7 @@ const SundayDiscourse: React.FC<SundayDiscourseProps> = ({ settings, setGlobalLo
                 <div>
                   <span className="text-[10px] font-black uppercase opacity-40 tracking-widest block">Liens inclus</span>
                   <ul className="list-disc list-inside opacity-80 text-sm">
-                    {contentOptions.articleLinks.map((link, i) => <li key={i}>{link}</li>)}
+                    {contentOptions.articleLinks.map((link: string, i: number) => <li key={i}>{link}</li>)}
                   </ul>
                 </div>
               )}

@@ -110,13 +110,14 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
     setError(null);
 
     try {
-      const result = await callGenerateContentApi('PREDICATION', inputDetails, 'tout', settings, false, preachingType, {
-        includeArticles: false,
-        includeImages: false,
-        includeVideos: false,
-        includeVerses: false,
-        articleLinks: [],
-      }, useManual ? manualText : null);
+      const result = await callGenerateContentApi(
+        'PREDICATION',
+        inputDetails,
+        'tout',
+        settings,
+        useManual,
+        preachingType
+      );
 
       setGlobalLoadingMessage('Enregistrement de la préparation et redirection...');
       const newStudy: GeneratedStudy = {

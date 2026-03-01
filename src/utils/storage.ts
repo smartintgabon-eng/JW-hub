@@ -58,9 +58,9 @@ export const saveInputState = (key: string, data: any) => {
   localStorage.setItem(`input_${key}`, JSON.stringify(data));
 };
 
-export const loadInputState = (key: string) => {
+export const loadInputState = (key: string, defaultValue: any = null) => {
   const data = localStorage.getItem(`input_${key}`);
-  return data ? JSON.parse(data) : null;
+  return data ? JSON.parse(data) : defaultValue;
 };
 
 export const clearHistoryOnly = () => {

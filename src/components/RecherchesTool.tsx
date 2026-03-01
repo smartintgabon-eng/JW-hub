@@ -141,9 +141,9 @@ const RecherchesTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadi
         type: 'RECHERCHES',
         title: query,
         date: new Date().toLocaleDateString(settings.language === 'fr' ? 'fr-FR' : settings.language === 'es' ? 'es-ES' : 'en-US'),
-        content: data.text, // Use data.text which contains the structured NOM, LIEN, EXPLICATION
+        content: data.text || '', // Use data.text which contains the structured NOM, LIEN, EXPLICATION
         rawSources: [], // The raw sources are now embedded in data.text, so this can be empty or parsed from data.text if needed
-        aiExplanation: data.text, // aiExplanation can also point to the full structured text
+        aiExplanation: data.text || '', // aiExplanation can also point to the full structured text
         timestamp: Date.now(),
         category: 'recherches',
         url: [query] // Store the search query as URL

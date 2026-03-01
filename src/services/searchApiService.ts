@@ -4,7 +4,8 @@ import { AppSettings } from '../types';
 export const callSearchContentApi = async (
   questionOrSubject: string,
   settings: AppSettings,
-  confirmMode: boolean
+  confirmMode: boolean,
+  contentOptions?: any
 ): Promise<{ 
     text?: string; 
     previewTitle?: string;
@@ -22,6 +23,7 @@ export const callSearchContentApi = async (
       questionOrSubject,
       settings,
       confirmMode,
+      contentOptions,
     }),
   });
 
