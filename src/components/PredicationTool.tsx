@@ -17,10 +17,6 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
 
-  // Manual Input states
-  const [useManual, setUseManual] = useState(() => loadInputState('predicationUseManual', false));
-  const [manualText, setManualText] = useState(() => loadInputState('predicationManualText', ''));
-
   // Porte-en-porte states
   const [pepPublicationLink, setPepPublicationLink] = useState(() => loadInputState('pepPublicationLink', ''));
   const [pepTopic, setPepTopic] = useState(() => loadInputState('pepTopic', ''));
@@ -49,8 +45,6 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
   }, [cooldown]);
 
   useEffect(() => { saveInputState('predicationMode', predicationMode); }, [predicationMode]);
-  useEffect(() => { saveInputState('predicationUseManual', useManual); }, [useManual]);
-  useEffect(() => { saveInputState('predicationManualText', manualText); }, [manualText]);
   useEffect(() => { saveInputState('pepPublicationLink', pepPublicationLink); }, [pepPublicationLink]);
   useEffect(() => { saveInputState('pepTopic', pepTopic); }, [pepTopic]);
   useEffect(() => { saveInputState('pepOfferStudy', pepOfferStudy); }, [pepOfferStudy]);
@@ -72,10 +66,6 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
     setError(null);
     setCooldown(0);
     setGlobalLoadingMessage(null);
-
-    // Reset Manual Input
-    setUseManual(false);
-    setManualText('');
 
     // Reset Porte-en-porte
     setPepPublicationLink('');
@@ -110,14 +100,7 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
     setError(null);
 
     try {
-      const result = await callGenerateContentApi(
-        'PREDICATION',
-        inputDetails,
-        'tout',
-        settings,
-        useManual,
-        preachingType
-      );
+      const result = await callGenerateContentApi('PREDICATION', inputDetails, 'tout', settings, false, preachingType);
 
       setGlobalLoadingMessage('Enregistrement de la préparation et redirection...');
       const newStudy: GeneratedStudy = {
@@ -199,37 +182,17 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
 
           {pepStep === 1 && (
             <div className="space-y-6 animate-in fade-in duration-300">
-              <div className="flex bg-white/5 p-1 rounded-xl w-fit mb-6">
-                <button onClick={() => setUseManual(false)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all ${!useManual ? 'bg-white/10 shadow' : 'opacity-40'}`}>Lien jw.org</button>
-                <button onClick={() => setUseManual(true)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all ${useManual ? 'bg-white/10 shadow' : 'opacity-40'}`}>Saisie Manuelle</button>
+              <div className="space-y-3">
+                <label className={getCommonLabelStyles()}>Lien direct de la publication souhaitée (jw.org) <span className="opacity-40 font-normal lowercase">(Optionnel)</span></label>
+                <div className="relative">
+                  <input type="text" value={pepPublicationLink} onChange={(e) => {
+                    setPepPublicationLink(e.target.value);
+                    saveInputState('pepPublicationLink', e.target.value);
+                  }}
+                    placeholder="https://www.jw.org/fr/..." className={getCommonFormStyles()} />
+                  <LinkIcon size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
+                </div>
               </div>
-
-              {useManual ? (
-                <div className="space-y-3">
-                  <label className={getCommonLabelStyles()}>Texte de la publication</label>
-                  <textarea 
-                    value={manualText} 
-                    onChange={e => {
-                      setManualText(e.target.value);
-                      saveInputState('predicationManualText', e.target.value);
-                    }}
-                    placeholder="Collez ici le texte de la publication..."
-                    className="w-full h-32 bg-black/40 border border-white/10 rounded-2xl p-5 outline-none focus:border-[var(--btn-color)] transition-all resize-none"
-                  />
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <label className={getCommonLabelStyles()}>Lien direct de la publication souhaitée (jw.org) <span className="opacity-40 font-normal lowercase">(Optionnel)</span></label>
-                  <div className="relative">
-                    <input type="text" value={pepPublicationLink} onChange={(e) => {
-                      setPepPublicationLink(e.target.value);
-                      saveInputState('pepPublicationLink', e.target.value);
-                    }}
-                      placeholder="https://www.jw.org/fr/..." className={getCommonFormStyles()} />
-                    <LinkIcon size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
-                  </div>
-                </div>
-              )}
               <div className="space-y-3">
                 <label className={getCommonLabelStyles()}>Sujet en particulier (Ex: L&apos;espoir pour l&apos;avenir)</label>
                 <div className="relative">
@@ -287,9 +250,9 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
               </div>
 
               <button onClick={() => handleGenerateContent(
-                  `Prédication Porte-à-porte: ${pepTopic}`,
-                  `Publication: ${pepPublicationLink || '(Non fournie)'}, Sujet: ${pepTopic}${pepOfferStudy && pepStudyBrochureLink ? `, Offre étude: ${pepStudyBrochureLink}` : ''}${pepCurrentAffairs ? `, Actualités: ${pepCurrentAffairs}` : ''}`,
-                  'porte_en_porte'
+                  'porte_en_porte',
+                  `Publication: ${pepPublicationLink || '(Non fournie)'}${pepOfferStudy && pepStudyBrochureLink ? `, Offre étude: ${pepStudyBrochureLink}` : ''}${pepCurrentAffairs ? `, Actualités: ${pepCurrentAffairs}` : ''}`,
+                  pepTopic
                 )}
                 style={{ backgroundColor: (loading || cooldown > 0 || !pepTopic.trim()) ? '#1f2937' : 'var(--btn-color)', color: 'var(--btn-text)' }}
                 className="w-full py-5 rounded-xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center space-x-2">
@@ -329,37 +292,17 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
 
           {nvType === 'study' && (
             <div className="space-y-6 animate-in fade-in duration-300">
-              <div className="flex bg-white/5 p-1 rounded-xl w-fit mb-6">
-                <button onClick={() => setUseManual(false)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all ${!useManual ? 'bg-white/10 shadow' : 'opacity-40'}`}>Lien jw.org</button>
-                <button onClick={() => setUseManual(true)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all ${useManual ? 'bg-white/10 shadow' : 'opacity-40'}`}>Saisie Manuelle</button>
+              <div className="space-y-3">
+                <label className={getCommonLabelStyles()}>Lien direct de l&apos;article/publication (jw.org) <span className="opacity-40 font-normal lowercase">(Optionnel)</span></label>
+                <div className="relative">
+                  <input type="text" value={nvStudyLink} onChange={(e) => {
+                    setNvStudyLink(e.target.value);
+                    saveInputState('nvStudyLink', e.target.value);
+                  }}
+                    placeholder="https://www.jw.org/fr/publications/livres/..." className={getCommonFormStyles()} />
+                  <LinkIcon size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
+                </div>
               </div>
-
-              {useManual ? (
-                <div className="space-y-3">
-                  <label className={getCommonLabelStyles()}>Texte de l'article/publication</label>
-                  <textarea 
-                    value={manualText} 
-                    onChange={e => {
-                      setManualText(e.target.value);
-                      saveInputState('predicationManualText', e.target.value);
-                    }}
-                    placeholder="Collez ici le texte..."
-                    className="w-full h-32 bg-black/40 border border-white/10 rounded-2xl p-5 outline-none focus:border-[var(--btn-color)] transition-all resize-none"
-                  />
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <label className={getCommonLabelStyles()}>Lien direct de l&apos;article/publication (jw.org) <span className="opacity-40 font-normal lowercase">(Optionnel)</span></label>
-                  <div className="relative">
-                    <input type="text" value={nvStudyLink} onChange={(e) => {
-                      setNvStudyLink(e.target.value);
-                      saveInputState('nvStudyLink', e.target.value);
-                    }}
-                      placeholder="https://www.jw.org/fr/publications/livres/..." className={getCommonFormStyles()} />
-                    <LinkIcon size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
-                  </div>
-                </div>
-              )}
               <div className="space-y-3">
                 <label className={getCommonLabelStyles()}>Où en étiez-vous ? (Ex: Leçon 2, paragraphe 3)</label>
                 <div className="relative">
@@ -373,9 +316,9 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
               </div>
 
               <button onClick={() => handleGenerateContent(
-                  `Nouvelle Visite (Cours): ${nvStudyLink || nvStudyChapterParagraph}`,
+                  'nouvelle_visite',
                   `Cours Biblique: ${nvStudyLink || '(Non fournie)'}, Arrêté à: ${nvStudyChapterParagraph}`,
-                  'nouvelle_visite'
+                  `Nouvelle Visite (Cours): ${nvStudyLink || nvStudyChapterParagraph}`
                 )}
                 style={{ backgroundColor: (loading || cooldown > 0 || !nvStudyChapterParagraph.trim()) ? '#1f2937' : 'var(--btn-color)', color: 'var(--btn-text)' }}
                 className="w-full py-5 rounded-xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center space-x-2">
@@ -409,9 +352,9 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
               </div>
 
               <button onClick={() => handleGenerateContent(
-                  `Nouvelle Visite (Question): ${nvQuestionLeft}`,
+                  'nouvelle_visite',
                   `Question en suspens: ${nvQuestionLeft}${nvBrochureLink ? `, Offre étude: ${nvBrochureLink}` : ''}`,
-                  'nouvelle_visite'
+                  `Nouvelle Visite (Question): ${nvQuestionLeft}`
                 )}
                 style={{ backgroundColor: (loading || cooldown > 0 || !nvQuestionLeft.trim()) ? '#1f2937' : 'var(--btn-color)', color: 'var(--btn-text)' }}
                 className="w-full py-5 rounded-xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center space-x-2">
@@ -451,11 +394,6 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
 
           {cbType && (
             <div className="space-y-6 animate-in fade-in duration-300">
-              <div className="flex bg-white/5 p-1 rounded-xl w-fit mb-6">
-                <button onClick={() => setUseManual(false)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all ${!useManual ? 'bg-white/10 shadow' : 'opacity-40'}`}>Lien jw.org</button>
-                <button onClick={() => setUseManual(true)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all ${useManual ? 'bg-white/10 shadow' : 'opacity-40'}`}>Saisie Manuelle</button>
-              </div>
-
               {cbType === 'ongoing' && (
                 <div className="space-y-3">
                   <label className={getCommonLabelStyles()}>Où en êtes-vous ? (Ex: Chapitre 4, paragraphe 2)</label>
@@ -469,38 +407,22 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
                   </div>
                 </div>
               )}
-              
-              {useManual ? (
-                <div className="space-y-3">
-                  <label className={getCommonLabelStyles()}>Texte de la publication</label>
-                  <textarea 
-                    value={manualText} 
-                    onChange={e => {
-                      setManualText(e.target.value);
-                      saveInputState('predicationManualText', e.target.value);
-                    }}
-                    placeholder="Collez ici le texte de la publication..."
-                    className="w-full h-32 bg-black/40 border border-white/10 rounded-2xl p-5 outline-none focus:border-[var(--btn-color)] transition-all resize-none"
-                  />
+              <div className="space-y-3">
+                <label className={getCommonLabelStyles()}>Lien direct de la publication (jw.org) <span className="opacity-40 font-normal lowercase">(Optionnel)</span></label>
+                <div className="relative">
+                  <input type="text" value={cbPublicationLink} onChange={(e) => {
+                    setCbPublicationLink(e.target.value);
+                    saveInputState('cbPublicationLink', e.target.value);
+                  }}
+                    placeholder="https://www.jw.org/fr/publications/livres/vivez-pour-toujours-livre-de-base-du-cours-biblique/" className={getCommonFormStyles()} />
+                  <LinkIcon size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  <label className={getCommonLabelStyles()}>Lien direct de la publication (jw.org) <span className="opacity-40 font-normal lowercase">(Optionnel)</span></label>
-                  <div className="relative">
-                    <input type="text" value={cbPublicationLink} onChange={(e) => {
-                      setCbPublicationLink(e.target.value);
-                      saveInputState('cbPublicationLink', e.target.value);
-                    }}
-                      placeholder="https://www.jw.org/fr/publications/livres/vivez-pour-toujours-livre-de-base-du-cours-biblique/" className={getCommonFormStyles()} />
-                    <LinkIcon size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
-                  </div>
-                </div>
-              )}
+              </div>
 
               <button onClick={() => handleGenerateContent(
-                  `Cours Biblique: ${cbType === 'new' ? 'Nouveau Chapitre' : `Suite: ${cbChapterParagraph}`}`,
+                  'cours_biblique',
                   `Publication: ${cbPublicationLink || '(Non fournie)'}${cbType === 'ongoing' ? `, Arrêté à: ${cbChapterParagraph}` : ''}`,
-                  'cours_biblique'
+                  `Cours Biblique: ${cbType === 'new' ? 'Nouveau Chapitre' : `Suite: ${cbChapterParagraph}`}`
                 )}
                 style={{ backgroundColor: (loading || cooldown > 0 || (cbType === 'ongoing' && !cbChapterParagraph.trim()) || !cbPublicationLink.trim()) ? '#1f2937' : 'var(--btn-color)', color: 'var(--btn-text)' }}
                 className="w-full py-5 rounded-xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center space-x-2">
