@@ -9,6 +9,17 @@ interface UpdatesProps {
 const Updates: React.FC<UpdatesProps> = () => {
   const updates = [
     {
+      version: "2.2.0",
+      date: "1 Mars 2026",
+      title: "Restauration et Améliorations de l'Interface",
+      changes: [
+        { icon: <CheckCircle size={18} />, text: "Restauration de la barre latérale escamotable et de la navigation globale." },
+        { icon: <CheckCircle size={18} />, text: "Correction de la logique des couleurs (Noir/Blanc) pour le texte des boutons." },
+        { icon: <CheckCircle size={18} />, text: "Nouveau mode de collecte par étapes pour la Prédication." },
+        { icon: <Zap size={18} />, text: "Activation du Cerveau IA avec Gemini 1.5 Flash." },
+      ]
+    },
+    {
       version: "2.1.0",
       date: "27 Février 2026",
       title: "Mise à jour Majeure : Discours & Stabilité",
