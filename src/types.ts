@@ -1,5 +1,4 @@
 // src/types.ts
-
 export enum AppView {
   HOME = 'HOME',
   MINISTRY = 'MINISTRY',
@@ -9,17 +8,12 @@ export enum AppView {
   SETTINGS = 'SETTINGS',
   HISTORY = 'HISTORY',
   UPDATES = 'UPDATES',
-  RECHERCHES = 'RECHERCHES', // New view for advanced search
+  RECHERCHES = 'RECHERCHES',
   PREFERENCE_MANAGER = 'PREFERENCE_MANAGER',
   DISCOURS = 'DISCOURS'
 }
 
-export enum DiscourseType {
-  NORMAL = 'normal',
-  THURSDAY = 'thursday',
-  SUNDAY = 'sunday',
-  SPECIAL = 'special',
-}
+export type DiscoursType = 'normal' | 'jeudi' | 'dimanche' | 'special';
 
 export type StudyPart =
   | 'perles_spirituelles' 
@@ -34,13 +28,21 @@ export type PredicationType =
   | 'nouvelle_visite'
   | 'cours_biblique';
 
+export interface ContentOptions {
+  includeArticles: boolean;
+  includeImages: boolean;
+  includeVideos: boolean;
+  includeVerses: boolean; 
+  articleLinks?: string[]; 
+}
+
 export type HistoryCategory = 
   | 'cahier_vie_et_ministere'
   | 'tour_de_garde'
   | 'predication_porte_en_porte'
   | 'predication_nouvelle_visite'
   | 'predication_cours_biblique'
-  | 'recherches' // New category for searches
+  | 'recherches'
   | 'discours_normal'
   | 'discours_jeudi'
   | 'discours_dimanche'
@@ -48,17 +50,18 @@ export type HistoryCategory =
 
 export interface GeneratedStudy {
   id: string;
-  type: 'WATCHTOWER' | 'MINISTRY' | 'PREDICATION' | 'RECHERCHES' | 'DISCOURS'; // Added DISCOURS
+  type: 'WATCHTOWER' | 'MINISTRY' | 'PREDICATION' | 'RECHERCHES' | 'DISCOURS';
+  category: HistoryCategory;
   title: string;
   date: string;
-  url?: string | string[]; // Can be a single string or an array of strings
+  url?: string | string[];
   content: string;
   timestamp: number;
-  part?: StudyPart; 
-  preachingType?: PredicationType; 
-  category: HistoryCategory; 
-  rawSources?: { title: string; uri: string; content: string }[]; // For Recherches tab
-  aiExplanation?: string; // For Recherches tab
+  // Optional fields preserved for compatibility
+  part?: StudyPart;
+  preachingType?: PredicationType;
+  rawSources?: { title: string; uri: string; content: string }[];
+  aiExplanation?: string;
 }
 
 export interface Preference {
