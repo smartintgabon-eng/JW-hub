@@ -1,83 +1,139 @@
-import { GoogleGenAI } from "@google/genai";
-import * as cheerio from 'cheerio';
+import { GoogleGenAI } from '@google/genai';
+
+let aiClient;
+function getAiClient() {
+  if (!aiClient) {
+    const apiKey = process.env.GEMINI_API_KEY || process.env.REACT_APP_GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY is missing. Please set it in your environment variables.");
+    }
+    // Trim the key to remove any accidental whitespace
+    const validApiKey = apiKey.trim();
+    if (!validApiKey) {
+      throw new Error("GEMINI_API_KEY is empty.");
+    }
+    aiClient = new GoogleGenAI({ apiKey: validApiKey });
+  }
+  return aiClient;
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
+  const { input, manualText, text, settings, type, part, discoursType, time, theme, articleReferences, pointsToReinforce, strengths, encouragements, contentOptions, preachingType } = req.body;
+
   try {
-    const { type, input, part, settings, manualText } = req.body;
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const ai = getAiClient();
+    let prompt = '';
+    const userPreferences = (settings?.answerPreferences || []).map(p => p.text).join(', ') || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.';
 
-    let contextText = manualText || "";
-    let sources = [];
+    // Helper to generate content inclusion instructions
+    const getContentInclusionInstructions = (options, refs) => {
+      let instructions = "";
+      if (options) {
+        if (options.includeArticles) instructions += `\n- Utilise Google Search pour trouver et inclure des références précises à des articles de jw.org ou wol.jw.org. Formatte-les comme des liens Markdown cliquables [Titre](URL).`;
+        if (options.includeImages) instructions += `\n- Suggère des images ou illustrations visuelles pertinentes.`;
+        if (options.includeVideos) instructions += `\n- Suggère des vidéos pertinentes de jw.org.`;
+        if (options.includeVerses) instructions += `\n- Inclus de nombreux versets bibliques clés avec leur explication.`;
+      }
+      if (refs && refs.length > 0) {
+        instructions += `\n\nIMPORTANT: Utilise les informations de ces articles comme base principale. Lis leur contenu via tes outils de recherche : ${refs.join(', ')}`;
+      }
+      return instructions;
+    };
 
-    // If no manual text, we need to scrape the input URLs or search
-    if (!manualText && input) {
-      const inputs = input.split('\n').map(s => s.trim()).filter(Boolean);
+    const commonInstructions = getContentInclusionInstructions(contentOptions, articleReferences);
+
+    if (type === 'DISCOURS_THEME') {
+      prompt = `Génère un thème de discours biblique accrocheur et profond.
+Critères de l'utilisateur (optionnel) : "${input || 'Aucun critère spécifique'}".
+Langue : ${settings?.language || 'fr'}.
+Le thème doit être court (moins de 10 mots), percutant, et adapté à un public chrétien.
+Ne renvoie QUE le thème, sans guillemets ni texte supplémentaire.`;
+    } else if (type === 'DISCOURS') {
+      prompt = `Tu es un orateur chrétien expérimenté. Prépare un plan détaillé pour un discours biblique.
+Type de discours : ${discoursType}
+Thème : "${theme}"
+Durée prévue : ${time}
+Langue : ${settings?.language || 'fr'}
+Préférences de l'utilisateur : ${userPreferences}
+
+Le discours doit inclure :
+1. Une introduction captivante.
+2. Un développement structuré avec des sous-thèmes clairs et des versets bibliques pertinents.
+3. Une conclusion motivante.
+4. IMPORTANT : Propose un cantique approprié de jw.org lié au thème du discours, avec son numéro et son titre.
+Assure-toi que le contenu est adapté à la durée prévue (${time}).
+${commonInstructions}`;
+
+      if (pointsToReinforce) prompt += `\nPoints à renforcer : ${pointsToReinforce}`;
+      if (strengths) prompt += `\nPoints forts : ${strengths}`;
+      if (encouragements) prompt += `\nEncouragements : ${encouragements}`;
+
+    } else {
+      const contentToAnalyze = manualText || input || text;
+      // For PREDICATION, input might be an array or string, handle it gracefully
+      const contentString = Array.isArray(contentToAnalyze) ? contentToAnalyze.join('\n') : contentToAnalyze;
+
+      if (!contentString && type !== 'PREDICATION') { 
+         // Allow empty input if it's just a template generation, but usually we need something.
+      }
+
+      // Check if contentString contains URLs
+      const containsUrl = /https?:\/\/[^\s]+/.test(contentString);
+      let urlInstructions = "";
+      if (containsUrl) {
+        urlInstructions = "The input contains URLs. Use your Google Search tool to read the content of these URLs to inform your response. Do not just analyze the URL string itself. If the URL is from jw.org or wol.jw.org, prioritize the content from that source.";
+      }
+
+      prompt = `Analyze the following content and provide a structured explanation based on user preferences.\nContent/Context: "${contentString}"\n${urlInstructions}\nUser Preferences: ${userPreferences}\n${commonInstructions}\n`;
       
-      for (const item of inputs) {
-        try {
-          new URL(item);
-          // It's a URL, scrape it
-          const response = await fetch(item);
-          const html = await response.text();
-          const $ = cheerio.load(html);
-          $('script, style, nav, footer, header, iframe, noscript').remove();
-          contextText += `\n\nSource (${item}):\n` + $('body').text().replace(/\s+/g, ' ').trim();
-        } catch (e) {
-          // Not a URL, use it as a search query with Google Search Grounding
-          const searchResponse = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: `Search for detailed information about: "${item}"`,
-            config: {
-              tools: [{ googleSearch: {} }]
-            }
-          });
-          contextText += `\n\nSearch Results for "${item}":\n` + searchResponse.text;
-          
-          const chunks = searchResponse.candidates?.[0]?.groundingMetadata?.groundingChunks;
-          if (chunks) {
-            const uris = chunks.map(chunk => chunk.web?.uri).filter(Boolean);
-            sources.push(...uris);
-          }
-        }
+      if (type === 'WATCHTOWER') {
+        prompt += `This is a Watchtower study article. Format the response with a clear title, a summary, and a detailed, point-by-point explanation for each paragraph or section. IMPORTANT: Also include the revision questions at the end and provide answers based on the article content.`;
+      } else if (type === 'MINISTRY') {
+        prompt += `This is a Ministry Workbook meeting part (${part || 'full'}). Format the response appropriately for this specific part, providing practical points, scriptures, and clear explanations.`;
+      } else if (type === 'PREDICATION') {
+         prompt += `This is a preparation for field ministry (${preachingType}). 
+         Context: ${contentString}
+         Provide a prepared presentation or discussion points suitable for this ministry type.
+         Include:
+         - An engaging opening question or remark.
+         - A scripture to share and explain.
+         - A transition to a publication or a follow-up question.
+         - Practical tips for handling common objections if applicable.`;
+      } else {
+        prompt += `Format the response with a clear title, a summary, and a detailed, point-by-point explanation.`;
       }
     }
 
-    // Now generate the final content based on the context
-    let prompt = `You are a helpful assistant. Based on the following context, generate a study guide or summary for the part: "${part}".\n\nContext:\n${contextText.substring(0, 30000)}`;
-    
-    if (type === 'WATCHTOWER') {
-      prompt = `You are a helpful assistant for Watchtower study preparation. Based on the following article text, generate a comprehensive study guide. Include key points, scriptures, and practical applications.\n\nArticle Text:\n${contextText.substring(0, 30000)}`;
-    } else if (type === 'MINISTRY') {
-      prompt = `You are a helpful assistant for the Christian Life and Ministry meeting preparation. Based on the following text, generate preparation material for the part: "${part}". Include key points, scriptures, and practical applications.\n\nText:\n${contextText.substring(0, 30000)}`;
-    }
-
-    const aiResponse = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
+    const result = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: prompt,
+        config: {
+          tools: [{ googleSearch: {} }]
+        }
     });
 
-    let generatedText = aiResponse.text;
-    
-    if (sources.length > 0) {
-      const uniqueSources = [...new Set(sources)];
-      generatedText += `\n\n### Sources\n` + uniqueSources.map(s => `- ${s}`).join('\n');
+    if (!result || !result.text) {
+      throw new Error("AI returned empty response");
     }
 
-    // Extract a title from the generated text
-    const titleMatch = generatedText.match(/^#\s+(.*)/m);
-    const title = titleMatch ? titleMatch[1] : (type === 'WATCHTOWER' ? 'Watchtower Study' : 'Ministry Preparation');
+    let title = "Generated Content";
+    if (type === 'DISCOURS_THEME') {
+      return res.status(200).json({ theme: result.text.trim() });
+    } else if (type === 'DISCOURS') {
+      title = theme;
+    } else {
+      const titleMatch = result.text.match(/^# (.*)/m);
+      if (titleMatch) title = titleMatch[1];
+    }
 
-    return res.status(200).json({
-      title: title,
-      text: generatedText
-    });
+    res.status(200).json({ text: result.text, title });
 
   } catch (error) {
-    console.error('Generate API Error:', error);
-    return res.status(500).json({ message: error.message || 'Internal Server Error' });
+    console.error('API Error in generate-content:', error);
+    res.status(500).json({ message: 'Failed to generate content.', details: error.message || String(error) });
   }
 }

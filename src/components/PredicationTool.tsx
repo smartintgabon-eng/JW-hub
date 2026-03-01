@@ -1,46 +1,523 @@
-import { useState } from 'react';
-import { PredicationType } from '../types';
-import { Home, MessageCircle, BookOpen, Globe } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Megaphone, Loader2, AlertTriangle, BookOpen, Link as LinkIcon, Handshake, CornerRightDown, ChevronRight, ChevronLeft } from 'lucide-react';
+// Fix: Import types from src/types.ts
+import { AppSettings, GeneratedStudy, PredicationType } from '../types.ts';
+import { callGenerateContentApi } from '../services/apiService.ts'; 
+import { saveInputState, loadInputState } from '../utils/storage.ts';
 
-const PredicationTool = (_props: any) => {
-  const [step, setStep] = useState(1);
-  const [, setType] = useState<PredicationType | null>(null);
-  const [input, setInput] = useState('');
+interface Props {
+  onGenerated: (study: GeneratedStudy) => void;
+  settings: AppSettings;
+  setGlobalLoadingMessage: (message: string | null) => void;
+}
 
-  const types = [
-    { id: 'porte_en_porte', label: 'Porte en porte', icon: <Home/> },
-    { id: 'nouvelle_visite', label: 'Nouvelle Visite', icon: <MessageCircle/> },
-    { id: 'cours_biblique', label: 'Cours Biblique', icon: <BookOpen/> },
-    { id: 'temoignage_public', label: 'Public', icon: <Globe/> },
-  ];
+const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadingMessage }) => {
+  const [predicationMode, setPredicationMode] = useState<PredicationType | null>(() => loadInputState('predicationMode', null));
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
 
-  if (step === 1) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {types.map(t => (
-          <button key={t.id} onClick={() => { setType(t.id as any); setStep(2); }} className="p-8 bg-white/5 border border-white/10 rounded-[2rem] hover:bg-white/10 text-left">
-            <div className="text-[var(--btn-color)] mb-4">{t.icon}</div>
-            <span className="font-black uppercase tracking-widest">{t.label}</span>
-          </button>
-        ))}
-      </div>
-    );
-  }
+  // Manual Input states
+  const [useManual, setUseManual] = useState(() => loadInputState('predicationUseManual', false));
+  const [manualText, setManualText] = useState(() => loadInputState('predicationManualText', ''));
+
+  // Porte-en-porte states
+  const [pepPublicationLink, setPepPublicationLink] = useState(() => loadInputState('pepPublicationLink', ''));
+  const [pepTopic, setPepTopic] = useState(() => loadInputState('pepTopic', ''));
+  const [pepOfferStudy, setPepOfferStudy] = useState(() => loadInputState('pepOfferStudy', false));
+  const [pepStudyBrochureLink, setPepStudyBrochureLink] = useState(() => loadInputState('pepStudyBrochureLink', ''));
+  const [pepCurrentAffairs, setPepCurrentAffairs] = useState(() => loadInputState('pepCurrentAffairs', ''));
+  const [pepStep, setPepStep] = useState(() => loadInputState('pepStep', 1)); 
+
+  // Nouvelle Visite states
+  const [nvType, setNvType] = useState<'study' | 'question' | null>(() => loadInputState('nvType', null));
+  const [nvStudyLink, setNvStudyLink] = useState(() => loadInputState('nvStudyLink', ''));
+  const [nvStudyChapterParagraph, setNvStudyChapterParagraph] = useState(() => loadInputState('nvStudyChapterParagraph', ''));
+  const [nvQuestionLeft, setNvQuestionLeft] = useState(() => loadInputState('nvQuestionLeft', ''));
+  const [nvBrochureLink, setNvBrochureLink] = useState(() => loadInputState('nvBrochureLink', ''));
+
+  // Cours Biblique states
+  const [cbType, setCbType] = useState<'new' | 'ongoing' | null>(() => loadInputState('cbType', null));
+  const [cbChapterParagraph, setCbChapterParagraph] = useState(() => loadInputState('cbChapterParagraph', ''));
+  const [cbPublicationLink, setCbPublicationLink] = useState(() => loadInputState('cbPublicationLink', ''));
+
+  useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldown]);
+
+  useEffect(() => { saveInputState('predicationMode', predicationMode); }, [predicationMode]);
+  useEffect(() => { saveInputState('predicationUseManual', useManual); }, [useManual]);
+  useEffect(() => { saveInputState('predicationManualText', manualText); }, [manualText]);
+  useEffect(() => { saveInputState('pepPublicationLink', pepPublicationLink); }, [pepPublicationLink]);
+  useEffect(() => { saveInputState('pepTopic', pepTopic); }, [pepTopic]);
+  useEffect(() => { saveInputState('pepOfferStudy', pepOfferStudy); }, [pepOfferStudy]);
+  useEffect(() => { saveInputState('pepStudyBrochureLink', pepStudyBrochureLink); }, [pepStudyBrochureLink]);
+  useEffect(() => { saveInputState('pepCurrentAffairs', pepCurrentAffairs); }, [pepCurrentAffairs]);
+  useEffect(() => { saveInputState('pepStep', pepStep); }, [pepStep]);
+  useEffect(() => { saveInputState('nvType', nvType); }, [nvType]);
+  useEffect(() => { saveInputState('nvStudyLink', nvStudyLink); }, [nvStudyLink]);
+  useEffect(() => { saveInputState('nvStudyChapterParagraph', nvStudyChapterParagraph); }, [nvStudyChapterParagraph]);
+  useEffect(() => { saveInputState('nvQuestionLeft', nvQuestionLeft); }, [nvQuestionLeft]);
+  useEffect(() => { saveInputState('nvBrochureLink', nvBrochureLink); }, [nvBrochureLink]);
+  useEffect(() => { saveInputState('cbType', cbType); }, [cbType]);
+  useEffect(() => { saveInputState('cbChapterParagraph', cbChapterParagraph); }, [cbChapterParagraph]);
+  useEffect(() => { saveInputState('cbPublicationLink', cbPublicationLink); }, [cbPublicationLink]);
+
+  const resetAllStates = () => {
+    setPredicationMode(null);
+    setLoading(false);
+    setError(null);
+    setCooldown(0);
+    setGlobalLoadingMessage(null);
+
+    // Reset Manual Input
+    setUseManual(false);
+    setManualText('');
+
+    // Reset Porte-en-porte
+    setPepPublicationLink('');
+    setPepTopic('');
+    setPepOfferStudy(false);
+    setPepStudyBrochureLink('');
+    setPepCurrentAffairs('');
+    setPepStep(1);
+
+    // Reset Nouvelle Visite
+    setNvType(null);
+    setNvStudyLink('');
+    setNvStudyChapterParagraph('');
+    setNvQuestionLeft('');
+    setNvBrochureLink('');
+
+    // Reset Cours Biblique
+    setCbType(null);
+    setCbChapterParagraph('');
+    setCbPublicationLink('');
+  };
+
+  const handleGenerateContent = async (
+    title: string,
+    inputDetails: string | string[], 
+    preachingType: PredicationType
+  ) => {
+    if (loading || cooldown > 0) return;
+
+    setLoading(true);
+    setGlobalLoadingMessage('Génération de la préparation de prédication...');
+    setError(null);
+
+    try {
+      const result = await callGenerateContentApi('PREDICATION', inputDetails, 'tout', settings, false, preachingType, {
+        includeArticles: false,
+        includeImages: false,
+        includeVideos: false,
+        includeVerses: false,
+        articleLinks: [],
+      }, useManual ? manualText : null);
+
+      setGlobalLoadingMessage('Enregistrement de la préparation et redirection...');
+      const newStudy: GeneratedStudy = {
+        id: Date.now().toString(),
+        type: 'PREDICATION',
+        title: result.title,
+        date: new Date().toLocaleDateString('fr-FR'),
+        url: (Array.isArray(inputDetails) ? inputDetails.join('\n') : inputDetails) || '', 
+        content: result.text,
+        timestamp: Date.now(),
+        preachingType: preachingType,
+        category: `predication_${preachingType}`
+      };
+      onGenerated(newStudy);
+      resetAllStates();
+    } catch (err: any) {
+      handleError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleError = (err: any) => {
+    setGlobalLoadingMessage(null); 
+    setError(err.message || "Une erreur inconnue est survenue.");
+    
+    if (err.message && err.message.includes('patienter')) {
+      const match = err.message.match(/patienter (\d+)s/);
+      if (match && match[1]) {
+        setCooldown(parseInt(match[1]));
+      } else {
+        setCooldown(90); 
+      }
+    }
+  };
+
+  const getCommonFormStyles = () => "w-full bg-black/40 border border-white/10 rounded-xl py-5 pl-14 pr-4 focus:border-[var(--btn-color)] outline-none transition-all font-medium";
+  const getCommonLabelStyles = () => "text-[10px] font-black uppercase opacity-40 ml-1 tracking-[0.2em]";
+  const getCommonButtonStyles = (isActive: boolean) => `px-4 py-2 rounded-lg text-sm font-bold transition-all ${isActive ? 'bg-[var(--btn-color)] text-[var(--btn-text)] shadow' : 'bg-white/5 opacity-60 hover:opacity-100'}`;
+
+
+
 
   return (
-    <div className="space-y-6 animate-in fade-in">
-      <div className="bg-white/5 p-8 rounded-[2rem] border border-white/10">
-        <h3 className="text-xl font-black uppercase mb-4">Analyse de la prédication</h3>
-        <textarea 
-          className="w-full bg-black/20 border border-white/10 rounded-2xl p-6 min-h-[200px] outline-none focus:border-[var(--btn-color)]"
-          placeholder="Collez le lien jw.org ou décrivez le sujet..."
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-        />
-        <button className="w-full py-6 mt-6 bg-[var(--btn-color)] text-[var(--btn-text)] rounded-2xl font-black uppercase tracking-widest">
-          Générer la préparation
-        </button>
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 md:max-w-5xl md:mx-auto"> 
+      <div className="flex items-center space-x-4 mb-2">
+        <div style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} className="p-4 rounded-2xl shadow-xl">
+          <Megaphone size={28} />
+        </div>
+        <div>
+          <h2 className="text-3xl font-black tracking-tight uppercase">Préparation à la Prédication</h2>
+          <p className="opacity-40 text-sm font-bold tracking-wide">Préparez vos présentations efficacement.</p>
+        </div>
       </div>
+
+      {!predicationMode && (
+        <div className="bg-white/5 border border-white/10 rounded-[2rem] p-8 space-y-8 shadow-2xl relative">
+          <p className="text-lg opacity-80 font-medium text-center">Choisissez le type de préparation de prédication :</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <button onClick={() => setPredicationMode('porte_en_porte')} className="p-8 bg-white/10 rounded-3xl hover:bg-white/20 transition-all text-center space-y-3">
+              <BookOpen size={32} className="mx-auto text-[var(--btn-color)]" />
+              <span className="font-bold text-xl uppercase tracking-tight">Porte-en-porte</span>
+            </button>
+            <button onClick={() => setPredicationMode('nouvelle_visite')} className="p-8 bg-white/10 rounded-3xl hover:bg-white/20 transition-all text-center space-y-3">
+              <Handshake size={32} className="mx-auto text-[var(--btn-color)]" />
+              <span className="font-bold text-xl uppercase tracking-tight">Nouvelle Visite</span>
+            </button>
+            <button onClick={() => setPredicationMode('cours_biblique')} className="p-8 bg-white/10 rounded-3xl hover:bg-white/20 transition-all text-center space-y-3">
+              <CornerRightDown size={32} className="mx-auto text-[var(--btn-color)]" />
+              <span className="font-bold text-xl uppercase tracking-tight">Cours Biblique</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {predicationMode === 'porte_en_porte' && (
+        <div className="bg-white/5 border border-white/10 rounded-[2rem] p-8 space-y-8 shadow-2xl relative">
+          <h3 className="text-2xl font-black uppercase tracking-tight mb-6" style={{ color: 'var(--btn-color)' }}>Porte-en-porte</h3>
+
+          {pepStep === 1 && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="flex bg-white/5 p-1 rounded-xl w-fit mb-6">
+                <button onClick={() => setUseManual(false)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all ${!useManual ? 'bg-white/10 shadow' : 'opacity-40'}`}>Lien jw.org</button>
+                <button onClick={() => setUseManual(true)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all ${useManual ? 'bg-white/10 shadow' : 'opacity-40'}`}>Saisie Manuelle</button>
+              </div>
+
+              {useManual ? (
+                <div className="space-y-3">
+                  <label className={getCommonLabelStyles()}>Texte de la publication</label>
+                  <textarea 
+                    value={manualText} 
+                    onChange={e => {
+                      setManualText(e.target.value);
+                      saveInputState('predicationManualText', e.target.value);
+                    }}
+                    placeholder="Collez ici le texte de la publication..."
+                    className="w-full h-32 bg-black/40 border border-white/10 rounded-2xl p-5 outline-none focus:border-[var(--btn-color)] transition-all resize-none"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <label className={getCommonLabelStyles()}>Lien direct de la publication souhaitée (jw.org) <span className="opacity-40 font-normal lowercase">(Optionnel)</span></label>
+                  <div className="relative">
+                    <input type="text" value={pepPublicationLink} onChange={(e) => {
+                      setPepPublicationLink(e.target.value);
+                      saveInputState('pepPublicationLink', e.target.value);
+                    }}
+                      placeholder="https://www.jw.org/fr/..." className={getCommonFormStyles()} />
+                    <LinkIcon size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
+                  </div>
+                </div>
+              )}
+              <div className="space-y-3">
+                <label className={getCommonLabelStyles()}>Sujet en particulier (Ex: L&apos;espoir pour l&apos;avenir)</label>
+                <div className="relative">
+                  <input type="text" value={pepTopic} onChange={(e) => {
+                    setPepTopic(e.target.value);
+                    saveInputState('pepTopic', e.target.value);
+                  }}
+                    placeholder="Votre sujet principal" className={getCommonFormStyles()} />
+                  <BookOpen size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
+                </div>
+              </div>
+              <div className="flex items-center space-x-3 bg-black/20 p-4 rounded-xl border border-white/10">
+                <input type="checkbox" checked={pepOfferStudy} onChange={(e) => {
+                  setPepOfferStudy(e.target.checked);
+                  saveInputState('pepOfferStudy', e.target.checked);
+                }}
+                  className="w-5 h-5 rounded-md text-[var(--btn-color)] bg-white/10 border-white/20 focus:ring-[var(--btn-color)]" />
+                <label className="text-sm font-medium">Souhaitez-vous proposer un cours biblique ?</label>
+              </div>
+              {pepOfferStudy && (
+                <div className="space-y-3 animate-in fade-in duration-300">
+                  <label className={getCommonLabelStyles()}>Lien de la brochure &apos;Vivez pour toujours&apos; (leçon 1) <span className="opacity-40 font-normal lowercase">(Optionnel)</span></label>
+                  <div className="relative">
+                    <input type="text" value={pepStudyBrochureLink} onChange={(e) => {
+                      setPepStudyBrochureLink(e.target.value);
+                      saveInputState('pepStudyBrochureLink', e.target.value);
+                    }}
+                      placeholder="https://www.jw.org/fr/publications/livres/vivez-pour-toujours-livre-de-base-du-cours-biblique/lecon-1/" className={getCommonFormStyles()} />
+                    <LinkIcon size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
+                  </div>
+                </div>
+              )}
+              <button onClick={() => setPepStep(2)} disabled={loading || cooldown > 0 || !pepTopic.trim()}
+                style={{ backgroundColor: (loading || cooldown > 0 || !pepTopic.trim()) ? '#1f2937' : 'var(--btn-color)', color: 'var(--btn-text)' }}
+                className="w-full py-5 rounded-xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center space-x-2">
+                Suivant <ChevronRight size={20} />
+              </button>
+            </div>
+          )}
+
+          {pepStep === 2 && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <button onClick={() => setPepStep(1)} className="flex items-center space-x-2 opacity-60 hover:opacity-100 mb-6">
+                <ChevronLeft size={20} /> <span className="text-sm">Retour</span>
+              </button>
+              <p className="text-lg opacity-80 font-medium text-center">Fournissez un contexte ou générez directement :</p>
+              <div className="space-y-3">
+                <label className={getCommonLabelStyles()}>Conditions d&apos;actualités pour détailler le sujet (facultatif)</label>
+                <textarea value={pepCurrentAffairs} onChange={(e) => {
+                  setPepCurrentAffairs(e.target.value);
+                  saveInputState('pepCurrentAffairs', e.target.value);
+                }}
+                  placeholder="Ex: L&apos;actualité récente sur les catastrophes naturelles montre le besoin d&apos;espoir."
+                  className="w-full h-24 bg-black/40 border border-white/10 rounded-xl py-3 px-4 focus:border-[var(--btn-color)] outline-none transition-all font-medium resize-none" />
+              </div>
+
+              <button onClick={() => handleGenerateContent(
+                  `Prédication Porte-à-porte: ${pepTopic}`,
+                  `Publication: ${pepPublicationLink || '(Non fournie)'}, Sujet: ${pepTopic}${pepOfferStudy && pepStudyBrochureLink ? `, Offre étude: ${pepStudyBrochureLink}` : ''}${pepCurrentAffairs ? `, Actualités: ${pepCurrentAffairs}` : ''}`,
+                  'porte_en_porte'
+                )}
+                style={{ backgroundColor: (loading || cooldown > 0 || !pepTopic.trim()) ? '#1f2937' : 'var(--btn-color)', color: 'var(--btn-text)' }}
+                className="w-full py-5 rounded-xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center space-x-2">
+                {loading ? <Loader2 size={18} className="animate-spin" /> : <Megaphone size={18} />}
+                <span>Générer la préparation</span>
+              </button>
+            </div>
+          )}
+          {error && (
+            <div className="mt-8 p-4 bg-red-500/10 text-red-400 rounded-lg flex items-center space-x-2">
+              <AlertTriangle size={20} /> <p className="text-sm">{cooldown > 0 ? `Veuillez patienter ${cooldown}s.` : error}</p>
+            </div>
+          )}
+          <button onClick={resetAllStates} className="mt-8 w-full bg-white/5 border border-white/10 py-3 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-white/10 transition-all">
+            Annuler / Recommencer
+          </button>
+        </div>
+      )}
+
+      {predicationMode === 'nouvelle_visite' && (
+        <div className="bg-white/5 border border-white/10 rounded-[2rem] p-8 space-y-8 shadow-2xl relative">
+          <h3 className="text-2xl font-black uppercase tracking-tight mb-6" style={{ color: 'var(--btn-color)' }}>Nouvelle Visite</h3>
+
+          <div className="space-y-3">
+            <label className={getCommonLabelStyles()}>Type de nouvelle visite</label>
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => {
+                setNvType('study');
+                saveInputState('nvType', 'study');
+              }} className={getCommonButtonStyles(nvType === 'study')}>Enchaîner Cours Biblique</button>
+              <button onClick={() => {
+                setNvType('question');
+                saveInputState('nvType', 'question');
+              }} className={getCommonButtonStyles(nvType === 'question')}>Question en suspens</button>
+            </div>
+          </div>
+
+          {nvType === 'study' && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="flex bg-white/5 p-1 rounded-xl w-fit mb-6">
+                <button onClick={() => setUseManual(false)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all ${!useManual ? 'bg-white/10 shadow' : 'opacity-40'}`}>Lien jw.org</button>
+                <button onClick={() => setUseManual(true)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all ${useManual ? 'bg-white/10 shadow' : 'opacity-40'}`}>Saisie Manuelle</button>
+              </div>
+
+              {useManual ? (
+                <div className="space-y-3">
+                  <label className={getCommonLabelStyles()}>Texte de l'article/publication</label>
+                  <textarea 
+                    value={manualText} 
+                    onChange={e => {
+                      setManualText(e.target.value);
+                      saveInputState('predicationManualText', e.target.value);
+                    }}
+                    placeholder="Collez ici le texte..."
+                    className="w-full h-32 bg-black/40 border border-white/10 rounded-2xl p-5 outline-none focus:border-[var(--btn-color)] transition-all resize-none"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <label className={getCommonLabelStyles()}>Lien direct de l&apos;article/publication (jw.org) <span className="opacity-40 font-normal lowercase">(Optionnel)</span></label>
+                  <div className="relative">
+                    <input type="text" value={nvStudyLink} onChange={(e) => {
+                      setNvStudyLink(e.target.value);
+                      saveInputState('nvStudyLink', e.target.value);
+                    }}
+                      placeholder="https://www.jw.org/fr/publications/livres/..." className={getCommonFormStyles()} />
+                    <LinkIcon size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
+                  </div>
+                </div>
+              )}
+              <div className="space-y-3">
+                <label className={getCommonLabelStyles()}>Où en étiez-vous ? (Ex: Leçon 2, paragraphe 3)</label>
+                <div className="relative">
+                  <input type="text" value={nvStudyChapterParagraph} onChange={(e) => {
+                    setNvStudyChapterParagraph(e.target.value);
+                    saveInputState('nvStudyChapterParagraph', e.target.value);
+                  }}
+                    placeholder="Leçon 2, paragraphe 3" className={getCommonFormStyles()} />
+                  <BookOpen size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
+                </div>
+              </div>
+
+              <button onClick={() => handleGenerateContent(
+                  `Nouvelle Visite (Cours): ${nvStudyLink || nvStudyChapterParagraph}`,
+                  `Cours Biblique: ${nvStudyLink || '(Non fournie)'}, Arrêté à: ${nvStudyChapterParagraph}`,
+                  'nouvelle_visite'
+                )}
+                style={{ backgroundColor: (loading || cooldown > 0 || !nvStudyChapterParagraph.trim()) ? '#1f2937' : 'var(--btn-color)', color: 'var(--btn-text)' }}
+                className="w-full py-5 rounded-xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center space-x-2">
+                {loading ? <Loader2 size={18} className="animate-spin" /> : <Megaphone size={18} />}
+                <span>Générer la préparation</span>
+              </button>
+            </div>
+          )}
+
+          {nvType === 'question' && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="space-y-3">
+                <label className={getCommonLabelStyles()}>Question laissée en suspens</label>
+                <textarea value={nvQuestionLeft} onChange={(e) => {
+                  setNvQuestionLeft(e.target.value);
+                  saveInputState('nvQuestionLeft', e.target.value);
+                }}
+                  placeholder="Ex: Pourquoi Dieu permet-il la souffrance ?"
+                  className="w-full h-24 bg-black/40 border border-white/10 rounded-xl py-3 px-4 focus:border-[var(--btn-color)] outline-none transition-all font-medium resize-none" />
+              </div>
+              <div className="space-y-3">
+                <label className={getCommonLabelStyles()}>Lien de la brochure &apos;Vivez pour toujours&apos; (pour proposer l&apos;étude) <span className="opacity-40 font-normal lowercase">(Optionnel)</span></label>
+                <div className="relative">
+                  <input type="text" value={nvBrochureLink} onChange={(e) => {
+                    setNvBrochureLink(e.target.value);
+                    saveInputState('nvBrochureLink', e.target.value);
+                  }}
+                    placeholder="https://www.jw.org/fr/publications/livres/vivez-pour-toujours-livre-de-base-du-cours-biblique/lecon-1/" className={getCommonFormStyles()} />
+                  <LinkIcon size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
+                </div>
+              </div>
+
+              <button onClick={() => handleGenerateContent(
+                  `Nouvelle Visite (Question): ${nvQuestionLeft}`,
+                  `Question en suspens: ${nvQuestionLeft}${nvBrochureLink ? `, Offre étude: ${nvBrochureLink}` : ''}`,
+                  'nouvelle_visite'
+                )}
+                style={{ backgroundColor: (loading || cooldown > 0 || !nvQuestionLeft.trim()) ? '#1f2937' : 'var(--btn-color)', color: 'var(--btn-text)' }}
+                className="w-full py-5 rounded-xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center space-x-2">
+                {loading ? <Loader2 size={18} className="animate-spin" /> : <Megaphone size={18} />}
+                <span>Générer la préparation</span>
+              </button>
+            </div>
+          )}
+          {error && (
+            <div className="mt-8 p-4 bg-red-500/10 text-red-400 rounded-lg flex items-center space-x-2">
+              <AlertTriangle size={20} /> <p className="text-sm">{cooldown > 0 ? `Veuillez patienter ${cooldown}s.` : error}</p>
+            </div>
+          )}
+          <button onClick={resetAllStates} className="mt-8 w-full bg-white/5 border border-white/10 py-3 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-white/10 transition-all">
+            Annuler / Recommencer
+          </button>
+        </div>
+      )}
+
+      {predicationMode === 'cours_biblique' && (
+        <div className="bg-white/5 border border-white/10 rounded-[2rem] p-8 space-y-8 shadow-2xl relative">
+          <h3 className="text-2xl font-black uppercase tracking-tight mb-6" style={{ color: 'var(--btn-color)' }}>Préparation de Cours Biblique</h3>
+
+          <div className="space-y-3">
+            <label className={getCommonLabelStyles()}>Progression de l&apos;étude</label>
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => {
+                setCbType('new');
+                saveInputState('cbType', 'new');
+              }} className={getCommonButtonStyles(cbType === 'new')}>Nouveau chapitre</button>
+              <button onClick={() => {
+                setCbType('ongoing');
+                saveInputState('cbType', 'ongoing');
+              }} className={getCommonButtonStyles(cbType === 'ongoing')}>En plein chapitre</button>
+            </div>
+          </div>
+
+          {cbType && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="flex bg-white/5 p-1 rounded-xl w-fit mb-6">
+                <button onClick={() => setUseManual(false)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all ${!useManual ? 'bg-white/10 shadow' : 'opacity-40'}`}>Lien jw.org</button>
+                <button onClick={() => setUseManual(true)} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all ${useManual ? 'bg-white/10 shadow' : 'opacity-40'}`}>Saisie Manuelle</button>
+              </div>
+
+              {cbType === 'ongoing' && (
+                <div className="space-y-3">
+                  <label className={getCommonLabelStyles()}>Où en êtes-vous ? (Ex: Chapitre 4, paragraphe 2)</label>
+                  <div className="relative">
+                    <input type="text" value={cbChapterParagraph} onChange={(e) => {
+                      setCbChapterParagraph(e.target.value);
+                      saveInputState('cbChapterParagraph', e.target.value);
+                    }}
+                      placeholder="Chapitre 4, paragraphe 2" className={getCommonFormStyles()} />
+                    <BookOpen size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
+                  </div>
+                </div>
+              )}
+              
+              {useManual ? (
+                <div className="space-y-3">
+                  <label className={getCommonLabelStyles()}>Texte de la publication</label>
+                  <textarea 
+                    value={manualText} 
+                    onChange={e => {
+                      setManualText(e.target.value);
+                      saveInputState('predicationManualText', e.target.value);
+                    }}
+                    placeholder="Collez ici le texte de la publication..."
+                    className="w-full h-32 bg-black/40 border border-white/10 rounded-2xl p-5 outline-none focus:border-[var(--btn-color)] transition-all resize-none"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <label className={getCommonLabelStyles()}>Lien direct de la publication (jw.org) <span className="opacity-40 font-normal lowercase">(Optionnel)</span></label>
+                  <div className="relative">
+                    <input type="text" value={cbPublicationLink} onChange={(e) => {
+                      setCbPublicationLink(e.target.value);
+                      saveInputState('cbPublicationLink', e.target.value);
+                    }}
+                      placeholder="https://www.jw.org/fr/publications/livres/vivez-pour-toujours-livre-de-base-du-cours-biblique/" className={getCommonFormStyles()} />
+                    <LinkIcon size={22} className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30" />
+                  </div>
+                </div>
+              )}
+
+              <button onClick={() => handleGenerateContent(
+                  `Cours Biblique: ${cbType === 'new' ? 'Nouveau Chapitre' : `Suite: ${cbChapterParagraph}`}`,
+                  `Publication: ${cbPublicationLink || '(Non fournie)'}${cbType === 'ongoing' ? `, Arrêté à: ${cbChapterParagraph}` : ''}`,
+                  'cours_biblique'
+                )}
+                style={{ backgroundColor: (loading || cooldown > 0 || (cbType === 'ongoing' && !cbChapterParagraph.trim()) || !cbPublicationLink.trim()) ? '#1f2937' : 'var(--btn-color)', color: 'var(--btn-text)' }}
+                className="w-full py-5 rounded-xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center space-x-2">
+                {loading ? <Loader2 size={18} className="animate-spin" /> : <Megaphone size={18} />}
+                <span>Générer la préparation</span>
+              </button>
+            </div>
+          )}
+          {error && (
+            <div className="mt-8 p-4 bg-red-500/10 text-red-400 rounded-lg flex items-center space-x-2">
+              <AlertTriangle size={20} /> <p className="text-sm">{cooldown > 0 ? `Veuillez patienter ${cooldown}s.` : error}</p>
+            </div>
+          )}
+          <button onClick={resetAllStates} className="mt-8 w-full bg-white/5 border border-white/10 py-3 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-white/10 transition-all">
+            Annuler / Recommencer
+          </button>
+        </div>
+      )}
     </div>
   );
 };

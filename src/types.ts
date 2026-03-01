@@ -1,20 +1,4 @@
-export enum DiscourseType {
-  NORMAL = 'normal',
-  THURSDAY = 'thursday',
-  SUNDAY = 'sunday',
-  SPECIAL = 'special',
-}
-
-export enum DiscourseTimeOptions {
-  FIVE_MIN = '5min',
-  TEN_MIN = '10min',
-  THIRTY_MIN = '30min',
-  FORTY_MIN = '40min',
-  ONE_HOUR = '1h',
-  ONE_MIN = '1min',
-  FOUR_MIN = '4min',
-  FIFTEEN_MIN = '15min',
-}
+// src/types.ts
 
 export enum AppView {
   HOME = 'HOME',
@@ -25,9 +9,16 @@ export enum AppView {
   SETTINGS = 'SETTINGS',
   HISTORY = 'HISTORY',
   UPDATES = 'UPDATES',
-  RECHERCHES = 'RECHERCHES',
+  RECHERCHES = 'RECHERCHES', // New view for advanced search
   PREFERENCE_MANAGER = 'PREFERENCE_MANAGER',
   DISCOURS = 'DISCOURS'
+}
+
+export enum DiscourseType {
+  NORMAL = 'normal',
+  THURSDAY = 'thursday',
+  SUNDAY = 'sunday',
+  SPECIAL = 'special',
 }
 
 export type StudyPart =
@@ -49,7 +40,7 @@ export type HistoryCategory =
   | 'predication_porte_en_porte'
   | 'predication_nouvelle_visite'
   | 'predication_cours_biblique'
-  | 'recherches'
+  | 'recherches' // New category for searches
   | 'discours_normal'
   | 'discours_jeudi'
   | 'discours_dimanche'
@@ -57,30 +48,17 @@ export type HistoryCategory =
 
 export interface GeneratedStudy {
   id: string;
-  type: 'WATCHTOWER' | 'MINISTRY' | 'PREDICATION' | 'RECHERCHES' | 'DISCOURS';
+  type: 'WATCHTOWER' | 'MINISTRY' | 'PREDICATION' | 'RECHERCHES' | 'DISCOURS'; // Added DISCOURS
   title: string;
   date: string;
-  url?: string | string[];
+  url?: string | string[]; // Can be a single string or an array of strings
   content: string;
   timestamp: number;
-  part?: StudyPart;
-  preachingType?: PredicationType;
-  category: HistoryCategory;
-  rawSources?: { title: string; uri: string; content: string }[];
-  aiExplanation?: string;
-}
-
-export interface GeneratedDiscourse extends GeneratedStudy {
-  discoursType: DiscourseType;
-  time: string;
-  theme: string;
-  articleReferences?: string[];
-  imageReferences?: string[];
-  videoReferences?: string[];
-  pointsToReinforce?: string[];
-  strengths?: string[];
-  encouragements?: string;
-  settings: AppSettings;
+  part?: StudyPart; 
+  preachingType?: PredicationType; 
+  category: HistoryCategory; 
+  rawSources?: { title: string; uri: string; content: string }[]; // For Recherches tab
+  aiExplanation?: string; // For Recherches tab
 }
 
 export interface Preference {
