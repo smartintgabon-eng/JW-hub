@@ -1,17 +1,87 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
-:root {
-  --bg-color: #09090b;
-  --text-color: #ffffff;
-  --btn-color: #3b82f6;
-  --btn-text: #ffffff;
+@theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
 body {
-  background-color: var(--bg-color);
-  color: var(--text-color);
-  font-family: var(--font-sans);
+  background-color: #0a0a0a;
+  color: #f5f5f5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
+
+/* Markdown Styles */
+.markdown-body h1, .markdown-body h2, .markdown-body h3 {
+  font-weight: 800;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  color: #ffffff;
+}
+
+.markdown-body p {
+  margin-bottom: 1em;
+  line-height: 1.7;
+  color: #d1d5db;
+}
+
+.markdown-body ul {
+  list-style-type: disc;
+  padding-left: 1.5em;
+  margin-bottom: 1em;
+  color: #d1d5db;
+}
+
+.markdown-body strong {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.markdown-body blockquote {
+  border-left: 4px solid var(--btn-color, #4a6da7);
+  padding-left: 1em;
+  font-style: italic;
+  color: #9ca3af;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 1em;
+  border-radius: 0 8px 8px 0;
+}
+
+.markdown-body code {
+  background: rgba(255,255,255,0.1);
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  color: #f87171;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-in {
+  animation: fadeIn 0.4s ease-out forwards;
 }

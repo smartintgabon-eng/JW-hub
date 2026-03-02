@@ -2,11 +2,11 @@ import React from 'react';
 import { Plus, X, Link as LinkIcon } from 'lucide-react';
 
 export interface ContentOptions {
-  includeArticles: boolean;
-  includeImages: boolean;
-  includeVideos: boolean;
-  includeVerses: boolean;
-  articleLinks: string[];
+  includeArticles?: boolean;
+  includeImages?: boolean;
+  includeVideos?: boolean;
+  includeVerses?: boolean;
+  articleLinks?: string | string[];
 }
 
 interface Props {

@@ -1,256 +1,93 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  BookOpen, Calendar, Settings as SettingsIcon, History as HistoryIcon, 
-  HelpCircle, Menu, X, Home as HomeIcon, BellRing, Loader2, Search, ChevronRight, Mic,
-  Megaphone
-} from 'lucide-react';
-import { getContrastTextColor } from './utils/colorUtils.ts';
-import { AppView, GeneratedStudy, AppSettings } from './types.ts'; 
-import { getSettings, getHistory, saveToHistory } from './utils/storage.ts'; 
+import { AppSettings, AppView } from './types';
+import { Settings, Mic, Search, BookOpen, Home, Menu, Clock, HelpCircle, ChevronLeft } from 'lucide-react';
+import { getContrastTextColor } from './utils/colorUtils';
 
-import StudyTool from './components/StudyTool.tsx'; 
-import History from './components/History.tsx'; 
-import Settings from './components/Settings.tsx'; 
-import Tutorial from './components/Tutorial.tsx'; 
-import Updates from './components/Updates.tsx'; 
-import PredicationTool from './components/PredicationTool.tsx';
-import RecherchesTool from './components/RecherchesTool.tsx';
-import PreferenceManager from './components/PreferenceManager.tsx';
-import Discourse from './components/Discourse.tsx';
-
-const getLocalizedText = (settings: AppSettings, key: string) => {
-  const texts: { [key: string]: { [lang: string]: string } } = {
-    'home': { 'fr': 'Accueil', 'en': 'Home', 'es': 'Inicio' },
-    'workbook': { 'fr': 'Cahier', 'en': 'Workbook', 'es': 'Cuaderno' },
-    'watchtower': { 'fr': 'Tour de Garde', 'en': 'Watchtower', 'es': 'La Atalaya' },
-    'preaching': { 'fr': 'Prédication', 'en': 'Preaching', 'es': 'Predicación' },
-    'searches': { 'fr': 'Recherches', 'en': 'Searches', 'es': 'Búsquedas' },
-    'history': { 'fr': 'Historique', 'en': 'History', 'es': 'Historial' },
-    'updates': { 'fr': 'Mises à jour', 'en': 'Updates', 'es': 'Actualizaciones' },
-    'tutorial': { 'fr': 'Tutoriel', 'en': 'Tutorial', 'es': 'Tutorial' },
-    'settings': { 'fr': 'Paramètres', 'en': 'Settings', 'es': 'Configuración' },
-    'prepareSimply': { 'fr': 'Préparez-vous.', 'en': 'Prepare.', 'es': 'Prepárese.' },
-    'simply': { 'fr': 'Simplement.', 'en': 'Simply.', 'es': 'Simplemente.' },
-    'discoverTutorial': { 'fr': 'Découvrir le tutoriel visuel', 'en': 'Discover visual tutorial', 'es': 'Descubra el tutorial visual' },
-    'midweekMeetings': { 'fr': 'Réunions de semaine', 'en': 'Midweek meetings', 'es': 'Reuniones de entre semana' },
-    'weekendStudy': { 'fr': 'Étude de week-end', 'en': 'Weekend study', 'es': 'Estudio de fin de semana' },
-    'installGuideAlert': { 'fr': "Installation : Cliquez sur 'Partager' (iOS) ou le Menu (Android) puis 'Ajouter à l'écran d'accueil'.", 'en': "Installation: Click 'Share' (iOS) or Menu (Android) then 'Add to Home Screen'.", 'es': "Instalación: Haga clic en 'Compartir' (iOS) o Menú (Android) y luego 'Añadir a pantalla de inicio'." },
-    'updateApp': { 'fr': 'Mettre à jour l\'App', 'en': 'Update App', 'es': 'Actualizar aplicación' },
-    'continueStudy': { 'fr': 'Continuer l\'étude en cours', 'en': 'Continue current study', 'es': 'Continuar estudio actual' },
-    'lastUpdate': { 'fr': 'Dernière mise à jour', 'en': 'Last update', 'es': 'Última actualización' },
-    'noCurrentStudy': { 'fr': 'Aucune étude en cours.', 'en': 'No current study.', 'es': 'No hay estudio en curso.' },
-    'lastStudy': { 'fr': 'Dernière étude :', 'en': 'Last study:', 'es': 'Último estudio:' },
-    'viewHistory': { 'fr': 'Voir l\'historique', 'en': 'View history', 'es': 'Ver historial' },
-    'latestVersion': { 'fr': 'Dernière version', 'en': 'Latest version', 'es': 'Última versión' },
-    'newFeatures': { 'fr': 'Nouvelles Fonctionnalités', 'en': 'New Features', 'es': 'Nuevas características' },
-    'advancedSearch': { 'fr': 'Recherches Avancées', 'en': 'Advanced Searches', 'es': 'Búsquedas avanzadas' },
-    'discours': { 'fr': 'Discours', 'en': 'Discourses', 'es': 'Discursos' },
-  };
-  return texts[key]?.[settings.language] || texts[key]?.['fr'];
-};
-
-interface NavItemProps {
-  icon: React.ElementType;
-  label: string;
-  viewId: AppView;
-  currentView: AppView;
-  handleViewChange: (view: AppView) => void;
-  isExpanded: boolean;
-  settings: AppSettings;
-}
-
-const NavItem: React.FC<NavItemProps> = ({ icon: Icon, label, viewId, currentView, handleViewChange, isExpanded }) => (
-  <button
-    onClick={() => handleViewChange(viewId)}
-    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 
-      ${currentView === viewId ? 'bg-[var(--btn-color)] text-[var(--btn-text)] shadow-lg' : 'opacity-50 hover:opacity-100 hover:bg-white/5'}
-      ${!isExpanded ? 'justify-center' : ''}`}
-  >
-    <Icon size={24} />
-    {isExpanded && <span className="text-sm font-bold uppercase tracking-wider truncate">{label}</span>}
-  </button>
-);
+// Import des composants (assure-toi que les chemins sont bons)
+import StudyTool from './components/StudyTool';
+import PredicationTool from './components/PredicationTool';
+import Discourse from './components/Discourse';
+import RecherchesTool from './components/RecherchesTool';
+import History from './components/History';
+import SettingsView from './components/Settings';
+import Tutorial from './components/Tutorial';
+import Updates from './components/Updates';
+import PreferenceManager from './components/PreferenceManager';
 
 const App: React.FC = () => {
-  const [view, setView] = useState<AppView>(() => {
-    const savedView = localStorage.getItem('lastView');
-    return savedView ? (savedView as AppView) : AppView.HOME;
+  const [currentView, setCurrentView] = useState<AppView>(AppView.HOME);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [settings, setSettings] = useState<AppSettings>(() => {
+    const saved = localStorage.getItem('jw_settings');
+    return saved ? JSON.parse(saved) : { btnColor: '#4a70b5', bgColor: '#09090b', language: 'fr', answerPreferences: [] };
   });
-  const [settings, setAppSettings] = useState<AppSettings>(getSettings);
-
-  const handleSettingsChange = (newSettings: AppSettings) => {
-    // Failsafe to prevent child components from passing invalid settings
-    if (newSettings && typeof newSettings === 'object' && newSettings.language && Array.isArray(newSettings.answerPreferences)) {
-      setAppSettings(newSettings);
-    } else {
-      console.error("Ignored invalid settings update:", newSettings);
-    }
-  };
-  const [isExpanded, setIsExpanded] = useState(window.innerWidth >= 1024); 
-  const [isReadingModeActive] = useState(false);
-  const [history, setHistory] = useState<GeneratedStudy[]>(getHistory());
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [globalLoadingMessage, setGlobalLoadingMessage] = useState<string | null>(null); 
-
 
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.ready.then(registration => {
-        registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing;
-          if (newWorker) {
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                // Service worker updated
-              }
-            });
-          }
-        });
-      });
-      navigator.serviceWorker.addEventListener('message', (event) => {
-        if (event.data && event.data.type === 'SKIP_WAITING_CONFIRMED') {
-          window.location.reload();
-        }
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e: any) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-  }, []);
-
-  useEffect(() => {
-    const bgColor = settings.bgColor || '#f5f5f0'; // Un blanc cassé doux
-    const btnColor = settings.btnColor || '#5A5A40'; // Un vert olive doux
-    document.documentElement.style.setProperty('--bg-color', bgColor);
-    document.documentElement.style.setProperty('--text-color', getContrastTextColor(bgColor));
-    document.documentElement.style.setProperty('--btn-color', btnColor);
-    document.documentElement.style.setProperty('--btn-text', getContrastTextColor(btnColor));
+    document.documentElement.style.setProperty('--btn-color', settings.btnColor);
+    const textColor = getContrastTextColor(settings.btnColor);
+    document.documentElement.style.setProperty('--btn-text', textColor === 'black' ? '#000000' : '#ffffff');
+    localStorage.setItem('jw_settings', JSON.stringify(settings));
   }, [settings]);
 
-  const handleViewChange = (newView: AppView) => {
-    console.log('Changing view to:', newView);
-    setView(newView);
-    localStorage.setItem('lastView', newView);
-  };
+  const menuItems = [
+    { id: AppView.HOME, icon: <Home size={22}/>, label: "Accueil" },
+    { id: AppView.WATCHTOWER, icon: <BookOpen size={22}/>, label: "Tour de Garde" },
+    { id: AppView.MINISTRY, icon: <Clock size={22}/>, label: "Cahier" },
+    { id: AppView.PREDICATION, icon: <Search size={22}/>, label: "Prédication" },
+    { id: AppView.DISCOURS, icon: <Mic size={22}/>, label: "Discours" },
+    { id: AppView.RECHERCHES, icon: <Search size={22}/>, label: "Recherches" },
+    { id: AppView.SETTINGS, icon: <Settings size={22}/>, label: "Paramètres" },
+    { id: AppView.TUTORIAL, icon: <HelpCircle size={22}/>, label: "Tutoriel" },
+  ];
 
-  const handleStudyGenerated = (study: GeneratedStudy) => {
-    saveToHistory(study);
-    setHistory(getHistory());
-    setGlobalLoadingMessage(null);
-    handleViewChange(AppView.HISTORY);
-  };
-
-  const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') setDeferredPrompt(null);
-    } else {
-      alert(getLocalizedText(settings, 'installGuideAlert'));
+  const renderView = () => {
+    const props = { settings, setSettings, setGlobalLoadingMessage: (m:any)=>console.log(m), onGenerated: ()=>setCurrentView(AppView.HISTORY) };
+    switch(currentView) {
+      case AppView.WATCHTOWER: return <StudyTool category="tour_de_garde" title="Tour de Garde" icon={<BookOpen/>} {...props} onGenerationComplete={()=>setCurrentView(AppView.HISTORY)}/>;
+      case AppView.MINISTRY: return <StudyTool category="cahier_vie_et_ministere" title="Cahier" icon={<Clock/>} {...props} onGenerationComplete={()=>setCurrentView(AppView.HISTORY)}/>;
+      case AppView.PREDICATION: return <PredicationTool {...props} />;
+      case AppView.DISCOURS: return <Discourse {...props} />;
+      case AppView.RECHERCHES: return <RecherchesTool {...props} />;
+      case AppView.SETTINGS: return <SettingsView {...props} setView={setCurrentView} />;
+      case AppView.PREFERENCE_MANAGER: return <PreferenceManager {...props} />;
+      case AppView.TUTORIAL: return <Tutorial />;
+      case AppView.UPDATES: return <Updates settings={settings} />;
+      case AppView.HISTORY: return <History history={[]} setHistory={()=>{}} settings={settings} />;
+      default: return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4">
+          <h2 className="col-span-full text-3xl font-black uppercase mb-4">Bonjour, Championne ✨</h2>
+          {menuItems.filter(i => i.id !== AppView.HOME).map(item => (
+            <button key={item.id} onClick={() => setCurrentView(item.id)} className="p-8 bg-white/5 border border-white/10 rounded-[2.5rem] hover:bg-white/10 transition-all text-left group">
+              <div className="p-4 bg-[var(--btn-color)]/10 text-[var(--btn-color)] rounded-2xl w-fit mb-4 group-hover:scale-110 transition-transform">{item.icon}</div>
+              <h3 className="text-xl font-black uppercase tracking-tight">{item.label}</h3>
+            </button>
+          ))}
+        </div>
+      );
     }
   };
 
-
-
   return (
-    <div className="min-h-screen flex flex-row bg-[var(--bg-color)] text-[var(--text-color)] overflow-hidden">
-      {globalLoadingMessage && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center z-[9999] text-white p-6 text-center">
-          <Loader2 size={48} className="animate-spin text-[var(--btn-color)] mb-4" />
-          <p className="text-xl font-bold uppercase">{globalLoadingMessage}</p>
+    <div className="flex min-h-screen" style={{ backgroundColor: settings.bgColor, color: '#fff' }}>
+      <aside className={`fixed left-0 top-0 h-full z-50 transition-all duration-300 bg-black/20 backdrop-blur-2xl border-r border-white/5 ${isSidebarOpen ? 'w-64' : 'w-20'}`}>
+        <div className="p-6 flex items-center justify-between">
+          {isSidebarOpen && <span className="font-black text-xl tracking-tighter">JW <span style={{color: settings.btnColor}}>HUB</span></span>}
+          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-white/5 rounded-xl"><Menu/></button>
         </div>
-      )}
-
-      <aside className={`flex flex-col h-screen bg-black/90 backdrop-blur-xl border-r border-white/10 transition-all duration-300 z-50 ${isExpanded ? 'w-72' : 'w-20'} ${isReadingModeActive ? 'hidden' : 'flex'} md:static`}>
-        <div className="p-4 flex items-center justify-center mb-8">
-          <button onClick={() => setIsExpanded(!isExpanded)} className="p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-all text-[var(--btn-color)]">
-            {isExpanded ? <X size={24} /> : <Menu size={24} />}
-          </button>
-        </div>
-
-        <nav className="flex-1 px-2 space-y-2 overflow-y-auto overflow-x-hidden">
-          <NavItem icon={HomeIcon} label={getLocalizedText(settings, 'home')} viewId={AppView.HOME} currentView={view} handleViewChange={handleViewChange} isExpanded={isExpanded} settings={settings} />
-          <NavItem icon={Calendar} label={getLocalizedText(settings, 'workbook')} viewId={AppView.MINISTRY} currentView={view} handleViewChange={handleViewChange} isExpanded={isExpanded} settings={settings} />
-          <NavItem icon={BookOpen} label={getLocalizedText(settings, 'watchtower')} viewId={AppView.WATCHTOWER} currentView={view} handleViewChange={handleViewChange} isExpanded={isExpanded} settings={settings} />
-          <NavItem icon={Megaphone} label={getLocalizedText(settings, 'preaching')} viewId={AppView.PREDICATION} currentView={view} handleViewChange={handleViewChange} isExpanded={isExpanded} settings={settings} />
-          <NavItem icon={Search} label={getLocalizedText(settings, 'searches')} viewId={AppView.RECHERCHES} currentView={view} handleViewChange={handleViewChange} isExpanded={isExpanded} settings={settings} />
-          <NavItem icon={HistoryIcon} label={getLocalizedText(settings, 'history')} viewId={AppView.HISTORY} currentView={view} handleViewChange={handleViewChange} isExpanded={isExpanded} settings={settings} />
-          <NavItem icon={BellRing} label={getLocalizedText(settings, 'updates')} viewId={AppView.UPDATES} currentView={view} handleViewChange={handleViewChange} isExpanded={isExpanded} settings={settings} />
-          <NavItem icon={HelpCircle} label={getLocalizedText(settings, 'tutorial')} viewId={AppView.TUTORIAL} currentView={view} handleViewChange={handleViewChange} isExpanded={isExpanded} settings={settings} />
-          <NavItem icon={SettingsIcon} label={getLocalizedText(settings, 'settings')} viewId={AppView.SETTINGS} currentView={view} handleViewChange={handleViewChange} isExpanded={isExpanded} settings={settings} />
-          <NavItem icon={Mic} label={getLocalizedText(settings, 'discours')} viewId={AppView.DISCOURS} currentView={view} handleViewChange={handleViewChange} isExpanded={isExpanded} settings={settings} />
+        <nav className="mt-10 px-3 space-y-2">
+          {menuItems.map(item => (
+            <button key={item.id} onClick={() => setCurrentView(item.id)} className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all ${currentView === item.id ? 'bg-[var(--btn-color)] text-[var(--btn-text)] shadow-lg' : 'text-gray-400 hover:bg-white/5'}`}>
+              <div className="min-w-[24px]">{item.icon}</div>
+              {isSidebarOpen && <span className="font-bold text-[10px] uppercase tracking-widest">{item.label}</span>}
+            </button>
+          ))}
         </nav>
       </aside>
-
-      <main className="flex-1 h-screen overflow-y-auto p-4 md:p-10 relative">
-        {view === AppView.HOME && (
-          <div className="max-w-4xl mx-auto py-12 flex flex-col items-center justify-center min-h-[80vh] text-center animate-in fade-in duration-1000">
-            <div 
-              style={{ backgroundColor: 'var(--btn-color)', color: 'var(--btn-text)' }} 
-              className="w-32 h-32 text-5xl rounded-3xl flex items-center justify-center font-black shadow-2xl hover:scale-105 transition-transform cursor-pointer mb-12"
-              onClick={handleInstallClick}
-            >JW</div>
-
-            <h1 className="text-5xl md:text-8xl font-black uppercase tracking-tighter mb-4 leading-none">
-              {getLocalizedText(settings, 'prepareSimply')} <br/> <span className="opacity-20 text-4xl md:text-6xl italic">{getLocalizedText(settings, 'simply')}</span>
-            </h1>
-            
-            <button 
-              onClick={() => handleViewChange(AppView.TUTORIAL)}
-              className="group relative px-10 py-5 rounded-2xl font-black uppercase text-sm tracking-widest bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 text-white shadow-[0_20px_50px_rgba(79,70,229,0.3)] hover:shadow-[0_20px_60px_rgba(79,70,229,0.5)] transition-all active:scale-95 mb-16 overflow-hidden"
-            >
-              <span className="relative z-10 flex items-center gap-3">
-                {getLocalizedText(settings, 'discoverTutorial')} <ChevronRight className="group-hover:translate-x-1 transition-transform" />
-              </span>
-            </button>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-5xl">
-              <button 
-                onClick={() => handleViewChange(AppView.MINISTRY)}
-                className="p-8 bg-white/5 rounded-[2.5rem] border border-white/10 hover:border-[var(--btn-color)] transition-all group flex flex-col items-center"
-              >
-                <Calendar size={48} className="text-[var(--btn-color)] mb-4" />
-                <h3 className="text-xl font-bold uppercase">{getLocalizedText(settings, 'workbook')}</h3>
-                <p className="text-xs opacity-40 mt-1">{getLocalizedText(settings, 'midweekMeetings')}</p>
-              </button>
-
-              <button 
-                onClick={() => handleViewChange(AppView.WATCHTOWER)}
-                className="p-8 bg-white/5 rounded-[2.5rem] border border-white/10 hover:border-[var(--btn-color)] transition-all group flex flex-col items-center"
-              >
-                <BookOpen size={48} className="text-[var(--btn-color)] mb-4" />
-                <h3 className="text-xl font-bold uppercase">{getLocalizedText(settings, 'watchtower')}</h3>
-                <p className="text-xs opacity-40 mt-1">{getLocalizedText(settings, 'weekendStudy')}</p>
-              </button>
-
-              <button 
-                onClick={() => handleViewChange(AppView.RECHERCHES)}
-                className="p-8 bg-white/5 rounded-[2.5rem] border border-white/10 hover:border-[var(--btn-color)] transition-all group flex flex-col items-center"
-              >
-                <Search size={48} className="text-[var(--btn-color)] mb-4" />
-                <h3 className="text-xl font-bold uppercase">{getLocalizedText(settings, 'searches')}</h3>
-                <p className="text-xs opacity-40 mt-1">{getLocalizedText(settings, 'advancedSearch')}</p>
-              </button>
-            </div>
-          </div>
+      <main className={`flex-1 ${isSidebarOpen ? 'ml-64' : 'ml-20'} p-10 transition-all`}>
+        {currentView !== AppView.HOME && (
+          <button onClick={() => setCurrentView(AppView.HOME)} className="mb-8 flex items-center gap-2 text-[10px] font-black uppercase opacity-30 hover:opacity-100"><ChevronLeft size={14}/> Retour</button>
         )}
-        
-        {view === AppView.MINISTRY && <StudyTool type="MINISTRY" onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
-        {view === AppView.WATCHTOWER && <StudyTool type="WATCHTOWER" onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
-        {view === AppView.PREDICATION && <PredicationTool onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
-        {view === AppView.RECHERCHES && <RecherchesTool onGenerated={handleStudyGenerated} settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
-        {view === AppView.HISTORY && <History history={history} setHistory={setHistory} settings={settings} />}
-        {view === AppView.SETTINGS && <Settings setSettings={handleSettingsChange} settings={settings} deferredPrompt={deferredPrompt} handleInstallClick={handleInstallClick} setView={setView} />}
-        {view === AppView.TUTORIAL && <Tutorial deferredPrompt={deferredPrompt} handleInstallClick={handleInstallClick} navigateTo={handleViewChange} settings={settings} />}
-        {view === AppView.UPDATES && <Updates settings={settings} />}
-        {view === AppView.PREFERENCE_MANAGER && <PreferenceManager settings={settings} setSettings={handleSettingsChange} onClose={() => handleViewChange(AppView.SETTINGS)} />}
-        {view === AppView.DISCOURS && <Discourse settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
+        {renderView()}
       </main>
     </div>
   );

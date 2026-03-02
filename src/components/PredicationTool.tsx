@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Megaphone, Loader2, AlertTriangle, BookOpen, Link as LinkIcon, Handshake, CornerRightDown, ChevronRight, ChevronLeft } from 'lucide-react';
 // Fix: Import types from src/types.ts
-import { AppSettings, GeneratedStudy, PredicationType } from '../types.ts';
+import { AppSettings, GeneratedStudy, PredicationType, HistoryCategory } from '../types.ts';
 import { callGenerateContentApi } from '../services/apiService.ts'; 
 import { saveInputState, loadInputState } from '../utils/storage.ts';
 
@@ -118,7 +118,7 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
         content: result.text,
         timestamp: Date.now(),
         preachingType: preachingType,
-        category: `predication_${preachingType}`
+        category: `predication_${preachingType}` as HistoryCategory
       };
       onGenerated(newStudy);
       resetAllStates();

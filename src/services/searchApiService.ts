@@ -1,23 +1,17 @@
 // src/services/searchApiService.ts
-import { AppSettings, GeneratedStudy } from '../types';
-import { ContentOptions } from '../components/ContentInclusion';
+import { AppSettings } from '../types';
 
 export const callSearchContentApi = async (
   questionOrSubject: string,
   settings: AppSettings,
-  // Fix: Add confirmMode parameter
-  confirmMode: boolean, 
-  contentOptions?: ContentOptions
+  confirmMode: boolean,
+  contentOptions?: any
 ): Promise<{ 
-    text: string; 
-    title: string; 
-    theme?: string; 
-    rawSources?: GeneratedStudy['rawSources']; 
-    aiExplanation?: string;
+    text?: string; 
     previewTitle?: string;
     previewSummary?: string;
     previewImage?: string;
-    previewInfos?: string; // Added for "Infos clés"
+    previewInfos?: string; 
 }> => {
 
   const response = await fetch('/api/search-content', {
@@ -28,10 +22,8 @@ export const callSearchContentApi = async (
     body: JSON.stringify({
       questionOrSubject,
       settings,
-      // Fix: Pass confirmMode in the request body
-      confirmMode, 
+      confirmMode,
       contentOptions,
-      articleReferences: contentOptions?.articleLinks
     }),
   });
 
@@ -40,10 +32,9 @@ export const callSearchContentApi = async (
     try {
       errorData = await response.json();
     } catch {
-      // If response.json() fails, it means the server didn't send JSON (e.g., HTML error page)
-      throw new Error(`Server Error: ${response.status} - Non-JSON response received.`);
+      throw new Error(`Erreur serveur: ${response.status} - Réponse non-JSON reçue.`);
     }
-    throw new Error(errorData.message || `API Error: ${response.status}`);
+    throw new Error(errorData.message || `Erreur API: ${response.status}`);
   }
 
   return response.json();
