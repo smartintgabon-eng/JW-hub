@@ -6,17 +6,21 @@ export default async function handler(req, res) {
   if (!text) return res.status(400).json({ message: 'Texte manquant' });
   
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY.trim() });
+    const apiKey = process.env.GEMINI_API_KEY || process.env.REACT_APP_GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("API key is missing");
+    }
+    const genAI = new GoogleGenAI({ apiKey: apiKey.trim() });
     
     const prompt = `Analyse le thème biblique suivant et donne-moi UNIQUEMENT un code hexadécimal de couleur qui lui correspond (ex: #4a6da7). 
 Le code doit être sombre et élégant. Thème : "${text}"`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+    const result = await genAI.models.generateContent({
+      model: "gemini-3-flash-preview",
       contents: prompt
     });
     
-    const responseText = response.text;
+    const responseText = result.text;
 
     // Extraction propre du code HEX (au cas où l'IA met du texte autour)
     const hexMatch = responseText.match(/#[0-9A-Fa-f]{6}/);
