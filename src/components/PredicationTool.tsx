@@ -100,7 +100,13 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
     setError(null);
 
     try {
-      const result = await callGenerateContentApi('PREDICATION', inputDetails, 'tout', settings, false, preachingType);
+      const result = await callGenerateContentApi('PREDICATION', inputDetails, 'tout', settings, false, preachingType, {
+        includeArticles: false,
+        includeImages: false,
+        includeVideos: false,
+        includeVerses: false,
+        articleLinks: [],
+      });
 
       setGlobalLoadingMessage('Enregistrement de la préparation et redirection...');
       const newStudy: GeneratedStudy = {
@@ -250,9 +256,9 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
               </div>
 
               <button onClick={() => handleGenerateContent(
-                  'porte_en_porte',
-                  `Publication: ${pepPublicationLink || '(Non fournie)'}${pepOfferStudy && pepStudyBrochureLink ? `, Offre étude: ${pepStudyBrochureLink}` : ''}${pepCurrentAffairs ? `, Actualités: ${pepCurrentAffairs}` : ''}`,
-                  pepTopic
+                  `Prédication Porte-à-porte: ${pepTopic}`,
+                  `Publication: ${pepPublicationLink || '(Non fournie)'}, Sujet: ${pepTopic}${pepOfferStudy && pepStudyBrochureLink ? `, Offre étude: ${pepStudyBrochureLink}` : ''}${pepCurrentAffairs ? `, Actualités: ${pepCurrentAffairs}` : ''}`,
+                  'porte_en_porte'
                 )}
                 style={{ backgroundColor: (loading || cooldown > 0 || !pepTopic.trim()) ? '#1f2937' : 'var(--btn-color)', color: 'var(--btn-text)' }}
                 className="w-full py-5 rounded-xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center space-x-2">
@@ -316,9 +322,9 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
               </div>
 
               <button onClick={() => handleGenerateContent(
-                  'nouvelle_visite',
+                  `Nouvelle Visite (Cours): ${nvStudyLink || nvStudyChapterParagraph}`,
                   `Cours Biblique: ${nvStudyLink || '(Non fournie)'}, Arrêté à: ${nvStudyChapterParagraph}`,
-                  `Nouvelle Visite (Cours): ${nvStudyLink || nvStudyChapterParagraph}`
+                  'nouvelle_visite'
                 )}
                 style={{ backgroundColor: (loading || cooldown > 0 || !nvStudyChapterParagraph.trim()) ? '#1f2937' : 'var(--btn-color)', color: 'var(--btn-text)' }}
                 className="w-full py-5 rounded-xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center space-x-2">
@@ -352,9 +358,9 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
               </div>
 
               <button onClick={() => handleGenerateContent(
-                  'nouvelle_visite',
+                  `Nouvelle Visite (Question): ${nvQuestionLeft}`,
                   `Question en suspens: ${nvQuestionLeft}${nvBrochureLink ? `, Offre étude: ${nvBrochureLink}` : ''}`,
-                  `Nouvelle Visite (Question): ${nvQuestionLeft}`
+                  'nouvelle_visite'
                 )}
                 style={{ backgroundColor: (loading || cooldown > 0 || !nvQuestionLeft.trim()) ? '#1f2937' : 'var(--btn-color)', color: 'var(--btn-text)' }}
                 className="w-full py-5 rounded-xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center space-x-2">
@@ -420,9 +426,9 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
               </div>
 
               <button onClick={() => handleGenerateContent(
-                  'cours_biblique',
+                  `Cours Biblique: ${cbType === 'new' ? 'Nouveau Chapitre' : `Suite: ${cbChapterParagraph}`}`,
                   `Publication: ${cbPublicationLink || '(Non fournie)'}${cbType === 'ongoing' ? `, Arrêté à: ${cbChapterParagraph}` : ''}`,
-                  `Cours Biblique: ${cbType === 'new' ? 'Nouveau Chapitre' : `Suite: ${cbChapterParagraph}`}`
+                  'cours_biblique'
                 )}
                 style={{ backgroundColor: (loading || cooldown > 0 || (cbType === 'ongoing' && !cbChapterParagraph.trim()) || !cbPublicationLink.trim()) ? '#1f2937' : 'var(--btn-color)', color: 'var(--btn-text)' }}
                 className="w-full py-5 rounded-xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center space-x-2">

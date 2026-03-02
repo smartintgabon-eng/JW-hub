@@ -160,7 +160,7 @@ const DiscoursTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoading
       return (
         <div className="space-y-6">
           <label className="text-[10px] font-black uppercase opacity-40 ml-2 tracking-widest">{getLocalizedText(settings, 'articleReference')}</label>
-          {articleReferences.map((ref: string, i: number) => (
+          {articleReferences.map((ref, i) => (
             <div key={i} className="flex gap-2 items-center">
               <input type="text" value={ref} onChange={(e) => updateReference(setArticleReferences, i, e.target.value)} placeholder="Lien jw.org ou wol.jw.org" className="flex-1 bg-black/40 border border-white/10 rounded-2xl p-4 outline-none focus:border-[var(--btn-color)]" />
               <button onClick={() => removeReference(setArticleReferences, i)} className="p-3 text-red-400 bg-red-400/10 rounded-xl"><Minus size={16} /></button>
@@ -179,7 +179,7 @@ const DiscoursTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoading
         {showImages && (
           <div className="space-y-4">
             <label className="text-[10px] font-black uppercase opacity-40 ml-2 tracking-widest">{getLocalizedText(settings, 'imageReference')}</label>
-            {imageReferences.map((ref: string, i: number) => (
+            {imageReferences.map((ref, i) => (
               <div key={i} className="flex gap-2 items-center">
                 <input type="text" value={ref} onChange={(e) => updateReference(setImageReferences, i, e.target.value)} placeholder="Description de l'image à trouver" className="flex-1 bg-black/40 border border-white/10 rounded-2xl p-4 outline-none focus:border-[var(--btn-color)]" />
                 <button onClick={() => removeReference(setImageReferences, i)} className="p-3 text-red-400 bg-red-400/10 rounded-xl"><Minus size={16} /></button>
@@ -192,7 +192,7 @@ const DiscoursTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoading
         {showVideos && (discoursType === 'normal' || discoursType === 'dimanche' || discoursType === 'special') && (
           <div className="space-y-4">
             <label className="text-[10px] font-black uppercase opacity-40 ml-2 tracking-widest">{getLocalizedText(settings, 'videoReference')}</label>
-            {videoReferences.map((ref: string, i: number) => (
+            {videoReferences.map((ref, i) => (
               <div key={i} className="flex gap-2 items-center">
                 <input type="text" value={ref} onChange={(e) => updateReference(setVideoReferences, i, e.target.value)} placeholder="Description de la vidéo à trouver" className="flex-1 bg-black/40 border border-white/10 rounded-2xl p-4 outline-none focus:border-[var(--btn-color)]" />
                 <button onClick={() => removeReference(setVideoReferences, i)} className="p-3 text-red-400 bg-red-400/10 rounded-xl"><Minus size={16} /></button>
@@ -203,7 +203,7 @@ const DiscoursTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoading
         )}
 
         <label className="text-[10px] font-black uppercase opacity-40 ml-2 tracking-widest">{getLocalizedText(settings, 'articleReference')}</label>
-        {articleReferences.map((ref: string, i: number) => (
+        {articleReferences.map((ref, i) => (
           <div key={i} className="flex gap-2 items-center">
             <input type="text" value={ref} onChange={(e) => updateReference(setArticleReferences, i, e.target.value)} placeholder="Lien jw.org ou wol.jw.org" className="flex-1 bg-black/40 border border-white/10 rounded-2xl p-4 outline-none focus:border-[var(--btn-color)]" />
             <button onClick={() => removeReference(setArticleReferences, i)} className="p-3 text-red-400 bg-red-400/10 rounded-xl"><Minus size={16} /></button>
@@ -219,7 +219,7 @@ const DiscoursTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoading
       return (
         <div className="space-y-6">
           <label className="text-[10px] font-black uppercase opacity-40 ml-2 tracking-widest">{getLocalizedText(settings, 'addPointToReinforce')}</label>
-          {pointsToReinforce.map((point: string, i: number) => (
+          {pointsToReinforce.map((point, i) => (
             <div key={i} className="flex gap-2 items-center">
               <input type="text" value={point} onChange={(e) => updateReference(setPointsToReinforce, i, e.target.value)} placeholder="Ex: Améliorer la participation aux réunions" className="flex-1 bg-black/40 border border-white/10 rounded-2xl p-4 outline-none focus:border-[var(--btn-color)]" />
               <button onClick={() => removeReference(setPointsToReinforce, i)} className="p-3 text-red-400 bg-red-400/10 rounded-xl"><Minus size={16} /></button>
@@ -228,7 +228,7 @@ const DiscoursTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoading
           <button onClick={() => addReference(setPointsToReinforce)} className="w-full py-4 bg-white/10 hover:bg-white/20 rounded-xl font-bold uppercase text-xs transition-all flex items-center justify-center gap-2"><Plus size={16} /> Ajouter un point à renforcer</button>
 
           <label className="text-[10px] font-black uppercase opacity-40 ml-2 tracking-widest">{getLocalizedText(settings, 'addStrengths')}</label>
-          {strengths.map((strength: string, i: number) => (
+          {strengths.map((strength, i) => (
             <div key={i} className="flex gap-2 items-center">
               <input type="text" value={strength} onChange={(e) => updateReference(setStrengths, i, e.target.value)} placeholder="Ex: Excellente hospitalité" className="flex-1 bg-black/40 border border-white/10 rounded-2xl p-4 outline-none focus:border-[var(--btn-color)]" />
               <button onClick={() => removeReference(setStrengths, i)} className="p-3 text-red-400 bg-red-400/10 rounded-xl"><Minus size={16} /></button>

@@ -5,7 +5,7 @@ import {
 import { GeneratedStudy, AppSettings } from '../types.ts'; 
 import { deleteFromHistory } from '../utils/storage.ts'; 
 import saveAs from 'file-saver'; 
-import { Document, Paragraph, TextRun, Packer, AlignmentType, HeadingLevel, ExternalHyperlink } from 'docx'; 
+import { Document, Paragraph, TextRun, Packer, AlignmentType, HeadingLevel } from 'docx'; 
 import jsPDF from 'jspdf';
 import { getContrastTextColor } from '../utils/colorUtils.ts';
 
@@ -181,10 +181,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
           docChildren.push(new Paragraph({
             children: [
               new TextRun({ text: 'LIEN : ', bold: true, color: defaultTextColor }),
-              new ExternalHyperlink({
-                children: [new TextRun({ text: link, italics: true, color: defaultTextColor })],
-                link: link
-              })
+              new TextRun({ text: link, italics: true, color: defaultTextColor, hyperlink: { link: link } })
             ],
             spacing: { after: 60 },
           }));
@@ -264,8 +261,8 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
     }
 
     const doc = new Document({ sections: [{ children: docChildren }] });
-    const blob = await Packer.toBlob(doc);
-    saveAs(blob, `${study.title.replace(/[\s\W]+/g, '_')}.docx`);
+    const buffer = await Packer.toBuffer(doc);
+    saveAs(new Blob([buffer]), `${study.title.replace(/[\s\W]+/g, '_')}.docx`);
   };
 
   const exportToPdf = (study: GeneratedStudy) => {
