@@ -3,8 +3,7 @@ import { Search, Loader2, AlertTriangle, Info } from 'lucide-react';
 import { AppSettings, GeneratedStudy } from '../types.ts';
 import { callSearchContentApi } from '../services/searchApiService.ts'; // New service for this API
 import { saveInputState, loadInputState } from '../utils/storage.ts'; // Import for persistence
-import ContentInclusion from './ContentInclusion.tsx';
-import { ContentOptions } from '../types.ts';
+import ContentInclusion, { ContentOptions } from './ContentInclusion.tsx';
 
 
 interface Props {

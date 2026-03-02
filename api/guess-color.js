@@ -3,46 +3,45 @@ import { GoogleGenAI } from '@google/genai';
 let aiClient;
 function getAiClient() {
   if (!aiClient) {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.REACT_APP_GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error("GEMINI_API_KEY is missing. Please set it in your environment variables.");
+    if (!process.env.GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY is missing");
     }
-    // Trim the key to remove any accidental whitespace
-    const validApiKey = apiKey.trim();
-    if (!validApiKey) {
-      throw new Error("GEMINI_API_KEY is empty.");
-    }
-    aiClient = new GoogleGenAI({ apiKey: validApiKey });
+    aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
   }
   return aiClient;
 }
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ message: 'Method Not Allowed' });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Method Not Allowed' });
+  }
+
   const { text } = req.body;
-  if (!text) return res.status(400).json({ message: 'Texte manquant' });
-  
+
+  if (!text) {
+    return res.status(400).json({ message: 'Text for color analysis is required.' });
+  }
+
   try {
     const ai = getAiClient();
-    
-    const prompt = `Analyse le thème biblique suivant et donne-moi UNIQUEMENT un code hexadécimal de couleur qui lui correspond (ex: #4a6da7). 
-Le code doit être sombre et élégant. Thème : "${text}"`;
+    const prompt = `Based on the dominant theme of the following text, suggest a single primary hex color code that would be appropriate for a button or accent color. The text is: "${text.substring(0, 1000)}". Return ONLY the hex code as a JSON object like this: {"hex": "#RRGGBB"}.`;
 
     const result = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt
+        model: 'gemini-3-flash-preview',
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+        }
     });
-    
-    const responseText = result.text;
 
-    // Extraction propre du code HEX (au cas où l'IA met du texte autour)
-    const hexMatch = responseText.match(/#[0-9A-Fa-f]{6}/);
-    const finalHex = hexMatch ? hexMatch[0] : "#4a6da7";
+    // The response from the AI should be a JSON string like '{"hex":"#RRGGBB"}'
+    // We parse it to get the actual object.
+    const colorData = JSON.parse(result.text);
 
-    return res.status(200).json({ hex: finalHex });
+    res.status(200).json(colorData);
+
   } catch (error) {
-    console.error("Erreur Couleur:", error);
-    // En cas d'erreur (clé API invalide par exemple), on renvoie le bleu JW par défaut
-    return res.status(200).json({ hex: "#4a6da7" });
+    console.error('API Error in guess-color:', error);
+    res.status(500).json({ message: 'Failed to guess color.', details: error.message });
   }
 }

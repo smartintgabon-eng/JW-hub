@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import Markdown from 'react-markdown';
 import { AppSettings } from '../types';
-import ContentInclusion from './ContentInclusion.tsx';
-import { ContentOptions } from '../types.ts';
+import ContentInclusion, { ContentOptions } from './ContentInclusion.tsx';
 import { getContrastTextColor } from '../utils/colorUtils.ts';
 
 interface NormalDiscourseProps {

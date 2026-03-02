@@ -1,6 +1,13 @@
 import React from 'react';
 import { Plus, X, Link as LinkIcon } from 'lucide-react';
-import { ContentOptions } from '../types.ts';
+
+export interface ContentOptions {
+  includeArticles: boolean;
+  includeImages: boolean;
+  includeVideos: boolean;
+  includeVerses: boolean;
+  articleLinks: string[];
+}
 
 interface Props {
   options: ContentOptions;
@@ -16,13 +23,13 @@ const ContentInclusion: React.FC<Props> = ({ options, onChange }) => {
 
   const addLink = () => {
     if (newLink.trim() && newLink.startsWith('http')) {
-      onChange({ ...options, articleLinks: [...(options.articleLinks || []), newLink.trim()] });
+      onChange({ ...options, articleLinks: [...options.articleLinks, newLink.trim()] });
       setNewLink('');
     }
   };
 
   const removeLink = (index: number) => {
-    const newLinks = [...(options.articleLinks || [])];
+    const newLinks = [...options.articleLinks];
     newLinks.splice(index, 1);
     onChange({ ...options, articleLinks: newLinks });
   };
@@ -76,9 +83,9 @@ const ContentInclusion: React.FC<Props> = ({ options, onChange }) => {
           </button>
         </div>
 
-        {(options.articleLinks || []).length > 0 && (
+        {options.articleLinks.length > 0 && (
           <div className="space-y-2 mt-4">
-            {(options.articleLinks || []).map((link, idx) => (
+            {options.articleLinks.map((link, idx) => (
               <div key={idx} className="flex items-center justify-between p-3 bg-black/40 border border-white/5 rounded-xl animate-in fade-in slide-in-from-left-2">
                 <span className="text-xs truncate flex-1 opacity-80">{link}</span>
                 <button onClick={() => removeLink(idx)} className="p-1 text-red-400 hover:bg-red-400/20 rounded-lg transition-all ml-2">

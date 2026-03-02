@@ -3,7 +3,7 @@ import NormalDiscourse from './NormalDiscourse.tsx';
 import ThursdayDiscourse from './ThursdayDiscourse.tsx';
 import SundayDiscourse from './SundayDiscourse.tsx';
 import SpecialDiscourse from './SpecialDiscourse.tsx';
-import { AppSettings, DiscoursType } from '../types';
+import { AppSettings } from '../types';
 import { Mic, Calendar, Sun, Star, ChevronLeft } from 'lucide-react';
 
 interface DiscourseProps {
@@ -11,24 +11,31 @@ interface DiscourseProps {
   setGlobalLoadingMessage: (message: string | null) => void;
 }
 
+enum DiscourseType {
+  NORMAL = 'normal',
+  THURSDAY = 'thursday',
+  SUNDAY = 'sunday',
+  SPECIAL = 'special',
+}
+
 const Discourse: React.FC<DiscourseProps> = ({ settings, setGlobalLoadingMessage }) => {
-  const [selectedType, setSelectedType] = useState<DiscoursType | null>(null);
+  const [selectedType, setSelectedType] = useState<DiscourseType | null>(null);
 
   const renderDiscourseContent = () => {
     switch (selectedType) {
-      case 'normal':
+      case DiscourseType.NORMAL:
         return <NormalDiscourse settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />;
-      case 'jeudi':
+      case DiscourseType.THURSDAY:
         return <ThursdayDiscourse settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />;
-      case 'dimanche':
+      case DiscourseType.SUNDAY:
         return <SundayDiscourse settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />;
-      case 'special':
+      case DiscourseType.SPECIAL:
         return <SpecialDiscourse settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />;
       default:
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
             <button
-              onClick={() => setSelectedType('normal')}
+              onClick={() => setSelectedType(DiscourseType.NORMAL)}
               className="group p-8 bg-white/5 border border-white/10 rounded-[2rem] hover:border-[var(--btn-color)] transition-all flex flex-col items-center text-center shadow-lg hover:shadow-xl"
             >
               <div className="w-16 h-16 rounded-full bg-[var(--btn-color)]/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
@@ -38,7 +45,7 @@ const Discourse: React.FC<DiscourseProps> = ({ settings, setGlobalLoadingMessage
               <p className="text-sm opacity-60">Préparation standard pour un discours de l&apos;assemblée.</p>
             </button>
             <button
-              onClick={() => setSelectedType('jeudi')}
+              onClick={() => setSelectedType(DiscourseType.THURSDAY)}
               className="group p-8 bg-white/5 border border-white/10 rounded-[2rem] hover:border-[var(--btn-color)] transition-all flex flex-col items-center text-center shadow-lg hover:shadow-xl"
             >
               <div className="w-16 h-16 rounded-full bg-[var(--btn-color)]/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
@@ -48,7 +55,7 @@ const Discourse: React.FC<DiscourseProps> = ({ settings, setGlobalLoadingMessage
               <p className="text-sm opacity-60">Pour les réunions de semaine (Cahier Vie et Ministère).</p>
             </button>
             <button
-              onClick={() => setSelectedType('dimanche')}
+              onClick={() => setSelectedType(DiscourseType.SUNDAY)}
               className="group p-8 bg-white/5 border border-white/10 rounded-[2rem] hover:border-[var(--btn-color)] transition-all flex flex-col items-center text-center shadow-lg hover:shadow-xl"
             >
               <div className="w-16 h-16 rounded-full bg-[var(--btn-color)]/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
@@ -58,7 +65,7 @@ const Discourse: React.FC<DiscourseProps> = ({ settings, setGlobalLoadingMessage
               <p className="text-sm opacity-60">Préparation spécifique pour les discours publics du week-end.</p>
             </button>
             <button
-              onClick={() => setSelectedType('special')}
+              onClick={() => setSelectedType(DiscourseType.SPECIAL)}
               className="group p-8 bg-white/5 border border-white/10 rounded-[2rem] hover:border-[var(--btn-color)] transition-all flex flex-col items-center text-center shadow-lg hover:shadow-xl"
             >
               <div className="w-16 h-16 rounded-full bg-[var(--btn-color)]/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">

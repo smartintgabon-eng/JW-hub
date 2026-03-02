@@ -11,17 +11,6 @@ interface UpdateItem {
 
 const updates: UpdateItem[] = [
   {
-    version: "2.0.6",
-    date: "02 Mars 2026",
-    features: [
-      "**Correction de l'API Couleurs** : L'outil de suggestion de couleurs par l'IA dans les paramètres a été corrigé et utilise désormais le modèle Gemini 3 Flash pour des réponses plus rapides et précises."
-    ],
-    fixes: [
-      "Correction des types TypeScript pour la préparation des discours et la prédication.",
-      "Correction de l'initialisation du client GoogleGenAI dans les fonctions serverless."
-    ]
-  },
-  {
     version: "2.0.5",
     date: "24 Février 2025",
     features: [
@@ -368,7 +357,7 @@ const updates: UpdateItem[] = [
   }
 ];
 
-const Updates: React.FC<{ settings?: any }> = ({ settings }) => {
+const Updates: React.FC = () => {
   // Sort updates by date, most recent first
   const sortedUpdates = [...updates].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 

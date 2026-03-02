@@ -1,14 +1,16 @@
 // src/services/apiService.ts
-import { AppSettings, PredicationType } from '../types';
+import { StudyPart, PredicationType, AppSettings, GeneratedStudy } from '../types'; // Import GeneratedStudy type
+import { ContentOptions } from '../components/ContentInclusion';
 
 export const callGenerateContentApi = async (
-  type: 'WATCHTOWER' | 'MINISTRY' | 'DISCOURS' | 'DISCOURS_THEME' | 'PREDICATION',
-  input: string | string[],
-  part: string,
+  type: 'WATCHTOWER' | 'MINISTRY' | 'PREDICATION',
+  input: string | string[], // Modified to accept string or string[]
+  part: StudyPart = 'tout',
   settings: AppSettings,
-  useManual: boolean,
-  preachingType?: PredicationType
-): Promise<{ text: string; title: string; theme?: string }> => {
+  isInitialSearchForPreview: boolean = false,
+  preachingType: PredicationType | undefined,
+  contentOptions?: ContentOptions
+): Promise<{ text: string; title: string; theme?: string; rawSources?: GeneratedStudy['rawSources']; aiExplanation?: string }> => { // Added optional rawSources and aiExplanation
 
   const response = await fetch('/api/generate-content', {
     method: 'POST',
@@ -20,20 +22,16 @@ export const callGenerateContentApi = async (
       input,
       part,
       settings,
-      manualText: useManual ? input : undefined, // Pass input as manualText if useManual is true
+      isInitialSearchForPreview,
       preachingType,
-      // contentOptions are no longer directly used by the new API, as it handles grounding internally
+      contentOptions,
+      articleReferences: contentOptions?.articleLinks
     }),
   });
 
   if (!response.ok) {
-    let errorData;
-    try {
-      errorData = await response.json();
-    } catch {
-      throw new Error(`Erreur serveur: ${response.status} - Réponse non-JSON reçue.`);
-    }
-    throw new Error(errorData.message || `Erreur API: ${response.status}`);
+    const errorData = await response.json();
+    throw new Error(errorData.message || `API Error: ${response.status}`);
   }
 
   return response.json();

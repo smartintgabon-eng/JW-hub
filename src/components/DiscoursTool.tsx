@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AppSettings, GeneratedStudy, DiscoursType } from '../types.ts';
+import { AppSettings, GeneratedStudy } from '../types.ts';
 import { saveInputState, loadInputState } from '../utils/storage.ts';
 import { Mic, Search, Loader2, BookOpen, Plus, Minus } from 'lucide-react';
 
@@ -9,6 +9,7 @@ interface Props {
   setGlobalLoadingMessage: (message: string | null) => void;
 }
 
+export type DiscoursType = 'normal' | 'jeudi' | 'dimanche' | 'special';
 export type DiscoursTime = '5min' | '10min' | '30min' | '40min' | '1h' | 'custom';
 
 const getLocalizedText = (settings: AppSettings, key: string) => {
@@ -170,8 +171,8 @@ const DiscoursTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoading
       );
     }
 
-    const showImages = true;
-    const showVideos = true;
+    const showImages = discoursType !== 'jeudi';
+    const showVideos = discoursType !== 'jeudi';
 
     return (
       <div className="space-y-6">
