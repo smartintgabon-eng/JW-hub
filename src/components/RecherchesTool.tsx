@@ -3,7 +3,8 @@ import { Search, Loader2, AlertTriangle, Info } from 'lucide-react';
 import { AppSettings, GeneratedStudy } from '../types.ts';
 import { callSearchContentApi } from '../services/searchApiService.ts'; // New service for this API
 import { saveInputState, loadInputState } from '../utils/storage.ts'; // Import for persistence
-import ContentInclusion, { ContentOptions } from './ContentInclusion.tsx';
+import ContentInclusion from './ContentInclusion.tsx';
+import { ContentOptions } from '../types.ts';
 
 
 interface Props {
@@ -15,9 +16,9 @@ interface Props {
 const getLocalizedText = (settings: AppSettings, key: string) => {
   const texts: { [key: string]: { [lang: string]: string } } = {
     'searchPlaceholder': {
-      'fr': 'Ex: Que dit la Bible sur l\'avenir de la terre ? Ou raconte-moi l\'histoire de David...',
-      'en': 'Ex: What does the Bible say about the future of the earth? Or tell me the story of David...',
-      'es': 'Ej: ¿Qué dice la Biblia sobre el futuro de la tierra? O cuéntame la historia de David...'
+      'fr': 'Ex: Que dit la Bible sur l\'avenir de la terre ?',
+      'en': 'Ex: What does the Bible say about the future of the earth?',
+      'es': 'Ej: ¿Qué dice la Biblia sobre el futuro de la tierra?'
     },
     'enterQuery': {
       'fr': 'Veuillez entrer une question ou un sujet.',
@@ -141,9 +142,9 @@ const RecherchesTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadi
         type: 'RECHERCHES',
         title: query,
         date: new Date().toLocaleDateString(settings.language === 'fr' ? 'fr-FR' : settings.language === 'es' ? 'es-ES' : 'en-US'),
-        content: data.text || '', // Use data.text which contains the structured NOM, LIEN, EXPLICATION
+        content: data.text, // Use data.text which contains the structured NOM, LIEN, EXPLICATION
         rawSources: [], // The raw sources are now embedded in data.text, so this can be empty or parsed from data.text if needed
-        aiExplanation: data.text || '', // aiExplanation can also point to the full structured text
+        aiExplanation: data.text, // aiExplanation can also point to the full structured text
         timestamp: Date.now(),
         category: 'recherches',
         url: [query] // Store the search query as URL

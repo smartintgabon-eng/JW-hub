@@ -368,7 +368,7 @@ const updates: UpdateItem[] = [
   }
 ];
 
-const Updates: React.FC = () => {
+const Updates: React.FC<{ settings?: any }> = ({ settings }) => {
   // Sort updates by date, most recent first
   const sortedUpdates = [...updates].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 

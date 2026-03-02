@@ -1,22 +1,35 @@
 import { GoogleGenAI } from '@google/genai';
 
+let aiClient;
+function getAiClient() {
+  if (!aiClient) {
+    const apiKey = process.env.GEMINI_API_KEY || process.env.REACT_APP_GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY is missing. Please set it in your environment variables.");
+    }
+    // Trim the key to remove any accidental whitespace
+    const validApiKey = apiKey.trim();
+    if (!validApiKey) {
+      throw new Error("GEMINI_API_KEY is empty.");
+    }
+    aiClient = new GoogleGenAI({ apiKey: validApiKey });
+  }
+  return aiClient;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ message: 'Method Not Allowed' });
   const { text } = req.body;
   if (!text) return res.status(400).json({ message: 'Texte manquant' });
   
   try {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.REACT_APP_GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error("API key is missing");
-    }
-    const genAI = new GoogleGenAI({ apiKey: apiKey.trim() });
+    const ai = getAiClient();
     
     const prompt = `Analyse le thème biblique suivant et donne-moi UNIQUEMENT un code hexadécimal de couleur qui lui correspond (ex: #4a6da7). 
 Le code doit être sombre et élégant. Thème : "${text}"`;
 
-    const result = await genAI.models.generateContent({
-      model: "gemini-3-flash-preview",
+    const result = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
       contents: prompt
     });
     

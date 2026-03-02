@@ -170,8 +170,8 @@ const DiscoursTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoading
       );
     }
 
-    const showImages = discoursType !== 'jeudi';
-    const showVideos = discoursType !== 'jeudi';
+    const showImages = true;
+    const showVideos = true;
 
     return (
       <div className="space-y-6">
