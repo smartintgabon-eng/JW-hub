@@ -3,10 +3,16 @@ import { GoogleGenAI } from '@google/genai';
 let aiClient;
 function getAiClient() {
   if (!aiClient) {
-    if (!process.env.GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY is missing");
+    const apiKey = process.env.GEMINI_API_KEY || process.env.REACT_APP_GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY is missing. Please set it in your environment variables.");
     }
-    aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    // Trim the key to remove any accidental whitespace
+    const validApiKey = apiKey.trim();
+    if (!validApiKey) {
+      throw new Error("GEMINI_API_KEY is empty.");
+    }
+    aiClient = new GoogleGenAI({ apiKey: validApiKey });
   }
   return aiClient;
 }

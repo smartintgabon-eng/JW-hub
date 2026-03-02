@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Megaphone, Loader2, AlertTriangle, BookOpen, Link as LinkIcon, Handshake, CornerRightDown, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Megaphone, Loader2, AlertTriangle, BookOpen, Link as LinkIcon, Handshake, CornerRightDown, ChevronRight, ChevronLeft, Search } from 'lucide-react';
 // Fix: Import types from src/types.ts
 import { AppSettings, GeneratedStudy, PredicationType } from '../types.ts';
 import { callGenerateContentApi } from '../services/apiService.ts'; 
@@ -26,6 +26,7 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
   const [pepStep, setPepStep] = useState(() => loadInputState('pepStep', 1)); 
 
   // Nouvelle Visite states
+  const [nvStep, setNvStep] = useState(() => loadInputState('nvStep', 1));
   const [nvType, setNvType] = useState<'study' | 'question' | null>(() => loadInputState('nvType', null));
   const [nvStudyLink, setNvStudyLink] = useState(() => loadInputState('nvStudyLink', ''));
   const [nvStudyChapterParagraph, setNvStudyChapterParagraph] = useState(() => loadInputState('nvStudyChapterParagraph', ''));
@@ -33,6 +34,7 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
   const [nvBrochureLink, setNvBrochureLink] = useState(() => loadInputState('nvBrochureLink', ''));
 
   // Cours Biblique states
+  const [cbStep, setCbStep] = useState(() => loadInputState('cbStep', 1));
   const [cbType, setCbType] = useState<'new' | 'ongoing' | null>(() => loadInputState('cbType', null));
   const [cbChapterParagraph, setCbChapterParagraph] = useState(() => loadInputState('cbChapterParagraph', ''));
   const [cbPublicationLink, setCbPublicationLink] = useState(() => loadInputState('cbPublicationLink', ''));
@@ -51,11 +53,13 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
   useEffect(() => { saveInputState('pepStudyBrochureLink', pepStudyBrochureLink); }, [pepStudyBrochureLink]);
   useEffect(() => { saveInputState('pepCurrentAffairs', pepCurrentAffairs); }, [pepCurrentAffairs]);
   useEffect(() => { saveInputState('pepStep', pepStep); }, [pepStep]);
+  useEffect(() => { saveInputState('nvStep', nvStep); }, [nvStep]);
   useEffect(() => { saveInputState('nvType', nvType); }, [nvType]);
   useEffect(() => { saveInputState('nvStudyLink', nvStudyLink); }, [nvStudyLink]);
   useEffect(() => { saveInputState('nvStudyChapterParagraph', nvStudyChapterParagraph); }, [nvStudyChapterParagraph]);
   useEffect(() => { saveInputState('nvQuestionLeft', nvQuestionLeft); }, [nvQuestionLeft]);
   useEffect(() => { saveInputState('nvBrochureLink', nvBrochureLink); }, [nvBrochureLink]);
+  useEffect(() => { saveInputState('cbStep', cbStep); }, [cbStep]);
   useEffect(() => { saveInputState('cbType', cbType); }, [cbType]);
   useEffect(() => { saveInputState('cbChapterParagraph', cbChapterParagraph); }, [cbChapterParagraph]);
   useEffect(() => { saveInputState('cbPublicationLink', cbPublicationLink); }, [cbPublicationLink]);
@@ -76,6 +80,7 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
     setPepStep(1);
 
     // Reset Nouvelle Visite
+    setNvStep(1);
     setNvType(null);
     setNvStudyLink('');
     setNvStudyChapterParagraph('');
@@ -83,6 +88,7 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
     setNvBrochureLink('');
 
     // Reset Cours Biblique
+    setCbStep(1);
     setCbType(null);
     setCbChapterParagraph('');
     setCbPublicationLink('');
@@ -145,7 +151,22 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
 
   const getCommonFormStyles = () => "w-full bg-black/40 border border-white/10 rounded-xl py-5 pl-14 pr-4 focus:border-[var(--btn-color)] outline-none transition-all font-medium";
   const getCommonLabelStyles = () => "text-[10px] font-black uppercase opacity-40 ml-1 tracking-[0.2em]";
-  const getCommonButtonStyles = (isActive: boolean) => `px-4 py-2 rounded-lg text-sm font-bold transition-all ${isActive ? 'bg-[var(--btn-color)] text-[var(--btn-text)] shadow' : 'bg-white/5 opacity-60 hover:opacity-100'}`;
+  const getCommonButtonStyles = (isActive: boolean) => `px-4 py-6 rounded-2xl text-sm font-bold transition-all border ${isActive ? 'bg-[var(--btn-color)] text-[var(--btn-text)] border-[var(--btn-color)] shadow-xl scale-[1.02]' : 'bg-white/5 border-white/10 opacity-60 hover:opacity-100 hover:bg-white/10'}`;
+
+  const renderStepIndicator = (currentStep: number, totalSteps: number, title: string) => (
+    <div className="mb-8">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-2xl font-black uppercase tracking-tight" style={{ color: 'var(--btn-color)' }}>{title}</h3>
+        <span className="text-xs font-bold px-3 py-1 rounded-full bg-white/10">Étape {currentStep}/{totalSteps}</span>
+      </div>
+      <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden">
+        <div 
+          className="h-full transition-all duration-500 ease-out"
+          style={{ width: `${(currentStep / totalSteps) * 100}%`, backgroundColor: 'var(--btn-color)' }}
+        />
+      </div>
+    </div>
+  );
 
 
 
@@ -184,7 +205,7 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
 
       {predicationMode === 'porte_en_porte' && (
         <div className="bg-white/5 border border-white/10 rounded-[2rem] p-8 space-y-8 shadow-2xl relative">
-          <h3 className="text-2xl font-black uppercase tracking-tight mb-6" style={{ color: 'var(--btn-color)' }}>Porte-en-porte</h3>
+          {renderStepIndicator(pepStep, 2, 'Porte-en-porte')}
 
           {pepStep === 1 && (
             <div className="space-y-6 animate-in fade-in duration-300">
@@ -280,24 +301,42 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
 
       {predicationMode === 'nouvelle_visite' && (
         <div className="bg-white/5 border border-white/10 rounded-[2rem] p-8 space-y-8 shadow-2xl relative">
-          <h3 className="text-2xl font-black uppercase tracking-tight mb-6" style={{ color: 'var(--btn-color)' }}>Nouvelle Visite</h3>
+          {renderStepIndicator(nvStep, 2, 'Nouvelle Visite')}
 
-          <div className="space-y-3">
-            <label className={getCommonLabelStyles()}>Type de nouvelle visite</label>
-            <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => {
-                setNvType('study');
-                saveInputState('nvType', 'study');
-              }} className={getCommonButtonStyles(nvType === 'study')}>Enchaîner Cours Biblique</button>
-              <button onClick={() => {
-                setNvType('question');
-                saveInputState('nvType', 'question');
-              }} className={getCommonButtonStyles(nvType === 'question')}>Question en suspens</button>
-            </div>
-          </div>
-
-          {nvType === 'study' && (
+          {nvStep === 1 && (
             <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="space-y-4">
+                <label className={getCommonLabelStyles()}>Sélectionnez le type de visite</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <button onClick={() => {
+                    setNvType('study');
+                    saveInputState('nvType', 'study');
+                  }} className={getCommonButtonStyles(nvType === 'study')}>
+                    <BookOpen size={24} className="mx-auto mb-2" />
+                    Enchaîner Cours Biblique
+                  </button>
+                  <button onClick={() => {
+                    setNvType('question');
+                    saveInputState('nvType', 'question');
+                  }} className={getCommonButtonStyles(nvType === 'question')}>
+                    <Search size={24} className="mx-auto mb-2" />
+                    Question en suspens
+                  </button>
+                </div>
+              </div>
+              <button onClick={() => setNvStep(2)} disabled={!nvType}
+                style={{ backgroundColor: !nvType ? '#1f2937' : 'var(--btn-color)', color: 'var(--btn-text)' }}
+                className="w-full py-5 rounded-xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center space-x-2 mt-8">
+                Suivant <ChevronRight size={20} />
+              </button>
+            </div>
+          )}
+
+          {nvStep === 2 && nvType === 'study' && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <button onClick={() => setNvStep(1)} className="flex items-center space-x-2 opacity-60 hover:opacity-100 mb-6">
+                <ChevronLeft size={20} /> <span className="text-sm">Retour</span>
+              </button>
               <div className="space-y-3">
                 <label className={getCommonLabelStyles()}>Lien direct de l&apos;article/publication (jw.org) <span className="opacity-40 font-normal lowercase">(Optionnel)</span></label>
                 <div className="relative">
@@ -334,8 +373,11 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
             </div>
           )}
 
-          {nvType === 'question' && (
+          {nvStep === 2 && nvType === 'question' && (
             <div className="space-y-6 animate-in fade-in duration-300">
+              <button onClick={() => setNvStep(1)} className="flex items-center space-x-2 opacity-60 hover:opacity-100 mb-6">
+                <ChevronLeft size={20} /> <span className="text-sm">Retour</span>
+              </button>
               <div className="space-y-3">
                 <label className={getCommonLabelStyles()}>Question laissée en suspens</label>
                 <textarea value={nvQuestionLeft} onChange={(e) => {
@@ -382,24 +424,42 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
 
       {predicationMode === 'cours_biblique' && (
         <div className="bg-white/5 border border-white/10 rounded-[2rem] p-8 space-y-8 shadow-2xl relative">
-          <h3 className="text-2xl font-black uppercase tracking-tight mb-6" style={{ color: 'var(--btn-color)' }}>Préparation de Cours Biblique</h3>
+          {renderStepIndicator(cbStep, 2, 'Cours Biblique')}
 
-          <div className="space-y-3">
-            <label className={getCommonLabelStyles()}>Progression de l&apos;étude</label>
-            <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => {
-                setCbType('new');
-                saveInputState('cbType', 'new');
-              }} className={getCommonButtonStyles(cbType === 'new')}>Nouveau chapitre</button>
-              <button onClick={() => {
-                setCbType('ongoing');
-                saveInputState('cbType', 'ongoing');
-              }} className={getCommonButtonStyles(cbType === 'ongoing')}>En plein chapitre</button>
-            </div>
-          </div>
-
-          {cbType && (
+          {cbStep === 1 && (
             <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="space-y-4">
+                <label className={getCommonLabelStyles()}>Progression de l&apos;étude</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <button onClick={() => {
+                    setCbType('new');
+                    saveInputState('cbType', 'new');
+                  }} className={getCommonButtonStyles(cbType === 'new')}>
+                    <BookOpen size={24} className="mx-auto mb-2" />
+                    Nouveau chapitre
+                  </button>
+                  <button onClick={() => {
+                    setCbType('ongoing');
+                    saveInputState('cbType', 'ongoing');
+                  }} className={getCommonButtonStyles(cbType === 'ongoing')}>
+                    <Search size={24} className="mx-auto mb-2" />
+                    En plein chapitre
+                  </button>
+                </div>
+              </div>
+              <button onClick={() => setCbStep(2)} disabled={!cbType}
+                style={{ backgroundColor: !cbType ? '#1f2937' : 'var(--btn-color)', color: 'var(--btn-text)' }}
+                className="w-full py-5 rounded-xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center space-x-2 mt-8">
+                Suivant <ChevronRight size={20} />
+              </button>
+            </div>
+          )}
+
+          {cbStep === 2 && cbType && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <button onClick={() => setCbStep(1)} className="flex items-center space-x-2 opacity-60 hover:opacity-100 mb-6">
+                <ChevronLeft size={20} /> <span className="text-sm">Retour</span>
+              </button>
               {cbType === 'ongoing' && (
                 <div className="space-y-3">
                   <label className={getCommonLabelStyles()}>Où en êtes-vous ? (Ex: Chapitre 4, paragraphe 2)</label>

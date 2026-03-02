@@ -11,6 +11,20 @@ interface UpdateItem {
 
 const updates: UpdateItem[] = [
   {
+    version: "2.1.0",
+    date: "02 Mars 2026",
+    features: [
+      "**Refonte UI Professionnelle (Prédication & Discours)** : Les outils de préparation à la prédication et aux discours intègrent désormais une interface étape par étape (Step-by-Step) ultra-moderne. Ce design guide l'utilisateur de manière fluide, réduisant la charge cognitive tout en conservant 100% des options de personnalisation.",
+      "**Grounding IA Renforcé (Google Search)** : L'intégration de l'outil Google Search avec Gemini 2.5 Flash a été optimisée pour garantir que toutes les informations générées (versets, références, actualités) sont ancrées dans la réalité et sourcées avec précision.",
+      "**Scraping Fiabilisé (Vercel)** : L'architecture serverless sur Vercel a été ajustée pour maximiser la réussite de l'extraction de contenu (scraping) des liens jw.org, contournant plus efficacement les blocages grâce à une combinaison de requêtes directes et de l'intelligence de Google Search.",
+      "**Suivi de Progression Visuel** : Ajout de barres de progression dynamiques dans les formulaires complexes pour indiquer clairement à l'utilisateur où il se trouve dans le processus de création."
+    ],
+    fixes: [
+      "Amélioration de la persistance des données : les étapes en cours dans les formulaires sont désormais sauvegardées localement, permettant de reprendre la préparation exactement là où elle a été laissée.",
+      "Optimisation des animations de transition entre les étapes pour une expérience utilisateur plus réactive et premium."
+    ]
+  },
+  {
     version: "2.0.5",
     date: "24 Février 2025",
     features: [

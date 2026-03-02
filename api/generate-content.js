@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
+import * as cheerio from 'cheerio';
 
 let aiClient;
 function getAiClient() {
@@ -15,6 +16,31 @@ function getAiClient() {
     aiClient = new GoogleGenAI({ apiKey: validApiKey });
   }
   return aiClient;
+}
+
+async function scrapeUrl(url) {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
+    if (!response.ok) return null;
+    const html = await response.text();
+    const $ = cheerio.load(html);
+    
+    // Remove scripts, styles, and other non-content elements
+    $('script, style, nav, footer, header, aside, .navigation, .site-header, .site-footer').remove();
+    
+    // Extract main content
+    // Prioritize specific selectors for jw.org if possible, otherwise generic body
+    const content = $('article, main, .docTitle, .docSubTitle, .bodyTxt, .pGroup').text() || $('body').text();
+    
+    return content.replace(/\s+/g, ' ').trim().substring(0, 15000); // Limit content length
+  } catch (error) {
+    console.error('Scraping error:', error);
+    return null;
+  }
 }
 
 export default async function handler(req, res) {
@@ -81,13 +107,23 @@ ${commonInstructions}`;
       }
 
       // Check if contentString contains URLs
-      const containsUrl = /https?:\/\/[^\s]+/.test(contentString);
+      const urlMatch = contentString ? contentString.match(/https?:\/\/[^\s]+/) : null;
+      let scrapedContent = "";
       let urlInstructions = "";
-      if (containsUrl) {
-        urlInstructions = "The input contains URLs. Use your Google Search tool to read the content of these URLs to inform your response. Do not just analyze the URL string itself. If the URL is from jw.org or wol.jw.org, prioritize the content from that source.";
+
+      if (urlMatch) {
+        const url = urlMatch[0];
+        console.log(`Attempting to scrape URL: ${url}`);
+        const scrapedText = await scrapeUrl(url);
+        if (scrapedText) {
+            scrapedContent = `\n\n--- SCRAPED CONTENT FROM ${url} ---\n${scrapedText}\n--- END SCRAPED CONTENT ---\n`;
+            urlInstructions = "I have provided the scraped content from the URL above. Use this content as the primary source for your analysis.";
+        } else {
+            urlInstructions = "The input contains URLs. Use your Google Search tool to read the content of these URLs to inform your response. Do not just analyze the URL string itself. If the URL is from jw.org or wol.jw.org, prioritize the content from that source.";
+        }
       }
 
-      prompt = `Analyze the following content and provide a structured explanation based on user preferences.\nContent/Context: "${contentString}"\n${urlInstructions}\nUser Preferences: ${userPreferences}\n${commonInstructions}\n`;
+      prompt = `Analyze the following content and provide a structured explanation based on user preferences.\nContent/Context: "${contentString}"\n${scrapedContent}\n${urlInstructions}\nUser Preferences: ${userPreferences}\n${commonInstructions}\n`;
       
       if (type === 'WATCHTOWER') {
         prompt += `This is a Watchtower study article. Format the response with a clear title, a summary, and a detailed, point-by-point explanation for each paragraph or section. IMPORTANT: Also include the revision questions at the end and provide answers based on the article content.`;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppSettings, GeneratedStudy } from '../types.ts';
 import { saveInputState, loadInputState } from '../utils/storage.ts';
-import { Mic, Search, Loader2, BookOpen, Plus, Minus } from 'lucide-react';
+import { Search, Loader2, BookOpen, Plus, Minus } from 'lucide-react';
 
 interface Props {
   onGenerated: (study: GeneratedStudy) => void;
@@ -122,6 +122,21 @@ const DiscoursTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoading
       setGlobalLoadingMessage(null);
     }
   };
+
+  const renderStepIndicator = (currentStep: number, totalSteps: number, title: string) => (
+    <div className="mb-8">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-2xl font-black uppercase tracking-tight" style={{ color: 'var(--btn-color)' }}>{title}</h3>
+        <span className="text-xs font-bold px-3 py-1 rounded-full bg-white/10">Étape {currentStep}/{totalSteps}</span>
+      </div>
+      <div className="w-full bg-white/10 h-2 rounded-full overflow-hidden">
+        <div 
+          className="h-full transition-all duration-500 ease-out"
+          style={{ width: `${(currentStep / totalSteps) * 100}%`, backgroundColor: 'var(--btn-color)' }}
+        />
+      </div>
+    </div>
+  );
 
   const renderTimeSelection = () => {
     let timeOptions: (DiscoursTime | string)[] = [];
@@ -317,10 +332,7 @@ const DiscoursTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoading
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-10 shadow-2xl relative overflow-hidden">
-        <h2 className="text-3xl font-black uppercase mb-8 flex items-center gap-4">
-          <div className="p-3 bg-[var(--btn-color)] rounded-2xl"><Mic size={28} /></div>
-          {getLocalizedText(settings, 'discours')}
-        </h2>
+        {renderStepIndicator(!themeConfirmed ? 1 : 2, 2, getLocalizedText(settings, 'discours'))}
 
         {!themeConfirmed ? (
           <div className="space-y-6">
