@@ -46,7 +46,15 @@ export default async function handler(req, res) {
 
   try {
     const ai = getAiClient();
-    const prompt = `Based on the dominant theme of the following text, suggest a single primary hex color code that would be appropriate for a button or accent color. The text is: "${text.substring(0, 1000)}". Return ONLY the hex code as a JSON object like this: {"hex": "#RRGGBB"}.`;
+    // Simplified prompt to just convert color name/description to hex
+    const prompt = `Convert the following color name or description into a single valid HEX color code.
+    Input: "${text.substring(0, 100)}"
+    
+    If the input is a color name (e.g., "bleu marine", "olive green"), return that color's hex code.
+    If the input is a description (e.g., "warm sunset"), return a suitable hex code.
+    If the input is already a hex code, return it validated.
+    
+    Return ONLY a JSON object with the key "hex". Example: {"hex": "#000080"}`;
 
     const result = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',

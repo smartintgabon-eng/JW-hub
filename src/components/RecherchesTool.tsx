@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Loader2, AlertTriangle, Info } from 'lucide-react';
 import { AppSettings, GeneratedStudy } from '../types.ts';
-import { callSearchContentApi } from '../services/searchApiService.ts'; // New service for this API
+import { performSearch } from '../services/geminiService.ts';
 import { saveInputState, loadInputState } from '../utils/storage.ts'; // Import for persistence
 import ContentInclusion, { ContentOptions } from './ContentInclusion.tsx';
 
@@ -110,8 +110,8 @@ const RecherchesTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadi
     setGlobalLoadingMessage(getLocalizedText(settings, 'articleSearchInProgress'));
 
     try {
-      // Pass confirmMode: true to callSearchContentApi to get preview data
-      const data = await callSearchContentApi(query, settings, true); 
+      // Pass confirmMode: true to performSearch to get preview data
+      const data = await performSearch(query, settings, undefined, true); 
       if (data.previewTitle) {
         setArticleConfirmed(data);
       } else {
@@ -134,7 +134,7 @@ const RecherchesTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadi
 
     try {
       // Call without confirmMode to get full structured content
-      const data = await callSearchContentApi(query, settings, false, contentOptions); 
+      const data = await performSearch(query, settings, contentOptions, false); 
       
       const study: GeneratedStudy = {
         id: Date.now().toString(),

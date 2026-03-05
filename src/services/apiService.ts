@@ -3,7 +3,7 @@ import { StudyPart, PredicationType, AppSettings, GeneratedStudy } from '../type
 import { ContentOptions } from '../components/ContentInclusion';
 
 export const callGenerateContentApi = async (
-  type: 'WATCHTOWER' | 'MINISTRY' | 'PREDICATION',
+  type: 'WATCHTOWER' | 'MINISTRY' | 'PREDICATION' | 'DISCOURS' | 'DISCOURS_THEME',
   input: string | string[], // Modified to accept string or string[]
   part: StudyPart = 'tout',
   settings: AppSettings,

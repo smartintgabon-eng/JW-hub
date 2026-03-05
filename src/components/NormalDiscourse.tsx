@@ -3,6 +3,7 @@ import Markdown from 'react-markdown';
 import { AppSettings } from '../types';
 import ContentInclusion, { ContentOptions } from './ContentInclusion.tsx';
 import { getContrastTextColor } from '../utils/colorUtils.ts';
+import { generateDiscourseContent, generateDiscourseTheme } from '../services/geminiService.ts';
 
 interface NormalDiscourseProps {
   settings: AppSettings;
@@ -63,23 +64,7 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
     try {
       let finalTheme = themeInput;
       if (generateTheme) {
-        const themeResponse = await fetch('/api/generate-content', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'DISCOURS_THEME',
-            input: themeInput,
-            settings: settings,
-          }),
-        });
-
-        if (!themeResponse.ok) {
-          const errorData = await themeResponse.json().catch(() => ({}));
-          throw new Error(errorData.message || errorData.details || 'Failed to generate theme');
-        }
-
-        const themeData = await themeResponse.json();
-        finalTheme = themeData.theme;
+        finalTheme = await generateDiscourseTheme(themeInput, settings);
         setGeneratedTheme(finalTheme);
       }
 
@@ -89,34 +74,16 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
         return;
       }
 
-      const discourseResponse = await fetch('/api/generate-content', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'DISCOURS',
-          discoursType: 'normal',
-          time: selectedTime,
-          theme: finalTheme,
-          articleReferences: contentOptions.articleLinks,
-          imageReferences: [], // Placeholder for future UI
-          videoReferences: [], // Placeholder for future UI
-          pointsToReinforce: [], // Placeholder for future UI
-          strengths: [], // Placeholder for future UI
-          encouragements: '', // Placeholder for future UI
-          settings: settings,
-          contentOptions,
-        }),
-      });
+      const study = await generateDiscourseContent(
+        'normal',
+        selectedTime,
+        finalTheme,
+        settings,
+        contentOptions
+      );
+      setGeneratedDiscourse(study.content);
 
-      if (!discourseResponse.ok) {
-        const errorData = await discourseResponse.json().catch(() => ({}));
-        throw new Error(errorData.message || errorData.details || 'Failed to generate discourse');
-      }
-
-      const discourseData = await discourseResponse.json();
-      setGeneratedDiscourse(discourseData.text);
-
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in discourse generation:', error);
       alert(`Erreur lors de la génération du discours: ${error.message}`);
     } finally {

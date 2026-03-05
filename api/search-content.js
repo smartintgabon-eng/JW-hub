@@ -80,6 +80,13 @@ async function fetchArticleData(url) {
         } else if (firstArticleImage.startsWith('http')) {
           image = firstArticleImage;
         }
+      } else if (image && image.startsWith('/')) {
+          const urlObj = new URL(url);
+          image = `${urlObj.origin}${image}`;
+      }
+
+      if (!image) {
+        image = "https://assets.jw.org/assets/m/jwb/jwb_placeholder.png";
       }
 
       const bodyText = $('#content .article-content, article, .main-content, #article, .pGroup, .document-body').text().replace(/\s\s+/g, ' ').trim();
@@ -94,7 +101,7 @@ async function fetchArticleData(url) {
       console.warn(`Fetch attempt ${attempt} failed for ${url}:`, error.message);
       if (attempt >= maxRetries) {
         console.error('Max fetch retries reached.');
-        throw new Error(`Could not retrieve article content: ${error.message}`);
+        return null;
       }
       // Wait a bit before retrying (e.g., 1s)
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -149,7 +156,35 @@ export default async function handler(req, res) {
     }
 
     if (!articleUrl || !articleUrl.startsWith('http')) {
-      return res.status(404).json({ message: 'Could not find a relevant article URL.' });
+        if (confirmMode) {
+             return res.status(404).json({ message: 'Could not find a relevant article URL.' });
+        } else {
+           // Fallback to answering the question directly using Grounding
+           let contentInclusionInstructions = "";
+           if (contentOptions) {
+             if (contentOptions.includeArticles) contentInclusionInstructions += "Include references to other relevant articles from jw.org or wol.jw.org.\n";
+             if (contentOptions.includeImages) contentInclusionInstructions += "Describe relevant images or visual aids that could be used.\n";
+             if (contentOptions.includeVideos) contentInclusionInstructions += "Suggest relevant videos from jw.org.\n";
+             if (contentOptions.includeVerses) contentInclusionInstructions += "Include key Bible verses (NWT).\n";
+           }
+
+           const answerPrompt = `Answer the following question based on Jehovah's Witnesses teachings: "${questionOrSubject}". 
+           User Preferences: ${JSON.stringify(settings?.answerPreferences || [])}
+           ${contentInclusionInstructions}
+           Use Google Search to find relevant information on jw.org or wol.jw.org (especially French content with lp-f/r30). Format the response in Markdown.`;
+           
+           try {
+             const answerResult = await ai.models.generateContent({
+                 model: 'gemini-3-flash-preview',
+                 contents: answerPrompt,
+                 config: { tools: [{ googleSearch: {} }] }
+             });
+             return res.status(200).json({ text: answerResult.text });
+           } catch (e) {
+             console.error("Direct answer generation failed:", e);
+             return res.status(500).json({ message: "Failed to generate answer.", details: e.message });
+           }
+        }
     }
 
     let articleData = null;
@@ -160,7 +195,7 @@ export default async function handler(req, res) {
     }
 
     if (confirmMode) {
-        if (articleData) {
+        if (articleData && articleData.title) {
             return res.status(200).json({
                 previewTitle: articleData.title,
                 previewSummary: articleData.summary,
@@ -168,13 +203,37 @@ export default async function handler(req, res) {
                 previewInfos: `Source: ${new URL(articleUrl).hostname}`
             });
         } else {
-             // Fallback preview if scraping fails
-             return res.status(200).json({
-                previewTitle: "Article trouvé (Accès limité)",
-                previewSummary: "Impossible d'afficher l'aperçu, mais l'IA peut analyser ce lien.",
-                previewImage: null,
-                previewInfos: `Source: ${new URL(articleUrl).hostname}`
-            });
+             // Fallback preview if scraping fails or returns incomplete data
+             // Use AI to extract metadata from the URL using Google Search tool
+             const metadataPrompt = `Extract the title, a brief summary, and a main image URL for this article: ${articleUrl}. 
+             Return a JSON object with keys: title, summary, image. 
+             If image is not found, use "https://assets.jw.org/assets/m/jwb/jwb_placeholder.png".`;
+             
+             try {
+                const metadataResult = await ai.models.generateContent({
+                    model: 'gemini-3-flash-preview',
+                    contents: metadataPrompt,
+                    config: {
+                        responseMimeType: 'application/json',
+                        tools: [{ googleSearch: {} }]
+                    }
+                });
+                const metadata = JSON.parse(metadataResult.text);
+                return res.status(200).json({
+                    previewTitle: metadata.title || "Article trouvé",
+                    previewSummary: metadata.summary || "Aperçu non disponible.",
+                    previewImage: metadata.image || "https://assets.jw.org/assets/m/jwb/jwb_placeholder.png",
+                    previewInfos: `Source: ${new URL(articleUrl).hostname}`
+                });
+             } catch (e) {
+                 console.error("Metadata extraction failed:", e);
+                 return res.status(200).json({
+                    previewTitle: "Article trouvé (Accès limité)",
+                    previewSummary: "Impossible d'afficher l'aperçu, mais l'IA peut analyser ce lien.",
+                    previewImage: "https://assets.jw.org/assets/m/jwb/jwb_placeholder.png",
+                    previewInfos: `Source: ${new URL(articleUrl).hostname}`
+                });
+             }
         }
     } else {
       let explanationPrompt;
