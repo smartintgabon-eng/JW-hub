@@ -35,31 +35,55 @@ function getAiClient() {
 }
 
 async function scrapeUrl(url) {
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-        'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Referer': 'https://www.google.com/'
+  const maxRetries = 3;
+  let attempt = 0;
+
+  while (attempt < maxRetries) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+          'Referer': 'https://www.google.com/'
+        }
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+         // If 404 or 403, maybe retrying won't help, but for 5xx it might.
+         // For now, we just return null if not ok to avoid infinite loops on bad URLs.
+         console.warn(`Scrape failed with status ${response.status} for ${url}`);
+         return null; 
       }
-    });
-    if (!response.ok) return null;
-    const html = await response.text();
-    const $ = cheerio.load(html);
-    
-    // Remove scripts, styles, and other non-content elements
-    $('script, style, nav, footer, header, aside, .navigation, .site-header, .site-footer, .advertisement, .share-options').remove();
-    
-    // Extract main content
-    // Prioritize specific selectors for jw.org/wol.jw.org
-    const content = $('article, main, .docTitle, .docSubTitle, .bodyTxt, .pGroup, #article').text() || $('body').text();
-    
-    return content.replace(/\s+/g, ' ').trim().substring(0, 20000); // Increased limit slightly
-  } catch (error) {
-    console.error('Scraping error:', error);
-    return null;
+      
+      const html = await response.text();
+      const $ = cheerio.load(html);
+      
+      // Remove scripts, styles, and other non-content elements
+      $('script, style, nav, footer, header, aside, .navigation, .site-header, .site-footer, .advertisement, .share-options').remove();
+      
+      // Extract main content
+      // Prioritize specific selectors for jw.org/wol.jw.org
+      const content = $('article, main, .docTitle, .docSubTitle, .bodyTxt, .pGroup, #article').text() || $('body').text();
+      
+      return content.replace(/\s+/g, ' ').trim().substring(0, 20000); // Increased limit slightly
+    } catch (error) {
+      attempt++;
+      console.warn(`Scraping attempt ${attempt} failed for ${url}:`, error.message);
+      if (attempt >= maxRetries) {
+        console.error('Max scraping retries reached.');
+        return null;
+      }
+      // Wait a bit before retrying (e.g., 1s)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
   }
+  return null;
 }
 
 export default async function handler(req, res) {
@@ -190,6 +214,15 @@ ${commonInstructions}`;
 
   } catch (error) {
     console.error('API Error in generate-content:', error);
+    
+    // Check for API key expiration
+    if (error.message && (error.message.includes('API key expired') || error.message.includes('API_KEY_INVALID'))) {
+      return res.status(500).json({ 
+        message: 'Your Gemini API Key has expired or is invalid. Please update GEMINI_API_KEY in your environment variables.', 
+        details: error.message 
+      });
+    }
+
     res.status(500).json({ message: 'Failed to generate content.', details: error.message || String(error) });
   }
 }

@@ -64,6 +64,15 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('API Error in guess-color:', error);
+    
+    // Check for API key expiration
+    if (error.message && (error.message.includes('API key expired') || error.message.includes('API_KEY_INVALID'))) {
+      return res.status(500).json({ 
+        message: 'Your Gemini API Key has expired or is invalid. Please update GEMINI_API_KEY in your environment variables.', 
+        details: error.message 
+      });
+    }
+
     res.status(500).json({ message: 'Failed to guess color.', details: error.message });
   }
 }

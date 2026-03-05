@@ -35,52 +35,70 @@ function getAiClient() {
 }
 
 async function fetchArticleData(url) {
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-        'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Referer': 'https://www.google.com/'
-      }
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to fetch article, status: ${response.status} ${response.statusText}`);
-    }
-    const html = await response.text();
-    
-    let $;
+  const maxRetries = 3;
+  let attempt = 0;
+
+  while (attempt < maxRetries) {
     try {
-      $ = cheerio.load(html);
-    } catch (e) {
-      console.error("Cheerio load error:", e);
-      throw new Error("Failed to parse HTML content");
-    }
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
-    const title = $('h1').first().text().trim() || $('title').text().trim();
-    const summary = $('meta[name=description]').attr('content') || '';
-    let image = $('meta[property="og:image"]').attr('content') || null;
-    const firstArticleImage = $('#content img, .article-content img, article img, .main-content img').first().attr('src');
-    
-    if (firstArticleImage) {
-      if (firstArticleImage.startsWith('/')) {
-        const urlObj = new URL(url);
-        image = `${urlObj.origin}${firstArticleImage}`;
-      } else if (firstArticleImage.startsWith('http')) {
-        image = firstArticleImage;
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+          'Referer': 'https://www.google.com/'
+        }
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        console.warn(`Failed to fetch article, status: ${response.status} ${response.statusText}`);
+        return null;
       }
+      const html = await response.text();
+      
+      let $;
+      try {
+        $ = cheerio.load(html);
+      } catch (e) {
+        console.error("Cheerio load error:", e);
+        throw new Error("Failed to parse HTML content");
+      }
+
+      const title = $('h1').first().text().trim() || $('title').text().trim();
+      const summary = $('meta[name=description]').attr('content') || '';
+      let image = $('meta[property="og:image"]').attr('content') || null;
+      const firstArticleImage = $('#content img, .article-content img, article img, .main-content img').first().attr('src');
+      
+      if (firstArticleImage) {
+        if (firstArticleImage.startsWith('/')) {
+          const urlObj = new URL(url);
+          image = `${urlObj.origin}${firstArticleImage}`;
+        } else if (firstArticleImage.startsWith('http')) {
+          image = firstArticleImage;
+        }
+      }
+
+      const bodyText = $('#content .article-content, article, .main-content, #article, .pGroup, .document-body').text().replace(/\s\s+/g, ' ').trim();
+
+      if (!bodyText) {
+          console.warn("No body text found for URL:", url);
+      }
+
+      return { title, summary, image, bodyText };
+    } catch (error) {
+      attempt++;
+      console.warn(`Fetch attempt ${attempt} failed for ${url}:`, error.message);
+      if (attempt >= maxRetries) {
+        console.error('Max fetch retries reached.');
+        throw new Error(`Could not retrieve article content: ${error.message}`);
+      }
+      // Wait a bit before retrying (e.g., 1s)
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
-
-    const bodyText = $('#content .article-content, article, .main-content, #article, .pGroup, .document-body').text().replace(/\s\s+/g, ' ').trim();
-
-    if (!bodyText) {
-        console.warn("No body text found for URL:", url);
-    }
-
-    return { title, summary, image, bodyText };
-  } catch (error) {
-    console.error('Error fetching or parsing article:', error);
-    throw new Error(`Could not retrieve article content: ${error.message}`);
   }
 }
 
@@ -119,6 +137,13 @@ export default async function handler(req, res) {
         articleUrl = urlResult.text.trim();
       } catch (aiError) {
         console.error("AI Search Error:", aiError);
+        // Check for API key expiration in the search step
+        if (aiError.message && (aiError.message.includes('API key expired') || aiError.message.includes('API_KEY_INVALID'))) {
+            return res.status(500).json({ 
+              message: 'Your Gemini API Key has expired or is invalid. Please update GEMINI_API_KEY in your environment variables.', 
+              details: aiError.message 
+            });
+        }
         return res.status(500).json({ message: 'AI Search failed', details: aiError.message });
       }
     }
@@ -185,6 +210,15 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('API Error in search-content:', error);
+    
+    // Check for API key expiration
+    if (error.message && (error.message.includes('API key expired') || error.message.includes('API_KEY_INVALID'))) {
+      return res.status(500).json({ 
+        message: 'Your Gemini API Key has expired or is invalid. Please update GEMINI_API_KEY in your environment variables.', 
+        details: error.message 
+      });
+    }
+
     res.status(500).json({ message: 'Failed to process search request.', details: error.message });
   }
 }
