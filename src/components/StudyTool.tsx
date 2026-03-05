@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Link as LinkIcon, Calendar, Loader2, ShieldCheck, Plus, Minus, Info } from 'lucide-react'; 
-import { StudyPart, GeneratedStudy, AppSettings } from '../types.ts'; 
+import { StudyPart, GeneratedStudy, AppSettings, AppView } from '../types.ts'; 
+import { generateStudyContent, performSearch } from '../services/geminiService.ts';
 
 interface Props {
   type: 'WATCHTOWER' | 'MINISTRY';
@@ -181,13 +182,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
           previewInfos: '' // No infos for manual text
         });
       } else {
-        const res = await fetch('/api/search-content', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ questionOrSubject: mainLink, settings, confirmMode: true })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || getLocalizedText(settings, 'articleConfirmationError'));
+        const data = await performSearch(mainLink, settings, undefined, true);
         setArticleConfirmed(data);
       }
     } catch (err: any) {
@@ -204,42 +199,29 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
     
     try {
       // Combine mainLink and extraLinks if not in manual mode
-      const combinedInput = !useManual ? (mainLink + (extraLinks.length ? "\n" + extraLinks.join("\n") : "")) : "";
+      const combinedInput = !useManual ? (mainLink + (extraLinks.length ? "\n" + extraLinks.join("\n") : "")) : (manualText || "");
       
-      const res = await fetch('/api/generate-content', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          type, 
-          input: combinedInput, 
-          part, 
-          settings, 
-          manualText: useManual ? manualText : null,
-          contentOptions: {
+      const study = await generateStudyContent(
+        type === 'WATCHTOWER' ? AppView.WATCHTOWER : AppView.MINISTRY,
+        combinedInput,
+        settings,
+        {
             includeArticles: false,
             includeImages: false,
             includeVideos: false,
             includeVerses: false,
             articleLinks: []
-          },
-          articleReferences: []
-        })
-      });
-      const data = await res.json();
-      
-      if (!res.ok) throw new Error(data.message || getLocalizedText(settings, 'generationError'));
+        },
+        part
+      );
 
       onGenerated({
-        id: Date.now().toString(),
-        type,
-        title: data.title,
-        date: new Date().toLocaleDateString(settings.language === 'fr' ? 'fr-FR' : settings.language === 'es' ? 'es-ES' : 'en-US'),
-        content: data.text,
-        timestamp: Date.now(),
+        ...study,
         part: part === 'tout' ? undefined : (part as StudyPart),
         category: type === 'WATCHTOWER' ? 'tour_de_garde' : 'cahier_vie_et_ministere',
         url: useManual ? getLocalizedText(settings, 'manualInput') : mainLink + (extraLinks.length ? ", " + extraLinks.join(", ") : "")
       });
+      
       // Reset after successful generation
       setMainLink('');
       setExtraLinks([]);

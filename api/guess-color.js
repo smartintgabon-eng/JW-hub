@@ -3,12 +3,28 @@ import { GoogleGenAI } from '@google/genai';
 let aiClient;
 function getAiClient() {
   if (!aiClient) {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.REACT_APP_GEMINI_API_KEY || process.env.API_KEY;
+    const candidates = [
+      process.env.GEMINI_API_KEY,
+      process.env.REACT_APP_GEMINI_API_KEY,
+      process.env.GOOGLE_API_KEY,
+      process.env.API_KEY
+    ];
+    
+    // Prioritize keys that start with "AIza" (standard Google API key format)
+    let apiKey = candidates.find(k => k && k.trim().startsWith('AIza'));
+    
+    // Fallback to the first non-empty key if no "AIza" key is found
+    if (!apiKey) {
+      apiKey = candidates.find(k => k && k.trim().length > 0);
+    }
+
     if (!apiKey) {
       throw new Error("GEMINI_API_KEY is missing. Please set it in your environment variables.");
     }
+    
     // Trim the key to remove any accidental whitespace and quotes
     const validApiKey = apiKey.trim().replace(/^["']|["']$/g, '');
+    
     if (!validApiKey) {
       throw new Error("GEMINI_API_KEY is empty.");
     }

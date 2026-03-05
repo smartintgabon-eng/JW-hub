@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Megaphone, Loader2, AlertTriangle, BookOpen, Link as LinkIcon, Handshake, CornerRightDown, ChevronRight, ChevronLeft, Search } from 'lucide-react';
 // Fix: Import types from src/types.ts
-import { AppSettings, GeneratedStudy, PredicationType } from '../types.ts';
-import { callGenerateContentApi } from '../services/apiService.ts'; 
+import { AppSettings, GeneratedStudy, PredicationType, AppView } from '../types.ts';
+import { generateStudyContent } from '../services/geminiService.ts'; 
 import { saveInputState, loadInputState } from '../utils/storage.ts';
 
 interface Props {
@@ -106,23 +106,26 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
     setError(null);
 
     try {
-      const result = await callGenerateContentApi('PREDICATION', inputDetails, 'tout', settings, false, preachingType, {
-        includeArticles: false,
-        includeImages: false,
-        includeVideos: false,
-        includeVerses: false,
-        articleLinks: [],
-      });
+      const study = await generateStudyContent(
+        AppView.PREDICATION,
+        inputDetails,
+        settings,
+        {
+            includeArticles: false,
+            includeImages: false,
+            includeVideos: false,
+            includeVerses: false,
+            articleLinks: []
+        },
+        'tout',
+        preachingType
+      );
 
       setGlobalLoadingMessage('Enregistrement de la préparation et redirection...');
       const newStudy: GeneratedStudy = {
-        id: Date.now().toString(),
-        type: 'PREDICATION',
-        title: result.title,
+        ...study,
         date: new Date().toLocaleDateString('fr-FR'),
         url: (Array.isArray(inputDetails) ? inputDetails.join('\n') : inputDetails) || '', 
-        content: result.text,
-        timestamp: Date.now(),
         preachingType: preachingType,
         category: `predication_${preachingType}`
       };

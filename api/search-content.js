@@ -1,15 +1,31 @@
 import { GoogleGenAI } from '@google/genai';
-import { load } from 'cheerio';
+import * as cheerio from 'cheerio';
 
 let aiClient;
 function getAiClient() {
   if (!aiClient) {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.REACT_APP_GEMINI_API_KEY || process.env.API_KEY;
+    const candidates = [
+      process.env.GEMINI_API_KEY,
+      process.env.REACT_APP_GEMINI_API_KEY,
+      process.env.GOOGLE_API_KEY,
+      process.env.API_KEY
+    ];
+    
+    // Prioritize keys that start with "AIza" (standard Google API key format)
+    let apiKey = candidates.find(k => k && k.trim().startsWith('AIza'));
+    
+    // Fallback to the first non-empty key if no "AIza" key is found
+    if (!apiKey) {
+      apiKey = candidates.find(k => k && k.trim().length > 0);
+    }
+
     if (!apiKey) {
       throw new Error("GEMINI_API_KEY is missing. Please set it in your environment variables.");
     }
+    
     // Trim the key to remove any accidental whitespace and quotes
     const validApiKey = apiKey.trim().replace(/^["']|["']$/g, '');
+    
     if (!validApiKey) {
       throw new Error("GEMINI_API_KEY is empty.");
     }
@@ -35,7 +51,7 @@ async function fetchArticleData(url) {
     
     let $;
     try {
-      $ = load(html);
+      $ = cheerio.load(html);
     } catch (e) {
       console.error("Cheerio load error:", e);
       throw new Error("Failed to parse HTML content");
@@ -84,7 +100,7 @@ export default async function handler(req, res) {
     let articleUrl = questionOrSubject.trim();
 
     // Check if the input is already a valid URL
-    const isUrl = /^https?:\/\/(wol\.jw\.org|jw\.org)/i.test(articleUrl);
+    const isUrl = /^https?:\/\/(www\.)?(wol\.jw\.org|jw\.org)/i.test(articleUrl);
 
     if (!isUrl) {
       const userLanguage = settings?.language || 'fr';
