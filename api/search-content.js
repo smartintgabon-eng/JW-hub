@@ -4,12 +4,12 @@ import { load } from 'cheerio';
 let aiClient;
 function getAiClient() {
   if (!aiClient) {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.REACT_APP_GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.REACT_APP_GEMINI_API_KEY || process.env.API_KEY;
     if (!apiKey) {
       throw new Error("GEMINI_API_KEY is missing. Please set it in your environment variables.");
     }
-    // Trim the key to remove any accidental whitespace
-    const validApiKey = apiKey.trim();
+    // Trim the key to remove any accidental whitespace and quotes
+    const validApiKey = apiKey.trim().replace(/^["']|["']$/g, '');
     if (!validApiKey) {
       throw new Error("GEMINI_API_KEY is empty.");
     }
@@ -22,7 +22,10 @@ async function fetchArticleData(url) {
   try {
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Referer': 'https://www.google.com/'
       }
     });
     if (!response.ok) {
@@ -84,7 +87,10 @@ export default async function handler(req, res) {
     const isUrl = /^https?:\/\/(wol\.jw\.org|jw\.org)/i.test(articleUrl);
 
     if (!isUrl) {
-      const searchPrompt = `Based on the user's question "${questionOrSubject}" in language "${settings?.language || 'fr'}", find the single most relevant article URL from wol.jw.org or jw.org. Return ONLY the URL.`;
+      const userLanguage = settings?.language || 'fr';
+      const searchPrompt = `Based on the user's question "${questionOrSubject}" in language "${userLanguage}", find the single most relevant article URL from wol.jw.org or jw.org. 
+      IMPORTANT: For French searches, look for URLs containing 'lp-f' and 'r30' parameters or content in French. 
+      Return ONLY the URL.`;
       
       try {
         const urlResult = await ai.models.generateContent({
@@ -134,20 +140,20 @@ export default async function handler(req, res) {
       let contentInclusionInstructions = "";
 
       if (contentOptions) {
-        if (contentOptions.includeArticles) contentInclusionInstructions += "Include references to other relevant articles.\n";
+        if (contentOptions.includeArticles) contentInclusionInstructions += "Include references to other relevant articles from jw.org or wol.jw.org.\n";
         if (contentOptions.includeImages) contentInclusionInstructions += "Describe relevant images or visual aids that could be used.\n";
         if (contentOptions.includeVideos) contentInclusionInstructions += "Suggest relevant videos from jw.org.\n";
-        if (contentOptions.includeVerses) contentInclusionInstructions += "Include key Bible verses.\n";
+        if (contentOptions.includeVerses) contentInclusionInstructions += "Include key Bible verses (NWT).\n";
         if (contentOptions.articleLinks && contentOptions.articleLinks.length > 0) {
             contentInclusionInstructions += `Consider these additional articles: ${contentOptions.articleLinks.join(', ')}\n`;
         }
       }
 
       if (articleData && articleData.bodyText) {
-        explanationPrompt = `Based on the user's question "${questionOrSubject}" and the content of this article, provide a structured explanation.\nArticle Title: ${articleData.title}\nArticle Content: "${articleData.bodyText.substring(0, 8000)}"\nUser Preferences: ${JSON.stringify(settings?.answerPreferences || [])}\n${contentInclusionInstructions}\nFormat the response in Markdown. Include the article title as a heading, the URL as a clickable link [Lien de l'article](${articleUrl}), and then the detailed explanation.`;
+        explanationPrompt = `Based on the user's question "${questionOrSubject}" and the content of this article, provide a structured explanation.\nArticle Title: ${articleData.title}\nArticle Content: "${articleData.bodyText.substring(0, 15000)}"\nUser Preferences: ${JSON.stringify(settings?.answerPreferences || [])}\n${contentInclusionInstructions}\nFormat the response in Markdown. Include the article title as a heading, the URL as a clickable link [Lien de l'article](${articleUrl}), and then the detailed explanation. Ensure the content is strictly based on the provided text and Jehovah's Witnesses teachings.`;
       } else {
         // Fallback prompt using Google Search tool directly on the URL
-        explanationPrompt = `The user wants an analysis of this URL: ${articleUrl}. \nQuestion: "${questionOrSubject}"\nUser Preferences: ${JSON.stringify(settings?.answerPreferences || [])}\n${contentInclusionInstructions}\nUse your Google Search tool to read the content of the URL if possible, or search for information about it. Prioritize content from jw.org or wol.jw.org. Format the response in Markdown. Include the article title as a heading, the URL as a clickable link [Lien de l'article](${articleUrl}), and then the detailed explanation.`;
+        explanationPrompt = `The user wants an analysis of this URL: ${articleUrl}. \nQuestion: "${questionOrSubject}"\nUser Preferences: ${JSON.stringify(settings?.answerPreferences || [])}\n${contentInclusionInstructions}\nUse your Google Search tool to read the content of the URL if possible, or search for information about it. Prioritize content from jw.org or wol.jw.org (especially French content with lp-f/r30 if applicable). Format the response in Markdown. Include the article title as a heading, the URL as a clickable link [Lien de l'article](${articleUrl}), and then the detailed explanation. Ensure the content is strictly based on Jehovah's Witnesses teachings.`;
       }
 
       const explanationResult = await ai.models.generateContent({

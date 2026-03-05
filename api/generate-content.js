@@ -4,12 +4,12 @@ import * as cheerio from 'cheerio';
 let aiClient;
 function getAiClient() {
   if (!aiClient) {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.REACT_APP_GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.REACT_APP_GEMINI_API_KEY || process.env.API_KEY;
     if (!apiKey) {
       throw new Error("GEMINI_API_KEY is missing. Please set it in your environment variables.");
     }
-    // Trim the key to remove any accidental whitespace
-    const validApiKey = apiKey.trim();
+    // Trim the key to remove any accidental whitespace and quotes
+    const validApiKey = apiKey.trim().replace(/^["']|["']$/g, '');
     if (!validApiKey) {
       throw new Error("GEMINI_API_KEY is empty.");
     }
@@ -22,7 +22,10 @@ async function scrapeUrl(url) {
   try {
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Referer': 'https://www.google.com/'
       }
     });
     if (!response.ok) return null;
@@ -30,13 +33,13 @@ async function scrapeUrl(url) {
     const $ = cheerio.load(html);
     
     // Remove scripts, styles, and other non-content elements
-    $('script, style, nav, footer, header, aside, .navigation, .site-header, .site-footer').remove();
+    $('script, style, nav, footer, header, aside, .navigation, .site-header, .site-footer, .advertisement, .share-options').remove();
     
     // Extract main content
-    // Prioritize specific selectors for jw.org if possible, otherwise generic body
-    const content = $('article, main, .docTitle, .docSubTitle, .bodyTxt, .pGroup').text() || $('body').text();
+    // Prioritize specific selectors for jw.org/wol.jw.org
+    const content = $('article, main, .docTitle, .docSubTitle, .bodyTxt, .pGroup, #article').text() || $('body').text();
     
-    return content.replace(/\s+/g, ' ').trim().substring(0, 15000); // Limit content length
+    return content.replace(/\s+/g, ' ').trim().substring(0, 20000); // Increased limit slightly
   } catch (error) {
     console.error('Scraping error:', error);
     return null;
@@ -53,19 +56,20 @@ export default async function handler(req, res) {
   try {
     const ai = getAiClient();
     let prompt = '';
+    const userLanguage = settings?.language || 'fr';
     const userPreferences = (settings?.answerPreferences || []).map(p => p.text).join(', ') || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.';
 
     // Helper to generate content inclusion instructions
     const getContentInclusionInstructions = (options, refs) => {
       let instructions = "";
       if (options) {
-        if (options.includeArticles) instructions += `\n- Utilise Google Search pour trouver et inclure des références précises à des articles de jw.org ou wol.jw.org. Formatte-les comme des liens Markdown cliquables [Titre](URL).`;
-        if (options.includeImages) instructions += `\n- Suggère des images ou illustrations visuelles pertinentes.`;
+        if (options.includeArticles) instructions += `\n- Utilise Google Search pour trouver et inclure des références précises à des articles de jw.org ou wol.jw.org. Pour le français, privilégie les résultats avec les paramètres 'lp-f' et 'r30'. Formatte-les comme des liens Markdown cliquables [Titre](URL).`;
+        if (options.includeImages) instructions += `\n- Suggère des images ou illustrations visuelles pertinentes basées sur les publications.`;
         if (options.includeVideos) instructions += `\n- Suggère des vidéos pertinentes de jw.org.`;
-        if (options.includeVerses) instructions += `\n- Inclus de nombreux versets bibliques clés avec leur explication.`;
+        if (options.includeVerses) instructions += `\n- Inclus de nombreux versets bibliques clés avec leur explication, en utilisant la Traduction du monde nouveau.`;
       }
       if (refs && refs.length > 0) {
-        instructions += `\n\nIMPORTANT: Utilise les informations de ces articles comme base principale. Lis leur contenu via tes outils de recherche : ${refs.join(', ')}`;
+        instructions += `\n\nIMPORTANT: Utilise les informations de ces articles comme base principale. Lis leur contenu via tes outils de recherche si nécessaire : ${refs.join(', ')}`;
       }
       return instructions;
     };
@@ -73,24 +77,24 @@ export default async function handler(req, res) {
     const commonInstructions = getContentInclusionInstructions(contentOptions, articleReferences);
 
     if (type === 'DISCOURS_THEME') {
-      prompt = `Génère un thème de discours biblique accrocheur et profond.
+      prompt = `Génère un thème de discours biblique accrocheur et profond basé sur les publications des Témoins de Jéhovah.
 Critères de l'utilisateur (optionnel) : "${input || 'Aucun critère spécifique'}".
-Langue : ${settings?.language || 'fr'}.
+Langue : ${userLanguage}.
 Le thème doit être court (moins de 10 mots), percutant, et adapté à un public chrétien.
 Ne renvoie QUE le thème, sans guillemets ni texte supplémentaire.`;
     } else if (type === 'DISCOURS') {
-      prompt = `Tu es un orateur chrétien expérimenté. Prépare un plan détaillé pour un discours biblique.
+      prompt = `Tu es un orateur chrétien expérimenté (Témoin de Jéhovah). Prépare un plan détaillé pour un discours biblique.
 Type de discours : ${discoursType}
 Thème : "${theme}"
 Durée prévue : ${time}
-Langue : ${settings?.language || 'fr'}
+Langue : ${userLanguage}
 Préférences de l'utilisateur : ${userPreferences}
 
 Le discours doit inclure :
 1. Une introduction captivante.
-2. Un développement structuré avec des sous-thèmes clairs et des versets bibliques pertinents.
+2. Un développement structuré avec des sous-thèmes clairs et des versets bibliques pertinents (Traduction du monde nouveau).
 3. Une conclusion motivante.
-Assure-toi que le contenu est adapté à la durée prévue (${time}).
+Assure-toi que le contenu est adapté à la durée prévue (${time}) et strictement basé sur les enseignements bibliques des Témoins de Jéhovah.
 ${commonInstructions}`;
 
       if (pointsToReinforce) prompt += `\nPoints à renforcer : ${pointsToReinforce}`;
@@ -117,13 +121,14 @@ ${commonInstructions}`;
         const scrapedText = await scrapeUrl(url);
         if (scrapedText) {
             scrapedContent = `\n\n--- SCRAPED CONTENT FROM ${url} ---\n${scrapedText}\n--- END SCRAPED CONTENT ---\n`;
-            urlInstructions = "I have provided the scraped content from the URL above. Use this content as the primary source for your analysis.";
+            urlInstructions = "I have provided the scraped content from the URL above. Use this content as the primary source for your analysis. Do not invent information not present in the text.";
         } else {
             urlInstructions = "The input contains URLs. Use your Google Search tool to read the content of these URLs to inform your response. Do not just analyze the URL string itself. If the URL is from jw.org or wol.jw.org, prioritize the content from that source.";
         }
       }
 
-      prompt = `Analyze the following content and provide a structured explanation based on user preferences.\nContent/Context: "${contentString}"\n${scrapedContent}\n${urlInstructions}\nUser Preferences: ${userPreferences}\n${commonInstructions}\n`;
+      prompt = `Analyze the following content and provide a structured explanation based on user preferences.\nContent/Context: "${contentString}"\n${scrapedContent}\n${urlInstructions}\nUser Preferences: ${userPreferences}\n${commonInstructions}\n
+      IMPORTANT: Your response must be strictly based on the provided content and the teachings found on jw.org and wol.jw.org. Use the Google Search tool to verify information on these sites if needed, especially looking for French content (lp-f, r30) if the user language is French.`;
       
       if (type === 'WATCHTOWER') {
         prompt += `This is a Watchtower study article. Format the response with a clear title, a summary, and a detailed, point-by-point explanation for each paragraph or section. IMPORTANT: Also include the revision questions at the end and provide answers based on the article content.`;
