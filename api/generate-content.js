@@ -215,11 +215,18 @@ ${commonInstructions}`;
   } catch (error) {
     console.error('API Error in generate-content:', error);
     
-    // Check for API key expiration
+    // Check for API key expiration or quota issues
     if (error.message && (error.message.includes('API key expired') || error.message.includes('API_KEY_INVALID'))) {
       return res.status(500).json({ 
         message: 'Your Gemini API Key has expired or is invalid. Please update GEMINI_API_KEY in your environment variables.', 
         details: error.message 
+      });
+    }
+
+    if (error.message && error.message.includes('quota')) {
+      return res.status(429).json({
+        message: "Quota d'IA épuisé. Veuillez patienter quelques minutes ou vérifier votre plan Gemini.",
+        details: error.message
       });
     }
 

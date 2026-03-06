@@ -205,17 +205,14 @@ export default async function handler(req, res) {
         } else {
              // Fallback preview if scraping fails or returns incomplete data
              // Use AI to extract metadata from the URL using Google Search tool
-             const metadataPrompt = `Extract the following from this article URL: ${articleUrl}.
+             const metadataPrompt = `Extract from ${articleUrl}:
+             1. Title
+             2. Theme Bible Verse (if any)
+             3. Brief Summary (1-2 sentences)
+             4. Main Image URL
              
-             1. Title (The main title of the article)
-             2. Theme Bible Verse (The primary verse the article is based on, if any)
-             3. General Idea / Summary (A brief 1-2 sentence summary)
-             4. Main Image URL (Find the most relevant image URL from the article or its metadata)
-             
-             IMPORTANT: You MUST return a valid JSON object.
-             Return a JSON object with keys: title, themeVerse, summary, image. 
-             If image is not found, use "https://assets.jw.org/assets/m/jwb/jwb_placeholder.png".
-             If theme verse is not found, use an empty string.`;
+             Return ONLY a JSON object: {"title": "...", "themeVerse": "...", "summary": "...", "image": "..."}. 
+             Use "https://assets.jw.org/assets/m/jwb/jwb_placeholder.png" if no image.`;
              
              try {
                 const metadataResult = await ai.models.generateContent({
@@ -235,11 +232,18 @@ export default async function handler(req, res) {
                 });
              } catch (e) {
                  console.error("Metadata extraction failed:", e);
-                 return res.status(200).json({
-                    previewTitle: "Article trouvé",
-                    previewSummary: "Analyse en cours par l'IA...",
-                    previewImage: "https://assets.jw.org/assets/m/jwb/jwb_placeholder.png",
-                    previewInfos: `Source: ${new URL(articleUrl).hostname}`
+                 
+                 // If it's a quota error, return it clearly
+                 if (e.message && (e.message.includes('quota') || e.message.includes('429'))) {
+                    return res.status(429).json({ 
+                        message: "Quota d'IA épuisé (429). Veuillez patienter quelques minutes ou vérifier votre plan Gemini.",
+                        details: e.message 
+                    });
+                 }
+
+                 return res.status(500).json({
+                    message: "Impossible d'analyser l'article. Vérifiez le lien ou réessayez plus tard.",
+                    details: e.message
                 });
              }
         }
