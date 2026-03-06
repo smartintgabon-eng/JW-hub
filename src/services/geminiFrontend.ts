@@ -133,7 +133,14 @@ export const generateStudyContentFrontend = async (
   IMPORTANT: Your response must be strictly based on the teachings found on jw.org and wol.jw.org. Use the Google Search tool to read the content of any URLs provided and verify information on these sites.`;
   
   if (type === 'WATCHTOWER') {
-    prompt += `\nThis is a Watchtower study article. Format the response with a clear title, a summary, and a detailed, point-by-point explanation for each paragraph or section. Include the revision questions at the end and provide answers based on the article content.`;
+    prompt += `\nThis is a Watchtower study article. 
+    Format the response STRICTLY as follows, without skipping any paragraphs or questions:
+    1. A clear title.
+    2. A brief summary of the article.
+    3. Detailed answers to EVERY paragraph question, following the EXACT numerical order of the article (e.g., 1, 2, 3, 4-5, 6, etc.). 
+    4. For each paragraph or group of paragraphs, you MUST state the question first, then provide a detailed, faithful, and point-by-point explanation based on the article content.
+    5. Include the revision questions at the end with their respective answers, also in numerical order.
+    DO NOT group questions unless they are explicitly grouped in the article (e.g., 4-5).`;
   } else if (type === 'MINISTRY') {
     prompt += `\nThis is a Ministry Workbook meeting part (${part || 'full'}). Format the response appropriately for this specific part, providing practical points, scriptures, and clear explanations.`;
   } else if (type === 'PREDICATION') {
