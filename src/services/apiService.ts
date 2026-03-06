@@ -4,13 +4,14 @@ import { ContentOptions } from '../components/ContentInclusion';
 
 export const callGenerateContentApi = async (
   type: 'WATCHTOWER' | 'MINISTRY' | 'PREDICATION' | 'DISCOURS' | 'DISCOURS_THEME',
-  input: string | string[], // Modified to accept string or string[]
+  input: string | string[],
   part: StudyPart = 'tout',
   settings: AppSettings,
   isInitialSearchForPreview: boolean = false,
   preachingType: PredicationType | undefined,
-  contentOptions?: ContentOptions
-): Promise<{ text: string; title: string; theme?: string; rawSources?: GeneratedStudy['rawSources']; aiExplanation?: string }> => { // Added optional rawSources and aiExplanation
+  contentOptions?: ContentOptions,
+  extraParams?: Record<string, any> // Allow passing extra parameters
+): Promise<{ text: string; title: string; theme?: string; rawSources?: GeneratedStudy['rawSources']; aiExplanation?: string }> => {
 
   const response = await fetch('/api/generate-content', {
     method: 'POST',
@@ -25,7 +26,8 @@ export const callGenerateContentApi = async (
       isInitialSearchForPreview,
       preachingType,
       contentOptions,
-      articleReferences: contentOptions?.articleLinks
+      articleReferences: contentOptions?.articleLinks,
+      ...extraParams // Spread extra params into the body
     }),
   });
 

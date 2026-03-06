@@ -61,32 +61,22 @@ export const generateDiscourseContent = async (
   settings: AppSettings,
   contentOptions?: ContentOptions
 ): Promise<GeneratedStudy> => {
-  // We need to extend callGenerateContentApi to accept discoursType, time, theme
-  // Or we can just call the API directly here to avoid changing apiService.ts signature too much
-  // But to keep it clean, let's assume we update apiService.ts or just use fetch here.
-  // Given the user wants to "bridge the interface and APIs", using fetch here is fine if apiService is too rigid.
-  // However, apiService is just a wrapper around fetch. Let's use fetch directly here for simplicity and to ensure we pass all specific params.
   
-  const response = await fetch('/api/generate-content', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      type: 'DISCOURS',
+  const result = await callGenerateContentApi(
+    'DISCOURS',
+    '', // Input is handled via extraParams for DISCOURS
+    'tout',
+    settings,
+    false,
+    undefined,
+    contentOptions,
+    {
       discoursType,
       time,
       theme,
-      articleReferences: contentOptions?.articleLinks,
-      settings,
-      contentOptions,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || errorData.details || 'Failed to generate discourse');
-  }
-
-  const result = await response.json();
+      articleReferences: contentOptions?.articleLinks
+    }
+  );
 
   return {
     id: Date.now().toString(),
@@ -94,7 +84,7 @@ export const generateDiscourseContent = async (
     title: theme,
     content: result.text,
     date: new Date().toISOString(),
-    rawSources: [] // Discourse generation usually doesn't return structured sources in the same way, or we can parse them if needed
+    rawSources: []
   };
 };
 
