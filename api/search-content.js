@@ -205,9 +205,17 @@ export default async function handler(req, res) {
         } else {
              // Fallback preview if scraping fails or returns incomplete data
              // Use AI to extract metadata from the URL using Google Search tool
-             const metadataPrompt = `Extract the title, a brief summary, and a main image URL for this article: ${articleUrl}. 
-             Return a JSON object with keys: title, summary, image. 
-             If image is not found, use "https://assets.jw.org/assets/m/jwb/jwb_placeholder.png".`;
+             const metadataPrompt = `Extract the following from this article URL: ${articleUrl}.
+             
+             1. Title (The main title of the article)
+             2. Theme Bible Verse (The primary verse the article is based on, if any)
+             3. General Idea / Summary (A brief 1-2 sentence summary)
+             4. Main Image URL (Find the most relevant image URL from the article or its metadata)
+             
+             IMPORTANT: You MUST return a valid JSON object.
+             Return a JSON object with keys: title, themeVerse, summary, image. 
+             If image is not found, use "https://assets.jw.org/assets/m/jwb/jwb_placeholder.png".
+             If theme verse is not found, use an empty string.`;
              
              try {
                 const metadataResult = await ai.models.generateContent({
@@ -221,15 +229,15 @@ export default async function handler(req, res) {
                 const metadata = JSON.parse(metadataResult.text);
                 return res.status(200).json({
                     previewTitle: metadata.title || "Article trouvé",
-                    previewSummary: metadata.summary || "Aperçu non disponible.",
+                    previewSummary: metadata.summary || metadata.themeVerse || "Aperçu non disponible.",
                     previewImage: metadata.image || "https://assets.jw.org/assets/m/jwb/jwb_placeholder.png",
-                    previewInfos: `Source: ${new URL(articleUrl).hostname}`
+                    previewInfos: metadata.themeVerse ? `Verset Thème: ${metadata.themeVerse}` : `Source: ${new URL(articleUrl).hostname}`
                 });
              } catch (e) {
                  console.error("Metadata extraction failed:", e);
                  return res.status(200).json({
-                    previewTitle: "Article trouvé (Accès limité)",
-                    previewSummary: "Impossible d'afficher l'aperçu, mais l'IA peut analyser ce lien.",
+                    previewTitle: "Article trouvé",
+                    previewSummary: "Analyse en cours par l'IA...",
                     previewImage: "https://assets.jw.org/assets/m/jwb/jwb_placeholder.png",
                     previewInfos: `Source: ${new URL(articleUrl).hostname}`
                 });

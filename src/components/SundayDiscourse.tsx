@@ -7,6 +7,7 @@ import { getContrastTextColor } from '../utils/colorUtils.ts';
 interface SundayDiscourseProps {
   settings: AppSettings;
   setGlobalLoadingMessage: (message: string | null) => void;
+  onGenerated: (study: GeneratedStudy) => void;
 }
 
 enum TimeOptions {
@@ -17,7 +18,7 @@ enum TimeOptions {
   ONE_HOUR = '1h',
 }
 
-const SundayDiscourse: React.FC<SundayDiscourseProps> = ({ settings, setGlobalLoadingMessage }) => {
+const SundayDiscourse: React.FC<SundayDiscourseProps> = ({ settings, setGlobalLoadingMessage, onGenerated }) => {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [customTime, setCustomTime] = useState<string>('');
   const [themeInput, setThemeInput] = useState<string>('');
@@ -115,6 +116,17 @@ const SundayDiscourse: React.FC<SundayDiscourseProps> = ({ settings, setGlobalLo
 
       const discourseData = await discourseResponse.json();
       setGeneratedDiscourse(discourseData.text);
+
+      const study: GeneratedStudy = {
+        id: Date.now().toString(),
+        type: 'DISCOURS' as any,
+        title: finalTheme,
+        content: discourseData.text,
+        date: new Date().toLocaleDateString(),
+        category: 'discours',
+        timestamp: Date.now()
+      };
+      onGenerated(study);
 
     } catch (error) {
       console.error('Error in Sunday discourse generation:', error);

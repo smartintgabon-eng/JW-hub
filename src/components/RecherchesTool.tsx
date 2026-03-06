@@ -107,6 +107,7 @@ const RecherchesTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadi
     }
     setLoading(true);
     setError(null);
+    setArticleConfirmed(null);
     setGlobalLoadingMessage(getLocalizedText(settings, 'articleSearchInProgress'));
 
     try {
@@ -149,14 +150,14 @@ const RecherchesTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadi
         url: [query] // Store the search query as URL
       };
 
-      onGenerated(study); // This will also navigate to history and clear loading message
+      onGenerated(study); // Redirect to history
       setQuery(''); // Clear input after successful search
       setArticleConfirmed(null); // Reset confirmation
     } catch (err: any) {
       setError(err.message || getLocalizedText(settings, 'generationFailed'));
-      setGlobalLoadingMessage(null);
     } finally {
       setLoading(false);
+      setGlobalLoadingMessage(null);
     }
   };
 

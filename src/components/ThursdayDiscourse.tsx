@@ -7,6 +7,7 @@ import { getContrastTextColor } from '../utils/colorUtils.ts';
 interface ThursdayDiscourseProps {
   settings: AppSettings;
   setGlobalLoadingMessage: (message: string | null) => void;
+  onGenerated: (study: GeneratedStudy) => void;
 }
 
 enum TimeOptions {
@@ -17,7 +18,7 @@ enum TimeOptions {
   ONE_HOUR = '1h',
 }
 
-const ThursdayDiscourse: React.FC<ThursdayDiscourseProps> = ({ settings, setGlobalLoadingMessage }) => {
+const ThursdayDiscourse: React.FC<ThursdayDiscourseProps> = ({ settings, setGlobalLoadingMessage, onGenerated }) => {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [customTime, setCustomTime] = useState<string>('');
   const [themeInput, setThemeInput] = useState<string>('');
@@ -115,6 +116,17 @@ const ThursdayDiscourse: React.FC<ThursdayDiscourseProps> = ({ settings, setGlob
 
       const discourseData = await discourseResponse.json();
       setGeneratedDiscourse(discourseData.text);
+
+      const study: GeneratedStudy = {
+        id: Date.now().toString(),
+        type: 'DISCOURS' as any,
+        title: finalTheme,
+        content: discourseData.text,
+        date: new Date().toLocaleDateString(),
+        category: 'discours',
+        timestamp: Date.now()
+      };
+      onGenerated(study);
 
     } catch (error) {
       console.error('Error in Thursday discourse generation:', error);

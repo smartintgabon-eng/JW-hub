@@ -8,6 +8,7 @@ import { generateDiscourseContent, generateDiscourseTheme } from '../services/ge
 interface NormalDiscourseProps {
   settings: AppSettings;
   setGlobalLoadingMessage: (message: string | null) => void;
+  onGenerated: (study: GeneratedStudy) => void;
 }
 
 enum TimeOptions {
@@ -18,7 +19,7 @@ enum TimeOptions {
   ONE_HOUR = '1h',
 }
 
-const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLoadingMessage }) => {
+const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLoadingMessage, onGenerated }) => {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [customTime, setCustomTime] = useState<string>('');
   const [themeInput, setThemeInput] = useState<string>('');
@@ -81,7 +82,15 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
         settings,
         contentOptions
       );
+      
+      const newStudy: GeneratedStudy = {
+        ...study,
+        category: 'discours',
+        timestamp: Date.now()
+      };
+
       setGeneratedDiscourse(study.content);
+      onGenerated(newStudy);
 
     } catch (error: any) {
       console.error('Error in discourse generation:', error);

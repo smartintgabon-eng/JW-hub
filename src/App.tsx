@@ -250,7 +250,7 @@ const App: React.FC = () => {
         {view === AppView.TUTORIAL && <Tutorial deferredPrompt={deferredPrompt} handleInstallClick={handleInstallClick} navigateTo={handleViewChange} settings={settings} />}
         {view === AppView.UPDATES && <Updates settings={settings} />}
         {view === AppView.PREFERENCE_MANAGER && <PreferenceManager settings={settings} setSettings={handleSettingsChange} onClose={() => handleViewChange(AppView.SETTINGS)} />}
-        {view === AppView.DISCOURS && <Discourse settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />}
+        {view === AppView.DISCOURS && <Discourse settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} onGenerated={handleStudyGenerated} />}
       </main>
     </div>
   );

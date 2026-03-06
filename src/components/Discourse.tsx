@@ -9,6 +9,7 @@ import { Mic, Calendar, Sun, Star, ChevronLeft } from 'lucide-react';
 interface DiscourseProps {
   settings: AppSettings;
   setGlobalLoadingMessage: (message: string | null) => void;
+  onGenerated: (study: GeneratedStudy) => void;
 }
 
 enum DiscourseType {
@@ -18,19 +19,19 @@ enum DiscourseType {
   SPECIAL = 'special',
 }
 
-const Discourse: React.FC<DiscourseProps> = ({ settings, setGlobalLoadingMessage }) => {
+const Discourse: React.FC<DiscourseProps> = ({ settings, setGlobalLoadingMessage, onGenerated }) => {
   const [selectedType, setSelectedType] = useState<DiscourseType | null>(null);
 
   const renderDiscourseContent = () => {
     switch (selectedType) {
       case DiscourseType.NORMAL:
-        return <NormalDiscourse settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />;
+        return <NormalDiscourse settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} onGenerated={onGenerated} />;
       case DiscourseType.THURSDAY:
-        return <ThursdayDiscourse settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />;
+        return <ThursdayDiscourse settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} onGenerated={onGenerated} />;
       case DiscourseType.SUNDAY:
-        return <SundayDiscourse settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />;
+        return <SundayDiscourse settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} onGenerated={onGenerated} />;
       case DiscourseType.SPECIAL:
-        return <SpecialDiscourse settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} />;
+        return <SpecialDiscourse settings={settings} setGlobalLoadingMessage={setGlobalLoadingMessage} onGenerated={onGenerated} />;
       default:
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
