@@ -1,6 +1,10 @@
 import { AppSettings, AppView, GeneratedStudy, StudyPart, PredicationType } from '../types';
-import { callGenerateContentApi } from './apiService';
-import { callSearchContentApi } from './searchApiService';
+import { 
+  generateStudyContentFrontend, 
+  generateDiscourseContentFrontend, 
+  generateDiscourseThemeFrontend, 
+  performSearchFrontend 
+} from './geminiFrontend';
 import { ContentOptions } from '../components/ContentInclusion';
 
 export const generateStudyContent = async (
@@ -12,20 +16,13 @@ export const generateStudyContent = async (
   preachingType?: PredicationType
 ): Promise<GeneratedStudy> => {
   
-  // Déterminer le type d'étude selon l'onglet
-  let type: 'WATCHTOWER' | 'MINISTRY' | 'PREDICATION' = 'WATCHTOWER';
-  if (view === AppView.MINISTRY) type = 'MINISTRY';
-  if (view === AppView.PREDICATION) type = 'PREDICATION';
-
-  // Appel à l'API de génération (Scraping + Analyse)
-  const result = await callGenerateContentApi(
-    type,
+  const result = await generateStudyContentFrontend(
+    view === AppView.MINISTRY ? 'MINISTRY' : view === AppView.PREDICATION ? 'PREDICATION' : 'WATCHTOWER',
     input,
-    part,
     settings,
-    false,
-    preachingType,
-    contentOptions
+    contentOptions,
+    part,
+    preachingType
   );
 
   return {
@@ -39,43 +36,23 @@ export const generateStudyContent = async (
 };
 
 export const generateDiscourseTheme = async (
-  input: string,
-  settings: AppSettings
+  input: string
 ): Promise<string> => {
-  const result = await callGenerateContentApi(
-    'DISCOURS_THEME',
-    input,
-    'tout',
-    settings,
-    false,
-    undefined,
-    undefined
-  );
-  return result.theme || "Thème généré";
+  return await generateDiscourseThemeFrontend(input);
 };
 
 export const generateDiscourseContent = async (
   discoursType: string,
   time: string,
   theme: string,
-  settings: AppSettings,
-  contentOptions?: ContentOptions
+  settings: AppSettings
 ): Promise<GeneratedStudy> => {
   
-  const result = await callGenerateContentApi(
-    'DISCOURS',
-    '', // Input is handled via extraParams for DISCOURS
-    'tout',
-    settings,
-    false,
-    undefined,
-    contentOptions,
-    {
-      discoursType,
-      time,
-      theme,
-      articleReferences: contentOptions?.articleLinks
-    }
+  const result = await generateDiscourseContentFrontend(
+    discoursType,
+    time,
+    theme,
+    settings
   );
 
   return {
@@ -94,6 +71,5 @@ export const performSearch = async (
   contentOptions?: ContentOptions,
   confirmMode: boolean = false
 ) => {
-  // Appel à l'API de recherche (Grounding Google Search)
-  return await callSearchContentApi(query, settings, confirmMode, contentOptions);
+  return await performSearchFrontend(query, settings, confirmMode, contentOptions);
 };

@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import Markdown from 'react-markdown';
-import { AppSettings } from '../types';
+import { AppSettings, GeneratedStudy } from '../types';
 import ContentInclusion, { ContentOptions } from './ContentInclusion.tsx';
-import { getContrastTextColor } from '../utils/colorUtils.ts';
+import { generateDiscourseContent, generateDiscourseTheme } from '../services/geminiService.ts';
 
 interface ThursdayDiscourseProps {
   settings: AppSettings;
@@ -23,8 +22,6 @@ const ThursdayDiscourse: React.FC<ThursdayDiscourseProps> = ({ settings, setGlob
   const [customTime, setCustomTime] = useState<string>('');
   const [themeInput, setThemeInput] = useState<string>('');
   const [generateTheme, setGenerateTheme] = useState<boolean>(false);
-  const [generatedTheme, setGeneratedTheme] = useState<string | null>(null);
-  const [generatedDiscourse, setGeneratedDiscourse] = useState<string | null>(null);
   const [contentOptions, setContentOptions] = useState<ContentOptions>({
     includeArticles: false,
     includeImages: false,
@@ -34,9 +31,6 @@ const ThursdayDiscourse: React.FC<ThursdayDiscourseProps> = ({ settings, setGlob
   });
 
   const [step, setStep] = useState<number>(1);
-
-  const textColor = getContrastTextColor(settings.bgColor || '#f5f5f0');
-  const proseClass = textColor === 'white' ? 'prose-invert' : '';
 
   const handleTimeChange = (time: string) => {
     setSelectedTime(time);
@@ -51,8 +45,6 @@ const ThursdayDiscourse: React.FC<ThursdayDiscourseProps> = ({ settings, setGlob
   const handleGenerateThemeToggle = () => {
     setGenerateTheme(!generateTheme);
     setThemeInput('');
-    setGeneratedTheme(null);
-    setGeneratedDiscourse(null);
   };
 
   const handleSubmit = async () => {
@@ -67,24 +59,7 @@ const ThursdayDiscourse: React.FC<ThursdayDiscourseProps> = ({ settings, setGlob
     try {
       let finalTheme = themeInput;
       if (generateTheme) {
-        const themeResponse = await fetch('/api/generate-content', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'DISCOURS_THEME',
-            input: themeInput,
-            settings: settings,
-          }),
-        });
-
-        if (!themeResponse.ok) {
-          const errorData = await themeResponse.json().catch(() => ({}));
-          throw new Error(errorData.message || errorData.details || 'Failed to generate theme');
-        }
-
-        const themeData = await themeResponse.json();
-        finalTheme = themeData.theme;
-        setGeneratedTheme(finalTheme);
+        finalTheme = await generateDiscourseTheme(themeInput, settings);
       }
 
       if (!finalTheme) {
@@ -94,43 +69,20 @@ const ThursdayDiscourse: React.FC<ThursdayDiscourseProps> = ({ settings, setGlob
         return;
       }
 
-      const discourseResponse = await fetch('/api/generate-content', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'DISCOURS',
-          discoursType: 'jeudi',
-          time: selectedTime,
-          theme: finalTheme,
-          articleReferences: contentOptions.articleLinks,
-          imageReferences: [], // Placeholder for future UI
-          videoReferences: [], // Placeholder for future UI
-          pointsToReinforce: [], // Placeholder for future UI
-          strengths: [], // Placeholder for future UI
-          encouragements: '', // Placeholder for future UI
-          settings: settings,
-          contentOptions,
-        }),
-      });
+      const study = await generateDiscourseContent(
+        'jeudi',
+        selectedTime,
+        finalTheme,
+        settings,
+        contentOptions
+      );
 
-      if (!discourseResponse.ok) {
-        const errorData = await discourseResponse.json().catch(() => ({}));
-        throw new Error(errorData.message || errorData.details || 'Failed to generate discourse');
-      }
-
-      const discourseData = await discourseResponse.json();
-      setGeneratedDiscourse(discourseData.text);
-
-      const study: GeneratedStudy = {
-        id: Date.now().toString(),
-        type: 'DISCOURS' as any,
-        title: finalTheme,
-        content: discourseData.text,
-        date: new Date().toLocaleDateString(),
+      const newStudy: GeneratedStudy = {
+        ...study,
         category: 'discours',
         timestamp: Date.now()
       };
-      onGenerated(study);
+      onGenerated(newStudy);
 
     } catch (error: any) {
       console.error('Error in Thursday discourse generation:', error);

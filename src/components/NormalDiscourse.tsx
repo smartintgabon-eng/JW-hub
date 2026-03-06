@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import Markdown from 'react-markdown';
-import { AppSettings } from '../types';
+import { AppSettings, GeneratedStudy } from '../types';
 import ContentInclusion, { ContentOptions } from './ContentInclusion.tsx';
-import { getContrastTextColor } from '../utils/colorUtils.ts';
 import { generateDiscourseContent, generateDiscourseTheme } from '../services/geminiService.ts';
 
 interface NormalDiscourseProps {
@@ -24,8 +22,6 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
   const [customTime, setCustomTime] = useState<string>('');
   const [themeInput, setThemeInput] = useState<string>('');
   const [generateTheme, setGenerateTheme] = useState<boolean>(false);
-  const [generatedTheme, setGeneratedTheme] = useState<string | null>(null);
-  const [generatedDiscourse, setGeneratedDiscourse] = useState<string | null>(null);
   const [contentOptions, setContentOptions] = useState<ContentOptions>({
     includeArticles: false,
     includeImages: false,
@@ -35,9 +31,6 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
   });
 
   const [step, setStep] = useState<number>(1);
-
-  const textColor = getContrastTextColor(settings.bgColor || '#f5f5f0');
-  const proseClass = textColor === 'white' ? 'prose-invert' : '';
 
   const handleTimeChange = (time: string) => {
     setSelectedTime(time);
@@ -69,7 +62,6 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
       let finalTheme = themeInput;
       if (generateTheme) {
         finalTheme = await generateDiscourseTheme(themeInput, settings);
-        setGeneratedTheme(finalTheme);
       }
 
       if (!finalTheme) {
@@ -93,7 +85,6 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
         timestamp: Date.now()
       };
 
-      setGeneratedDiscourse(study.content);
       onGenerated(newStudy);
 
     } catch (error: any) {

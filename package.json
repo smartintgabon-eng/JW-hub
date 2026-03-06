@@ -10,9 +10,11 @@
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.43",
     "@google/genai": "^1.42.0",
     "@tailwindcss/vite": "^4.2.1",
     "@vitejs/plugin-react": "^4.3.1",
+    "ai": "^6.0.116",
     "cheerio": "^1.0.0-rc.12",
     "docx": "^8.5.0",
     "dotenv": "^17.3.1",
