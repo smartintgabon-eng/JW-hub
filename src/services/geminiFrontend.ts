@@ -119,8 +119,8 @@ export const generateStudyContentFrontend = async (
   part: StudyPart = 'tout',
   preachingType?: PredicationType
 ) => {
-  // Use Pro for full study, Flash for parts
-  const model = part === 'tout' ? "gemini-3.1-pro-preview" : "gemini-3-flash-preview";
+  // Switch to Flash for everything to save quota (1500 RPD vs 50 RPD for Pro)
+  const model = "gemini-3-flash-preview";
   const userPreferences = (settings.answerPreferences || []).map(p => p.text).join(', ') || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.';
   
   let type: 'WATCHTOWER' | 'MINISTRY' | 'PREDICATION' = 'WATCHTOWER';
@@ -173,7 +173,8 @@ export const generateDiscourseContentFrontend = async (
   theme: string,
   settings: AppSettings
 ) => {
-  const model = "gemini-3.1-pro-preview";
+  // Switch to Flash for everything to save quota (1500 RPD vs 50 RPD for Pro)
+  const model = "gemini-3-flash-preview";
   const userPreferences = (settings.answerPreferences || []).map(p => p.text).join(', ') || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.';
 
   const prompt = `Tu es un orateur chrétien expérimenté (Témoin de Jéhovah). Prépare un plan détaillé pour un discours biblique.
