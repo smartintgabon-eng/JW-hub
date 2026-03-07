@@ -3,7 +3,8 @@ import { AppSettings, StudyPart, PredicationType } from "../types";
 
 // Helper to get the API key
 const getApiKey = () => {
-  return (process.env as any).GEMINI_API_KEY || (import.meta as any).env.VITE_GEMINI_API_KEY || "";
+  const key = (process.env as any).GEMINI_API_KEY || (import.meta as any).env.VITE_GEMINI_API_KEY || "";
+  return key.trim();
 };
 
 let genAI: any = null;
