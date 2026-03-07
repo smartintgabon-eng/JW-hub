@@ -24,11 +24,13 @@ export const generateContentFrontend = async (
   modelName: string,
   prompt: string,
   useSearch: boolean = true,
-  useThinking: boolean = false
+  useThinking: boolean = false,
+  retries: number = 3
 ) => {
   const ai = getGenAI();
   const config: any = {};
   
+  // Only use search if explicitly requested and prompt seems to need it
   if (useSearch) {
     config.tools = [{ googleSearch: {} }];
   }
@@ -37,24 +39,37 @@ export const generateContentFrontend = async (
     config.thinkingConfig = { thinkingLevel: ThinkingLevel.HIGH };
   }
 
-  try {
-    const response = await ai.models.generateContent({
-      model: modelName,
-      contents: prompt,
-      config
-    });
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents: prompt,
+        config
+      });
 
-    return {
-      text: response.text,
-      groundingChunks: response.candidates?.[0]?.groundingMetadata?.groundingChunks
-    };
-  } catch (error: any) {
-    console.error("Gemini Frontend Error:", error);
-    if (error.message?.includes("429") || error.message?.includes("quota")) {
-      throw new Error("Quota d'IA épuisé (429). Veuillez patienter quelques minutes ou vérifier votre plan Gemini.");
+      return {
+        text: response.text,
+        groundingChunks: response.candidates?.[0]?.groundingMetadata?.groundingChunks
+      };
+    } catch (error: any) {
+      const isQuotaError = error.message?.includes("429") || error.message?.includes("quota");
+      
+      if (isQuotaError && i < retries - 1) {
+        // Wait longer each time (2s, 4s, 6s)
+        const waitTime = (i + 1) * 2000;
+        console.warn(`Quota atteint. Nouvelle tentative dans ${waitTime/1000}s... (Essai ${i + 1}/${retries})`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        continue;
+      }
+
+      console.error("Gemini Frontend Error:", error);
+      if (isQuotaError) {
+        throw new Error("Le quota de l'IA est temporairement saturé. Veuillez patienter 1 minute et réessayer. (Note: Le plan gratuit est limité en nombre de recherches par minute)");
+      }
+      throw error;
     }
-    throw error;
   }
+  throw new Error("Échec après plusieurs tentatives suite à un dépassement de quota.");
 };
 
 export const performSearchFrontend = async (
