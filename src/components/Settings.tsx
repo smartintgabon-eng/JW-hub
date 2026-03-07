@@ -18,6 +18,8 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
   const [bgQuery, setBgQuery] = useState('');
   const [btnColorDescription, setBtnColorDescription] = useState<string | null>(null);
   const [bgColorDescription, setBgColorDescription] = useState<string | null>(null);
+  const [isGuessingBtn, setIsGuessingBtn] = useState(false);
+  const [isGuessingBg, setIsGuessingBg] = useState(false);
 
   useEffect(() => {
     setDraft(settings);
@@ -102,7 +104,9 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
           setDraft(prev => ({ ...prev, btnColor: btnQuery }));
           setBtnColorDescription(null);
         } else {
+          setIsGuessingBtn(true);
           handleGuessColor(btnQuery, 'btn');
+          setIsGuessingBtn(false);
         }
       }
     }, 1000);
@@ -117,7 +121,9 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
           setDraft(prev => ({ ...prev, bgColor: bgQuery }));
           setBgColorDescription(null);
         } else {
+          setIsGuessingBg(true);
           handleGuessColor(bgQuery, 'bg');
+          setIsGuessingBg(false);
         }
       }
     }, 1000);
