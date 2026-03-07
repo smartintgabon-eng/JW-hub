@@ -4,6 +4,7 @@ import { Megaphone, Loader2, AlertTriangle, BookOpen, Link as LinkIcon, Handshak
 import { AppSettings, GeneratedStudy, PredicationType, AppView } from '../types.ts';
 import { generateStudyContent } from '../services/geminiService.ts'; 
 import { saveInputState, loadInputState } from '../utils/storage.ts';
+import ContentInclusion, { ContentOptions } from './ContentInclusion.tsx';
 
 interface Props {
   onGenerated: (study: GeneratedStudy) => void;
@@ -38,6 +39,13 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
   const [cbType, setCbType] = useState<'new' | 'ongoing' | null>(() => loadInputState('cbType', null));
   const [cbChapterParagraph, setCbChapterParagraph] = useState(() => loadInputState('cbChapterParagraph', ''));
   const [cbPublicationLink, setCbPublicationLink] = useState(() => loadInputState('cbPublicationLink', ''));
+  const [contentOptions, setContentOptions] = useState<ContentOptions>({
+    includeArticles: true,
+    includeImages: false,
+    includeVideos: false,
+    includeVerses: true,
+    articleLinks: [],
+  });
 
   useEffect(() => {
     if (cooldown > 0) {
@@ -110,13 +118,7 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
         AppView.PREDICATION,
         inputDetails,
         settings,
-        {
-            includeArticles: false,
-            includeImages: false,
-            includeVideos: false,
-            includeVerses: false,
-            articleLinks: []
-        },
+        contentOptions,
         'tout',
         preachingType
       );
@@ -260,6 +262,7 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
                 className="w-full py-5 rounded-xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center space-x-2">
                 Suivant <ChevronRight size={20} />
               </button>
+              <ContentInclusion options={contentOptions} onChange={setContentOptions} />
             </div>
           )}
 

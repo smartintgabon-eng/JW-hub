@@ -206,11 +206,11 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
         combinedInput,
         settings,
         {
-            includeArticles: false,
-            includeImages: false,
-            includeVideos: false,
-            includeVerses: false,
-            articleLinks: []
+          includeArticles: false,
+          includeImages: false,
+          includeVideos: false,
+          includeVerses: false,
+          articleLinks: []
         },
         part
       );

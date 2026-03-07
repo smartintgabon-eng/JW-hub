@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import * as cheerio from 'cheerio';
+import { kv } from '@vercel/kv';
 
 let aiClient;
 function getAiClient() {
@@ -36,6 +37,17 @@ function getAiClient() {
 }
 
 async function fetchArticleData(url) {
+  // Try to get from cache first
+  try {
+    const cached = await kv.get(`article:${url}`);
+    if (cached) {
+      console.log(`Cache hit for article: ${url}`);
+      return cached;
+    }
+  } catch (e) {
+    console.warn("KV Cache read error:", e);
+  }
+
   const maxRetries = 3;
   let attempt = 0;
 
@@ -106,7 +118,16 @@ async function fetchArticleData(url) {
           console.warn("No body text found for URL:", url);
       }
 
-      return { title, summary, image, bodyText };
+      const articleData = { title, summary, image, bodyText };
+      
+      // Store in cache for 24 hours
+      try {
+        await kv.set(`article:${url}`, articleData, { ex: 86400 });
+      } catch (e) {
+        console.warn("KV Cache write error:", e);
+      }
+
+      return articleData;
     } catch (error) {
       attempt++;
       console.warn(`Fetch attempt ${attempt} failed for ${url}:`, error.message);
@@ -139,21 +160,43 @@ export default async function handler(req, res) {
     const isUrl = /^https?:\/\/(www\.)?(wol\.jw\.org|jw\.org)/i.test(articleUrl);
 
     if (!isUrl) {
-      const userLanguage = settings?.language || 'fr';
-      const searchPrompt = `Based on the user's question "${questionOrSubject}" in language "${userLanguage}", find the single most relevant article URL from wol.jw.org or jw.org. 
-      IMPORTANT: For French searches, look for URLs containing 'lp-f' and 'r30' parameters or content in French. 
-      Return ONLY the URL.`;
-      
+      // Try to get search result from cache
       try {
-        const urlResult = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: searchPrompt,
-            config: {
-              tools: [{ googleSearch: {} }]
+        const cachedUrl = await kv.get(`search:${questionOrSubject.trim()}:${settings?.language || 'fr'}`);
+        if (cachedUrl) {
+          console.log(`Cache hit for search: ${questionOrSubject}`);
+          articleUrl = cachedUrl;
+        }
+      } catch (e) {
+        console.warn("KV Cache search read error:", e);
+      }
+      
+      // If still not a URL (not in cache), perform AI search
+      if (!/^https?:\/\//i.test(articleUrl)) {
+        const userLanguage = settings?.language || 'fr';
+        const searchPrompt = `Based on the user's question "${questionOrSubject}" in language "${userLanguage}", find the single most relevant article URL from wol.jw.org or jw.org. 
+        IMPORTANT: For French searches, look for URLs containing 'lp-f' and 'r30' parameters or content in French. 
+        Return ONLY the URL.`;
+        
+        try {
+          const urlResult = await ai.models.generateContent({
+              model: 'gemini-3-flash-preview',
+              contents: searchPrompt,
+              config: {
+                tools: [{ googleSearch: {} }]
+              }
+          });
+          articleUrl = urlResult.text.trim();
+          
+          // Cache the search result for 12 hours
+          if (articleUrl.startsWith('http')) {
+            try {
+              await kv.set(`search:${questionOrSubject.trim()}:${settings?.language || 'fr'}`, articleUrl, { ex: 43200 });
+            } catch (e) {
+              console.warn("KV Cache search write error:", e);
             }
-        });
-        articleUrl = urlResult.text.trim();
-      } catch (aiError) {
+          }
+        } catch (aiError) {
         console.error("AI Search Error:", aiError);
         // Check for API key expiration in the search step
         if (aiError.message && (aiError.message.includes('API key expired') || aiError.message.includes('API_KEY_INVALID'))) {
@@ -165,6 +208,7 @@ export default async function handler(req, res) {
         return res.status(500).json({ message: 'AI Search failed', details: aiError.message });
       }
     }
+  }
 
     if (!articleUrl || !articleUrl.startsWith('http')) {
         if (confirmMode) {
@@ -205,89 +249,93 @@ export default async function handler(req, res) {
       console.warn("Scraping failed, falling back to AI search:", scrapeError);
     }
 
-    if (confirmMode) {
-        if (articleData && articleData.title) {
-            return res.status(200).json({
-                previewTitle: articleData.title,
-                previewSummary: articleData.summary,
-                previewImage: articleData.image,
-                previewInfos: `Source: ${new URL(articleUrl).hostname}`
-            });
-        } else {
-             // Fallback preview if scraping fails or returns incomplete data
-             // Use AI to extract metadata from the URL using Google Search tool
-             const metadataPrompt = `Extract from ${articleUrl}:
-             1. Title
-             2. Theme Bible Verse (if any)
-             3. Brief Summary (1-2 sentences)
-             4. Main Image URL
-             
-             Return ONLY a JSON object: {"title": "...", "themeVerse": "...", "summary": "...", "image": "..."}. 
-             Use "https://assets.jw.org/assets/m/jwb/jwb_placeholder.png" if no image.`;
-             
-             try {
-                const metadataResult = await ai.models.generateContent({
-                    model: 'gemini-3-flash-preview',
-                    contents: metadataPrompt,
-                    config: {
-                        responseMimeType: 'application/json',
-                        tools: [{ googleSearch: {} }]
-                    }
-                });
-                const metadata = JSON.parse(metadataResult.text);
-                return res.status(200).json({
-                    previewTitle: metadata.title || "Article trouvé",
-                    previewSummary: metadata.summary || metadata.themeVerse || "Aperçu non disponible.",
-                    previewImage: metadata.image || "https://assets.jw.org/assets/m/jwb/jwb_placeholder.png",
-                    previewInfos: metadata.themeVerse ? `Verset Thème: ${metadata.themeVerse}` : `Source: ${new URL(articleUrl).hostname}`
-                });
-             } catch (e) {
-                 console.error("Metadata extraction failed:", e);
-                 
-                 // If it's a quota error, return it clearly
-                 if (e.message && (e.message.includes('quota') || e.message.includes('429'))) {
-                    return res.status(429).json({ 
-                        message: "Quota d'IA épuisé (429). Veuillez patienter quelques minutes ou vérifier votre plan Gemini.",
-                        details: e.message 
-                    });
-                 }
-
-                 return res.status(500).json({
-                    message: "Impossible d'analyser l'article. Vérifiez le lien ou réessayez plus tard.",
-                    details: e.message
-                });
-             }
-        }
-    } else {
-      let explanationPrompt;
-      let contentInclusionInstructions = "";
-
-      if (contentOptions) {
-        if (contentOptions.includeArticles) contentInclusionInstructions += "Include references to other relevant articles from jw.org or wol.jw.org.\n";
-        if (contentOptions.includeImages) contentInclusionInstructions += "Describe relevant images or visual aids that could be used.\n";
-        if (contentOptions.includeVideos) contentInclusionInstructions += "Suggest relevant videos from jw.org.\n";
-        if (contentOptions.includeVerses) contentInclusionInstructions += "Include key Bible verses (NWT).\n";
-        if (contentOptions.articleLinks && contentOptions.articleLinks.length > 0) {
-            contentInclusionInstructions += `Consider these additional articles: ${contentOptions.articleLinks.join(', ')}\n`;
-        }
-      }
-
-      if (articleData && articleData.bodyText) {
-        explanationPrompt = `Based on the user's question "${questionOrSubject}" and the content of this article, provide a structured explanation.\nArticle Title: ${articleData.title}\nArticle Content: "${articleData.bodyText.substring(0, 15000)}"\nUser Preferences: ${JSON.stringify(settings?.answerPreferences || [])}\n${contentInclusionInstructions}\nFormat the response in Markdown. Include the article title as a heading, the URL as a clickable link [Lien de l'article](${articleUrl}), and then the detailed explanation. Ensure the content is strictly based on the provided text and Jehovah's Witnesses teachings.`;
+    const attemptGeneration = async (withSearch) => {
+      const config = {
+        tools: withSearch ? [{ googleSearch: {} }] : []
+      };
+      
+      if (confirmMode) {
+        const metadataPrompt = `Extract from ${articleUrl}:
+        1. Title
+        2. Theme Bible Verse (if any)
+        3. Brief Summary (1-2 sentences)
+        4. Main Image URL
+        
+        Return ONLY a JSON object: {"title": "...", "themeVerse": "...", "summary": "...", "image": "..."}. 
+        Use "https://assets.jw.org/assets/m/jwb/jwb_placeholder.png" if no image.`;
+        
+        config.responseMimeType = 'application/json';
+        return await ai.models.generateContent({
+          model: 'gemini-3-flash-preview',
+          contents: metadataPrompt,
+          config
+        });
       } else {
-        // Fallback prompt using Google Search tool directly on the URL
-        explanationPrompt = `The user wants an analysis of this URL: ${articleUrl}. \nQuestion: "${questionOrSubject}"\nUser Preferences: ${JSON.stringify(settings?.answerPreferences || [])}\n${contentInclusionInstructions}\nUse your Google Search tool to read the content of the URL if possible, or search for information about it. Prioritize content from jw.org or wol.jw.org (especially French content with lp-f/r30 if applicable). Format the response in Markdown. Include the article title as a heading, the URL as a clickable link [Lien de l'article](${articleUrl}), and then the detailed explanation. Ensure the content is strictly based on Jehovah's Witnesses teachings.`;
-      }
+        let explanationPrompt;
+        let contentInclusionInstructions = "";
 
-      const explanationResult = await ai.models.generateContent({
+        if (contentOptions) {
+          if (contentOptions.includeArticles) contentInclusionInstructions += "Include references to other relevant articles from jw.org or wol.jw.org.\n";
+          if (contentOptions.includeImages) contentInclusionInstructions += "Describe relevant images or visual aids that could be used.\n";
+          if (contentOptions.includeVideos) contentInclusionInstructions += "Suggest relevant videos from jw.org.\n";
+          contentInclusionInstructions += "Include key Bible verses (NWT) - this is MANDATORY.\n";
+          if (contentOptions.articleLinks && contentOptions.articleLinks.length > 0) {
+              contentInclusionInstructions += `Consider these additional articles: ${contentOptions.articleLinks.join(', ')}\n`;
+          }
+        }
+
+        if (articleData && articleData.bodyText) {
+          explanationPrompt = `Based on the user's question "${questionOrSubject}" and the content of this article, provide a structured explanation.\nArticle Title: ${articleData.title}\nArticle Content: "${articleData.bodyText.substring(0, 15000)}"\nUser Preferences: ${JSON.stringify(settings?.answerPreferences || [])}\n${contentInclusionInstructions}\nFormat the response in Markdown. Include the article title as a heading, the URL as a clickable link [Lien de l'article](${articleUrl}). 
+          
+          STRUCTURE DE LA RÉPONSE :
+          1. TEXTE BRUT : Inclus une section "Texte de l'article" avec le contenu principal de l'article.
+          2. EXPLICATION : Fournis une explication détaillée et fidèle basée sur les enseignements des Témoins de Jéhovah.
+          3. VERSETS : Inclus systématiquement les versets bibliques (TMN).
+          4. SOURCES : À la fin, liste toutes les sources (articles, vidéos, images) avec des liens directs.
+          
+          Assure-toi que le contenu est strictement basé sur le texte fourni et les publications officielles.`;
+        } else {
+          explanationPrompt = `The user wants an analysis of this URL: ${articleUrl}. \nQuestion: "${questionOrSubject}"\nUser Preferences: ${JSON.stringify(settings?.answerPreferences || [])}\n${contentInclusionInstructions}\nUse your Google Search tool to read the content of the URL if possible.
+          
+          STRUCTURE DE LA RÉPONSE :
+          1. EXPLICATION : Fournis une explication détaillée et fidèle basée sur les enseignements des Témoins de Jéhovah.
+          2. VERSETS : Inclus systématiquement les versets bibliques (TMN).
+          3. SOURCES : À la fin, liste toutes les sources (articles, vidéos, images) avec des liens directs.
+          
+          Formatte la réponse en Markdown. Inclus le titre de l'article et le lien [Lien de l'article](${articleUrl}).`;
+        }
+
+        return await ai.models.generateContent({
           model: 'gemini-3-flash-preview',
           contents: explanationPrompt,
-          config: {
-            tools: [{ googleSearch: {} }]
-          }
-      });
+          config
+        });
+      }
+    };
 
-      return res.status(200).json({ text: explanationResult.text });
+    let result;
+    try {
+      result = await attemptGeneration(true);
+    } catch (e) {
+      const isQuotaError = e.message?.includes("429") || e.message?.includes("quota");
+      if (isQuotaError) {
+        console.warn("Search quota hit, falling back to non-search generation...");
+        result = await attemptGeneration(false);
+      } else {
+        throw e;
+      }
+    }
+
+    if (confirmMode) {
+      const metadata = JSON.parse(result.text);
+      return res.status(200).json({
+        previewTitle: metadata.title || "Article trouvé",
+        previewSummary: metadata.summary || metadata.themeVerse || "Aperçu non disponible.",
+        previewImage: metadata.image || "https://assets.jw.org/assets/m/jwb/jwb_placeholder.png",
+        previewInfos: metadata.themeVerse ? `Verset Thème: ${metadata.themeVerse}` : `Source: ${new URL(articleUrl).hostname}`
+      });
+    } else {
+      return res.status(200).json({ text: result.text + (result.groundingMetadata ? "" : "\n\n*(Note: Cette réponse a été générée sans recherche en direct car le quota de recherche est saturé)*") });
     }
 
   } catch (error) {

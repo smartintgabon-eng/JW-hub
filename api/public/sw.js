@@ -3,8 +3,8 @@ const ASSETS = [
   '/',
   '/index.html',
   '/logo.png',
-  '/pwa-192.png',
-  '/pwa-512.png',
+  '/pwa-192.svg',
+  '/pwa-512.svg',
   'https://cdn.tailwindcss.com',
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap' // Cache fonts
 ];
@@ -26,11 +26,13 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.url.includes('/api/') || event.request.method !== 'GET') {
-    // For API calls, try network first, then cache (or just network if not applicable to cache)
-    event.respondWith(
-      fetch(event.request).catch(() => caches.match(event.request))
-    );
+  // STRICT BYPASS for API calls - bypass cache entirely
+  if (event.request.url.includes('/api/')) {
+    return event.respondWith(fetch(event.request));
+  }
+
+  if (event.request.method !== 'GET') {
+    event.respondWith(fetch(event.request));
     return;
   }
 

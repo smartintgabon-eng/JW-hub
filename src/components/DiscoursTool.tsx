@@ -3,6 +3,8 @@ import { AppSettings, GeneratedStudy } from '../types.ts';
 import { saveInputState, loadInputState } from '../utils/storage.ts';
 import { Search, Loader2, BookOpen, Plus, Minus } from 'lucide-react';
 
+import ContentInclusion, { ContentOptions } from './ContentInclusion.tsx';
+
 interface Props {
   onGenerated: (study: GeneratedStudy) => void;
   settings: AppSettings;
@@ -61,6 +63,13 @@ const DiscoursTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoading
   const [encouragements, setEncouragements] = useState(loadInputState('discours-encouragements', ''));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [contentOptions, setContentOptions] = useState<ContentOptions>({
+    includeArticles: true,
+    includeImages: false,
+    includeVideos: false,
+    includeVerses: true,
+    articleLinks: [],
+  });
 
   // Persistence effects
   useEffect(() => { saveInputState('discours-type', discoursType); }, [discoursType]);
@@ -289,6 +298,7 @@ const DiscoursTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoading
           strengths: strengths.filter(Boolean),
           encouragements,
           settings,
+          contentOptions,
         }),
       });
       const data = await res.json();
@@ -373,6 +383,8 @@ const DiscoursTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoading
               </div>
               <button onClick={() => setThemeConfirmed(null)} className="text-xs font-bold opacity-30 hover:opacity-100 uppercase underline">{getLocalizedText(settings, 'changeTheme')}</button>
             </div>
+
+            <ContentInclusion options={contentOptions} onChange={setContentOptions} />
 
             {renderReferences()}
             {renderSpecialDiscoursFields()}
