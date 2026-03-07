@@ -126,6 +126,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
   const [useManual, setUseManual] = useState(type === 'WATCHTOWER');
   const [loading, setLoading] = useState(false);
   const [articleConfirmed, setArticleConfirmed] = useState<any>(null);
+  const [streamingText, setStreamingText] = useState<string>(""); // For streaming
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -196,6 +197,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
 
   const startGeneration = async (part: StudyPart | 'tout') => {
     setLoading(true);
+    setStreamingText("");
     setGlobalLoadingMessage(`${getLocalizedText(settings, 'generationInProgress')} ${part.replace(/_/g, ' ')}...`);
     
     try {
@@ -213,7 +215,9 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
           includeVerses: false,
           articleLinks: []
         },
-        part
+        part,
+        undefined,
+        (text) => setStreamingText(text)
       );
 
       onGenerated({
@@ -229,6 +233,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
       setManualText('');
       setUseManual(type === 'WATCHTOWER'); // Reset useManual to default for the type
       setArticleConfirmed(null);
+      setStreamingText("");
     } catch (err: any) {
       setError(err.message || getLocalizedText(settings, 'generationFailed'));
     } finally {
@@ -331,6 +336,12 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
               </div>
               <button onClick={() => setArticleConfirmed(null)} className="text-xs font-bold opacity-30 hover:opacity-100 uppercase underline">{getLocalizedText(settings, 'change')}</button>
             </div>
+
+            {streamingText && (
+              <div className="p-6 bg-black/40 border border-white/5 rounded-2xl max-h-60 overflow-y-auto text-sm opacity-80 font-serif leading-relaxed">
+                {streamingText}
+              </div>
+            )}
 
             {type === 'MINISTRY' ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

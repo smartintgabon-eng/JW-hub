@@ -9,7 +9,8 @@ export const generateStudyContent = async (
   settings: AppSettings,
   contentOptions?: ContentOptions,
   part: StudyPart = 'tout',
-  preachingType?: PredicationType
+  preachingType?: PredicationType,
+  onStream?: (text: string) => void
 ): Promise<GeneratedStudy> => {
   
   const result = await callGenerateContentApi(
@@ -19,7 +20,9 @@ export const generateStudyContent = async (
     settings,
     false,
     preachingType,
-    contentOptions
+    contentOptions,
+    undefined,
+    onStream
   );
 
   return {
@@ -51,7 +54,8 @@ export const generateDiscourseContent = async (
   discoursType: string,
   time: string,
   theme: string,
-  settings: AppSettings
+  settings: AppSettings,
+  onStream?: (text: string) => void
 ): Promise<GeneratedStudy> => {
   
   const result = await callGenerateContentApi(
@@ -62,7 +66,8 @@ export const generateDiscourseContent = async (
     false,
     undefined,
     undefined,
-    { discoursType, time, theme }
+    { discoursType, time, theme },
+    onStream
   );
 
   return {
@@ -79,7 +84,9 @@ export const performSearch = async (
   query: string,
   settings: AppSettings,
   contentOptions?: ContentOptions,
-  confirmMode: boolean = false
+  confirmMode: boolean = false,
+  onStream?: (text: string) => void,
+  part?: string
 ) => {
-  return await callSearchContentApi(query, settings, confirmMode, contentOptions);
+  return await callSearchContentApi(query, settings, confirmMode, contentOptions, onStream, part);
 };

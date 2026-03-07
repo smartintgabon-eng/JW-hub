@@ -89,6 +89,7 @@ const RecherchesTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadi
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [articleConfirmed, setArticleConfirmed] = useState<any>(null); // For preview
+  const [streamingText, setStreamingText] = useState<string>(""); // For streaming
   const [contentOptions, setContentOptions] = useState<ContentOptions>({
     includeArticles: false,
     includeImages: false,
@@ -132,11 +133,14 @@ const RecherchesTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadi
     if (!query.trim() || !articleConfirmed) return;
     setLoading(true);
     setError(null);
+    setStreamingText("");
     setGlobalLoadingMessage(getLocalizedText(settings, 'analysisInProgress'));
 
     try {
       // Call without confirmMode to get full structured content
-      const data = await performSearch(query, settings, contentOptions, false); 
+      const data = await performSearch(query, settings, contentOptions, false, (text) => {
+        setStreamingText(text);
+      }); 
       
       const study: GeneratedStudy = {
         id: Date.now().toString(),
@@ -154,6 +158,7 @@ const RecherchesTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadi
       onGenerated(study); // Redirect to history
       setQuery(''); // Clear input after successful search
       setArticleConfirmed(null); // Reset confirmation
+      setStreamingText("");
     } catch (err: any) {
       setError(err.message || getLocalizedText(settings, 'generationFailed'));
     } finally {
@@ -218,6 +223,13 @@ const RecherchesTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadi
                 <AlertTriangle size={20} /> <span className="text-sm">{error}</span>
               </div>
             )}
+
+            {streamingText && (
+              <div className="p-6 bg-black/40 border border-white/5 rounded-2xl mb-4 max-h-60 overflow-y-auto text-sm opacity-80 font-serif leading-relaxed">
+                {streamingText}
+              </div>
+            )}
+
             <button
               onClick={handleGenerateContent}
               disabled={loading}

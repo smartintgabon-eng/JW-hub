@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AppSettings, GeneratedStudy } from '../types.ts';
 import { saveInputState, loadInputState } from '../utils/storage.ts';
 import { Search, Loader2, BookOpen, Plus, Minus } from 'lucide-react';
+import { callGenerateContentApi } from '../services/apiService.ts';
 
 import ContentInclusion, { ContentOptions } from './ContentInclusion.tsx';
 
@@ -62,6 +63,7 @@ const DiscoursTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoading
   const [strengths, setStrengths] = useState<string[]>(loadInputState('discours-strengths', ['']));
   const [encouragements, setEncouragements] = useState(loadInputState('discours-encouragements', ''));
   const [loading, setLoading] = useState(false);
+  const [streamingText, setStreamingText] = useState<string>(""); // For streaming
   const [error, setError] = useState<string | null>(null);
   const [contentOptions, setContentOptions] = useState<ContentOptions>({
     includeArticles: true,
@@ -280,14 +282,19 @@ const DiscoursTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoading
 
     setLoading(true);
     setError(null);
+    setStreamingText("");
     setGlobalLoadingMessage(getLocalizedText(settings, 'generatingDiscours'));
 
     try {
-      const res = await fetch('/api/generate-content', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'DISCOURS',
+      const result = await callGenerateContentApi(
+        'DISCOURS',
+        '',
+        'tout',
+        settings,
+        false,
+        undefined,
+        contentOptions,
+        {
           discoursType,
           time: time === 'custom' ? customTime : time,
           theme: themeConfirmed,
@@ -297,23 +304,20 @@ const DiscoursTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoading
           pointsToReinforce: pointsToReinforce.filter(Boolean),
           strengths: strengths.filter(Boolean),
           encouragements,
-          settings,
-          contentOptions,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || getLocalizedText(settings, 'generationFailed'));
+        },
+        (text) => setStreamingText(text)
+      );
 
       const study: GeneratedStudy = {
         id: Date.now().toString(),
         type: 'DISCOURS',
         title: themeConfirmed,
         date: new Date().toLocaleDateString(settings.language === 'fr' ? 'fr-FR' : settings.language === 'es' ? 'es-ES' : 'en-US'),
-        content: data.text,
+        content: result.text,
         timestamp: Date.now(),
         category: `discours_${discoursType}` as any,
         url: articleReferences.filter(Boolean).join(', ') || 'N/A',
-        aiExplanation: data.text,
+        aiExplanation: result.text,
       };
 
       onGenerated(study);
@@ -330,6 +334,7 @@ const DiscoursTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoading
       setPointsToReinforce(['']);
       setStrengths(['']);
       setEncouragements('');
+      setStreamingText("");
 
     } catch (err: any) {
       setError(err.message || getLocalizedText(settings, 'generationFailed'));
@@ -383,6 +388,12 @@ const DiscoursTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoading
               </div>
               <button onClick={() => setThemeConfirmed(null)} className="text-xs font-bold opacity-30 hover:opacity-100 uppercase underline">{getLocalizedText(settings, 'changeTheme')}</button>
             </div>
+
+            {streamingText && (
+              <div className="p-6 bg-black/40 border border-white/5 rounded-2xl max-h-60 overflow-y-auto text-sm opacity-80 font-serif leading-relaxed">
+                {streamingText}
+              </div>
+            )}
 
             <ContentInclusion options={contentOptions} onChange={setContentOptions} />
 

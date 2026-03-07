@@ -5,9 +5,10 @@ import { ContentOptions } from '../components/ContentInclusion';
 export const callSearchContentApi = async (
   questionOrSubject: string,
   settings: AppSettings,
-  // Fix: Add confirmMode parameter
   confirmMode: boolean, 
-  contentOptions?: ContentOptions
+  contentOptions?: ContentOptions,
+  onStream?: (text: string) => void,
+  part?: string
 ): Promise<{ 
     text: string; 
     title: string; 
@@ -17,7 +18,8 @@ export const callSearchContentApi = async (
     previewTitle?: string;
     previewSummary?: string;
     previewImage?: string;
-    previewInfos?: string; // Added for "Infos clés"
+    previewInfos?: string;
+    url?: string;
 }> => {
 
   const response = await fetch('/api/search-content', {
@@ -28,9 +30,9 @@ export const callSearchContentApi = async (
     body: JSON.stringify({
       questionOrSubject,
       settings,
-      // Fix: Pass confirmMode in the request body
       confirmMode, 
       contentOptions,
+      part,
       articleReferences: contentOptions?.articleLinks
     }),
   });
@@ -40,11 +42,34 @@ export const callSearchContentApi = async (
     try {
       errorData = await response.json();
     } catch {
-      // If response.json() fails, it means the server didn't send JSON (e.g., HTML error page)
-      throw new Error(`Server Error: ${response.status} - Non-JSON response received.`);
+      throw new Error(`Server Error: ${response.status}`);
     }
     throw new Error(errorData.message || `API Error: ${response.status}`);
   }
 
-  return response.json();
+  // If confirmMode, it's JSON
+  if (confirmMode) {
+    return response.json();
+  }
+
+  // If not confirmMode, it's a stream
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("No response body");
+
+  let fullText = "";
+  const decoder = new TextDecoder();
+
+  let done = false;
+  while (!done) {
+    const { done: readerDone, value } = await reader.read();
+    if (readerDone) {
+      done = true;
+      break;
+    }
+    const chunk = decoder.decode(value, { stream: true });
+    fullText += chunk;
+    if (onStream) onStream(fullText);
+  }
+
+  return { text: fullText, title: questionOrSubject };
 };

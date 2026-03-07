@@ -15,6 +15,7 @@ interface Props {
 const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadingMessage }) => {
   const [predicationMode, setPredicationMode] = useState<PredicationType | null>(() => loadInputState('predicationMode', null));
   const [loading, setLoading] = useState(false);
+  const [streamingText, setStreamingText] = useState<string>(""); // For streaming
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
 
@@ -110,6 +111,7 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
     if (loading || cooldown > 0) return;
 
     setLoading(true);
+    setStreamingText("");
     setGlobalLoadingMessage('Génération de la préparation de prédication...');
     setError(null);
 
@@ -120,7 +122,8 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
         settings,
         contentOptions,
         'tout',
-        preachingType
+        preachingType,
+        (text) => setStreamingText(text)
       );
 
       setGlobalLoadingMessage('Enregistrement de la préparation et redirection...');
@@ -133,6 +136,7 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
       };
       onGenerated(newStudy);
       resetAllStates();
+      setStreamingText("");
     } catch (err: any) {
       handleError(err);
     } finally {
@@ -271,6 +275,13 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
               <button onClick={() => setPepStep(1)} className="flex items-center space-x-2 opacity-60 hover:opacity-100 mb-6">
                 <ChevronLeft size={20} /> <span className="text-sm">Retour</span>
               </button>
+
+              {streamingText && (
+                <div className="p-6 bg-black/40 border border-white/5 rounded-2xl mb-4 max-h-60 overflow-y-auto text-sm opacity-80 font-serif leading-relaxed">
+                  {streamingText}
+                </div>
+              )}
+
               <p className="text-lg opacity-80 font-medium text-center">Fournissez un contexte ou générez directement :</p>
               <div className="space-y-3">
                 <label className={getCommonLabelStyles()}>Conditions d&apos;actualités pour détailler le sujet (facultatif)</label>
@@ -343,6 +354,13 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
               <button onClick={() => setNvStep(1)} className="flex items-center space-x-2 opacity-60 hover:opacity-100 mb-6">
                 <ChevronLeft size={20} /> <span className="text-sm">Retour</span>
               </button>
+
+              {streamingText && (
+                <div className="p-6 bg-black/40 border border-white/5 rounded-2xl mb-4 max-h-60 overflow-y-auto text-sm opacity-80 font-serif leading-relaxed">
+                  {streamingText}
+                </div>
+              )}
+
               <div className="space-y-3">
                 <label className={getCommonLabelStyles()}>Lien direct de l&apos;article/publication (jw.org) <span className="opacity-40 font-normal lowercase">(Optionnel)</span></label>
                 <div className="relative">
@@ -384,6 +402,13 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
               <button onClick={() => setNvStep(1)} className="flex items-center space-x-2 opacity-60 hover:opacity-100 mb-6">
                 <ChevronLeft size={20} /> <span className="text-sm">Retour</span>
               </button>
+
+              {streamingText && (
+                <div className="p-6 bg-black/40 border border-white/5 rounded-2xl mb-4 max-h-60 overflow-y-auto text-sm opacity-80 font-serif leading-relaxed">
+                  {streamingText}
+                </div>
+              )}
+
               <div className="space-y-3">
                 <label className={getCommonLabelStyles()}>Question laissée en suspens</label>
                 <textarea value={nvQuestionLeft} onChange={(e) => {
@@ -466,6 +491,13 @@ const PredicationTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoad
               <button onClick={() => setCbStep(1)} className="flex items-center space-x-2 opacity-60 hover:opacity-100 mb-6">
                 <ChevronLeft size={20} /> <span className="text-sm">Retour</span>
               </button>
+
+              {streamingText && (
+                <div className="p-6 bg-black/40 border border-white/5 rounded-2xl mb-4 max-h-60 overflow-y-auto text-sm opacity-80 font-serif leading-relaxed">
+                  {streamingText}
+                </div>
+              )}
+
               {cbType === 'ongoing' && (
                 <div className="space-y-3">
                   <label className={getCommonLabelStyles()}>Où en êtes-vous ? (Ex: Chapitre 4, paragraphe 2)</label>

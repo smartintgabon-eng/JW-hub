@@ -111,7 +111,8 @@ async function fetchArticleData(url) {
       // Extract theme verse if available (often in .themeVerse or similar)
       const themeVerse = $('.themeVerse, .theme-verse, .scrp, .bible-verse').first().text().trim() || '';
 
-      const bodyText = $('#content .article-content, article, .main-content, #article, .pGroup, .document-body, .articleText').text().replace(/\s\s+/g, ' ').trim();
+      // Limit body text to 5000 characters for "Fast" mode
+      const bodyText = $('#content .article-content, article, .main-content, #article, .pGroup, .document-body, .articleText').text().replace(/\s\s+/g, ' ').trim().substring(0, 5000);
 
       const articleData = { title, summary, image, bodyText, themeVerse, url };
       
@@ -187,9 +188,9 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { questionOrSubject, settings, confirmMode, contentOptions } = req.body;
+  const { questionOrSubject, settings, confirmMode, contentOptions, part } = req.body;
 
-  if (!questionOrSubject) {
+  if (!questionOrSubject && !confirmMode) {
     return res.status(400).json({ message: 'Question or subject is required.' });
   }
 
@@ -270,11 +271,13 @@ export default async function handler(req, res) {
     const explanationPrompt = `
     Question de l'utilisateur : "${questionOrSubject}"
     Article Principal : ${articleData.title} (${articleUrl})
-    Contenu de l'article : "${articleData.bodyText.substring(0, 15000)}"
-    ${bibleText ? `Texte Biblique : "${bibleText.substring(0, 5000)}"` : ""}
+    Contenu de l'article : "${articleData.bodyText}"
+    ${bibleText ? `Texte Biblique : "${bibleText.substring(0, 3000)}"` : ""}
+    ${part && part !== 'tout' ? `SECTION SPÉCIFIQUE À GÉNÉRER : ${part.replace(/_/g, ' ')}` : ""}
     
     INSTRUCTIONS DE RÉPONSE :
     ${contentInclusionInstructions}
+    ${part && part !== 'tout' ? `CONCENTRE-TOI UNIQUEMENT sur la section "${part.replace(/_/g, ' ')}" de l'étude.` : ""}
     1. TEXTE DE L'ARTICLE : Présente le texte brut extrait de l'article (ou un résumé fidèle si trop long).
     2. TEXTE BIBLIQUE : Affiche le texte biblique complet concerné (verset ou chapitre).
     3. EXPLICATION : Fournis une explication pédagogique détaillée, fidèle aux enseignements des Témoins de Jéhovah.
@@ -287,13 +290,24 @@ export default async function handler(req, res) {
     Formatte la réponse en Markdown. Utilise des titres clairs.
     Lien de l'article source : [${articleData.title}](${articleUrl})`;
 
-    const result = await ai.models.generateContent({
+    // Use streaming for full generation to avoid Vercel timeout
+    const stream = await ai.models.generateContentStream({
       model: 'gemini-3-flash-preview',
       contents: explanationPrompt,
       config: { tools: [{ googleSearch: {} }] }
     });
 
-    return res.status(200).json({ text: result.text });
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Transfer-Encoding', 'chunked');
+
+    for await (const chunk of stream) {
+      if (chunk.text) {
+        res.write(chunk.text);
+      }
+    }
+    
+    res.end();
+    return;
 
   } catch (error) {
     console.error('API Error in search-content:', error);

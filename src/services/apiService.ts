@@ -10,7 +10,8 @@ export const callGenerateContentApi = async (
   isInitialSearchForPreview: boolean = false,
   preachingType: PredicationType | undefined,
   contentOptions?: ContentOptions,
-  extraParams?: Record<string, any> // Allow passing extra parameters
+  extraParams?: Record<string, any>,
+  onStream?: (text: string) => void
 ): Promise<{ text: string; title: string; theme?: string; rawSources?: GeneratedStudy['rawSources']; aiExplanation?: string }> => {
 
   const response = await fetch('/api/generate-content', {
@@ -27,14 +28,41 @@ export const callGenerateContentApi = async (
       preachingType,
       contentOptions,
       articleReferences: contentOptions?.articleLinks,
-      ...extraParams // Spread extra params into the body
+      ...extraParams 
     }),
   });
 
   if (!response.ok) {
-    const errorData = await response.json();
+    let errorData;
+    try {
+      errorData = await response.json();
+    } catch {
+      throw new Error(`Server Error: ${response.status}`);
+    }
     throw new Error(errorData.message || `API Error: ${response.status}`);
   }
 
-  return response.json();
+  if (type === 'DISCOURS_THEME') {
+    return response.json();
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("No response body");
+
+  let fullText = "";
+  const decoder = new TextDecoder();
+
+  let done = false;
+  while (!done) {
+    const { done: readerDone, value } = await reader.read();
+    if (readerDone) {
+      done = true;
+      break;
+    }
+    const chunk = decoder.decode(value, { stream: true });
+    fullText += chunk;
+    if (onStream) onStream(fullText);
+  }
+
+  return { text: fullText, title: "Generated Content" };
 };

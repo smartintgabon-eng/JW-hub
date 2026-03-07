@@ -94,7 +94,7 @@ async function scrapeUrl(url) {
       // Prioritize specific selectors for jw.org/wol.jw.org
       const content = $('article, main, .docTitle, .docSubTitle, .bodyTxt, .pGroup, #article').text() || $('body').text();
       
-      const cleanContent = content.replace(/\s+/g, ' ').trim().substring(0, 20000); // Increased limit slightly
+      const cleanContent = content.replace(/\s+/g, ' ').trim().substring(0, 5000); // Limit to 5000 for "Fast" mode
       
       // Store in cache for 24 hours
       try {
@@ -243,39 +243,29 @@ ${commonInstructions}`;
       });
     };
 
-    let result;
-    try {
-      result = await attemptGeneration(true);
-    } catch (e) {
-      const isQuotaError = e.message?.includes("429") || e.message?.includes("quota");
-      if (isQuotaError) {
-        console.warn("Generation quota hit, falling back to non-search generation...");
-        result = await attemptGeneration(false);
-      } else {
-        throw e;
+    if (type === 'DISCOURS_THEME') {
+      const result = await attemptGeneration(true);
+      return res.status(200).json({ theme: result.text.trim() });
+    }
+
+    // Use streaming for all other types to avoid Vercel timeout
+    const stream = await ai.models.generateContentStream({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+      config: { tools: [{ googleSearch: {} }] }
+    });
+
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Transfer-Encoding', 'chunked');
+
+    for await (const chunk of stream) {
+      if (chunk.text) {
+        res.write(chunk.text);
       }
     }
-
-    if (!result || !result.text) {
-      throw new Error("AI returned empty response");
-    }
-
-    let finalResponseText = result.text;
-    if (!result.groundingMetadata && type !== 'DISCOURS_THEME') {
-      finalResponseText += "\n\n*(Note: Cette réponse a été générée sans recherche en direct car le quota de recherche est saturé)*";
-    }
-
-    let title = "Generated Content";
-    if (type === 'DISCOURS_THEME') {
-      return res.status(200).json({ theme: result.text.trim() });
-    } else if (type === 'DISCOURS') {
-      title = theme;
-    } else {
-      const titleMatch = result.text.match(/^# (.*)/m);
-      if (titleMatch) title = titleMatch[1];
-    }
-
-    res.status(200).json({ text: finalResponseText, title });
+    
+    res.end();
+    return;
 
   } catch (error) {
     console.error('API Error in generate-content:', error);
