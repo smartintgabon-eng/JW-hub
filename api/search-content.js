@@ -37,6 +37,8 @@ function getAiClient() {
 }
 
 async function fetchArticleData(url) {
+  if (!url || !url.startsWith('http')) return null;
+  
   // Try to get from cache first
   try {
     const cached = await kv.get(`article:${url}`);
@@ -54,7 +56,7 @@ async function fetchArticleData(url) {
   while (attempt < maxRetries) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
 
       const response = await fetch(url, {
         signal: controller.signal,
@@ -64,21 +66,13 @@ async function fetchArticleData(url) {
           'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache',
-          'Sec-Ch-Ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
-          'Sec-Ch-Ua-Mobile': '?0',
-          'Sec-Ch-Ua-Platform': '"Windows"',
-          'Sec-Fetch-Dest': 'document',
-          'Sec-Fetch-Mode': 'navigate',
-          'Sec-Fetch-Site': 'none',
-          'Sec-Fetch-User': '?1',
-          'Upgrade-Insecure-Requests': '1',
           'Referer': 'https://www.google.com/'
         }
       });
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        console.warn(`Failed to fetch article, status: ${response.status} ${response.statusText}`);
+        console.warn(`Failed to fetch article, status: ${response.status} ${response.statusText} for ${url}`);
         return null;
       }
       const html = await response.text();
@@ -94,7 +88,9 @@ async function fetchArticleData(url) {
       const title = $('h1').first().text().trim() || $('title').text().trim();
       const summary = $('meta[name=description]').attr('content') || '';
       let image = $('meta[property="og:image"]').attr('content') || null;
-      const firstArticleImage = $('#content img, .article-content img, article img, .main-content img').first().attr('src');
+      
+      // Try to find a better image in the content
+      const firstArticleImage = $('#content img, .article-content img, article img, .main-content img, .publication-image img').first().attr('src');
       
       if (firstArticleImage) {
         if (firstArticleImage.startsWith('/')) {
@@ -112,13 +108,12 @@ async function fetchArticleData(url) {
         image = "https://assets.jw.org/assets/m/jwb/jwb_placeholder.png";
       }
 
-      const bodyText = $('#content .article-content, article, .main-content, #article, .pGroup, .document-body').text().replace(/\s\s+/g, ' ').trim();
+      // Extract theme verse if available (often in .themeVerse or similar)
+      const themeVerse = $('.themeVerse, .theme-verse, .scrp, .bible-verse').first().text().trim() || '';
 
-      if (!bodyText) {
-          console.warn("No body text found for URL:", url);
-      }
+      const bodyText = $('#content .article-content, article, .main-content, #article, .pGroup, .document-body, .articleText').text().replace(/\s\s+/g, ' ').trim();
 
-      const articleData = { title, summary, image, bodyText };
+      const articleData = { title, summary, image, bodyText, themeVerse, url };
       
       // Store in cache for 24 hours
       try {
@@ -131,13 +126,59 @@ async function fetchArticleData(url) {
     } catch (error) {
       attempt++;
       console.warn(`Fetch attempt ${attempt} failed for ${url}:`, error.message);
-      if (attempt >= maxRetries) {
-        console.error('Max fetch retries reached.');
-        return null;
-      }
-      // Wait a bit before retrying (e.g., 1s)
+      if (attempt >= maxRetries) return null;
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
+  }
+}
+
+async function searchJW(query, language = 'fr') {
+  const searchUrl = `https://www.jw.org/${language}/rechercher/?q=${encodeURIComponent(query)}`;
+  try {
+    const response = await fetch(searchUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' }
+    });
+    if (!response.ok) return [];
+    const html = await response.text();
+    const $ = cheerio.load(html);
+    const results = [];
+    $('.resultTitle a').each((i, el) => {
+      if (i < 3) {
+        let href = $(el).attr('href');
+        if (href && href.startsWith('/')) href = `https://www.jw.org${href}`;
+        results.push(href);
+      }
+    });
+    return results;
+  } catch (e) {
+    console.error("JW Search error:", e);
+    return [];
+  }
+}
+
+async function searchWOL(query, language = 'fr') {
+  const langCode = language === 'fr' ? 'lp-f' : language === 'es' ? 'lp-s' : 'lp-e';
+  const rCode = language === 'fr' ? 'r30' : language === 'es' ? 'r132' : 'r1';
+  const searchUrl = `https://wol.jw.org/${language}/wol/s/${rCode}/${langCode}?q=${encodeURIComponent(query)}`;
+  try {
+    const response = await fetch(searchUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' }
+    });
+    if (!response.ok) return [];
+    const html = await response.text();
+    const $ = cheerio.load(html);
+    const results = [];
+    $('.resultTitle a').each((i, el) => {
+      if (i < 3) {
+        let href = $(el).attr('href');
+        if (href && href.startsWith('/')) href = `https://wol.jw.org${href}`;
+        results.push(href);
+      }
+    });
+    return results;
+  } catch (e) {
+    console.error("WOL Search error:", e);
+    return [];
   }
 }
 
@@ -154,189 +195,105 @@ export default async function handler(req, res) {
 
   try {
     const ai = getAiClient();
+    const userLanguage = settings?.language || 'fr';
     let articleUrl = questionOrSubject.trim();
+
+    // Intent Analysis
+    const lowerQuery = questionOrSubject.toLowerCase();
+    const isTellIntent = lowerQuery.includes('raconte') || lowerQuery.includes('histoire') || lowerQuery.includes('tell');
 
     // Check if the input is already a valid URL
     const isUrl = /^https?:\/\/(www\.)?(wol\.jw\.org|jw\.org)/i.test(articleUrl);
 
     if (!isUrl) {
-      // Try to get search result from cache
-      try {
-        const cachedUrl = await kv.get(`search:${questionOrSubject.trim()}:${settings?.language || 'fr'}`);
-        if (cachedUrl) {
-          console.log(`Cache hit for search: ${questionOrSubject}`);
-          articleUrl = cachedUrl;
-        }
-      } catch (e) {
-        console.warn("KV Cache search read error:", e);
-      }
+      // Perform real search on JW and WOL
+      const jwResults = await searchJW(questionOrSubject, userLanguage);
+      const wolResults = await searchWOL(questionOrSubject, userLanguage);
+      const allResults = [...jwResults, ...wolResults];
       
-      // If still not a URL (not in cache), perform AI search
-      if (!/^https?:\/\//i.test(articleUrl)) {
-        const userLanguage = settings?.language || 'fr';
+      if (allResults.length > 0) {
+        articleUrl = allResults[0]; // Take the first most relevant result
+      } else {
+        // Fallback to AI search if direct scraping search fails
         const searchPrompt = `Based on the user's question "${questionOrSubject}" in language "${userLanguage}", find the single most relevant article URL from wol.jw.org or jw.org. 
         IMPORTANT: For French searches, look for URLs containing 'lp-f' and 'r30' parameters or content in French. 
         Return ONLY the URL.`;
         
-        try {
-          const urlResult = await ai.models.generateContent({
-              model: 'gemini-3-flash-preview',
-              contents: searchPrompt,
-              config: {
-                tools: [{ googleSearch: {} }]
-              }
-          });
-          articleUrl = urlResult.text.trim();
-          
-          // Cache the search result for 12 hours
-          if (articleUrl.startsWith('http')) {
-            try {
-              await kv.set(`search:${questionOrSubject.trim()}:${settings?.language || 'fr'}`, articleUrl, { ex: 43200 });
-            } catch (e) {
-              console.warn("KV Cache search write error:", e);
-            }
-          }
-        } catch (aiError) {
-        console.error("AI Search Error:", aiError);
-        // Check for API key expiration in the search step
-        if (aiError.message && (aiError.message.includes('API key expired') || aiError.message.includes('API_KEY_INVALID'))) {
-            return res.status(500).json({ 
-              message: 'Your Gemini API Key has expired or is invalid. Please update GEMINI_API_KEY in your environment variables.', 
-              details: aiError.message 
-            });
-        }
-        return res.status(500).json({ message: 'AI Search failed', details: aiError.message });
+        const urlResult = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: searchPrompt,
+            config: { tools: [{ googleSearch: {} }] }
+        });
+        articleUrl = urlResult.text.trim();
       }
     }
-  }
 
     if (!articleUrl || !articleUrl.startsWith('http')) {
-        if (confirmMode) {
-             return res.status(404).json({ message: 'Could not find a relevant article URL.' });
-        } else {
-           // Fallback to answering the question directly using Grounding
-           let contentInclusionInstructions = "";
-           if (contentOptions) {
-             if (contentOptions.includeArticles) contentInclusionInstructions += "Include references to other relevant articles from jw.org or wol.jw.org.\n";
-             if (contentOptions.includeImages) contentInclusionInstructions += "Describe relevant images or visual aids that could be used.\n";
-             if (contentOptions.includeVideos) contentInclusionInstructions += "Suggest relevant videos from jw.org.\n";
-             if (contentOptions.includeVerses) contentInclusionInstructions += "Include key Bible verses (NWT).\n";
-           }
-
-           const answerPrompt = `Answer the following question based on Jehovah's Witnesses teachings: "${questionOrSubject}". 
-           User Preferences: ${JSON.stringify(settings?.answerPreferences || [])}
-           ${contentInclusionInstructions}
-           Use Google Search to find relevant information on jw.org or wol.jw.org (especially French content with lp-f/r30). Format the response in Markdown.`;
-           
-           try {
-             const answerResult = await ai.models.generateContent({
-                 model: 'gemini-3-flash-preview',
-                 contents: answerPrompt,
-                 config: { tools: [{ googleSearch: {} }] }
-             });
-             return res.status(200).json({ text: answerResult.text });
-           } catch (e) {
-             console.error("Direct answer generation failed:", e);
-             return res.status(500).json({ message: "Failed to generate answer.", details: e.message });
-           }
-        }
+      return res.status(404).json({ message: 'Could not find a relevant article URL.' });
     }
 
-    let articleData = null;
-    try {
-      articleData = await fetchArticleData(articleUrl);
-    } catch (scrapeError) {
-      console.warn("Scraping failed, falling back to AI search:", scrapeError);
-    }
-
-    const attemptGeneration = async (withSearch) => {
-      const config = {
-        tools: withSearch ? [{ googleSearch: {} }] : []
-      };
-      
-      if (confirmMode) {
-        const metadataPrompt = `Extract from ${articleUrl}:
-        1. Title
-        2. Theme Bible Verse (if any)
-        3. Brief Summary (1-2 sentences)
-        4. Main Image URL
-        
-        Return ONLY a JSON object: {"title": "...", "themeVerse": "...", "summary": "...", "image": "..."}. 
-        Use "https://assets.jw.org/assets/m/jwb/jwb_placeholder.png" if no image.`;
-        
-        config.responseMimeType = 'application/json';
-        return await ai.models.generateContent({
-          model: 'gemini-3-flash-preview',
-          contents: metadataPrompt,
-          config
-        });
-      } else {
-        let explanationPrompt;
-        let contentInclusionInstructions = "";
-
-        if (contentOptions) {
-          if (contentOptions.includeArticles) contentInclusionInstructions += "Include references to other relevant articles from jw.org or wol.jw.org.\n";
-          if (contentOptions.includeImages) contentInclusionInstructions += "Describe relevant images or visual aids that could be used.\n";
-          if (contentOptions.includeVideos) contentInclusionInstructions += "Suggest relevant videos from jw.org.\n";
-          contentInclusionInstructions += "Include key Bible verses (NWT) - this is MANDATORY.\n";
-          if (contentOptions.articleLinks && contentOptions.articleLinks.length > 0) {
-              contentInclusionInstructions += `Consider these additional articles: ${contentOptions.articleLinks.join(', ')}\n`;
-          }
-        }
-
-        if (articleData && articleData.bodyText) {
-          explanationPrompt = `Based on the user's question "${questionOrSubject}" and the content of this article, provide a structured explanation.\nArticle Title: ${articleData.title}\nArticle Content: "${articleData.bodyText.substring(0, 15000)}"\nUser Preferences: ${JSON.stringify(settings?.answerPreferences || [])}\n${contentInclusionInstructions}\nFormat the response in Markdown. Include the article title as a heading, the URL as a clickable link [Lien de l'article](${articleUrl}). 
-          
-          STRUCTURE DE LA RÉPONSE :
-          1. TEXTE BRUT : Inclus une section "Texte de l'article" avec le contenu principal de l'article.
-          2. EXPLICATION : Fournis une explication détaillée et fidèle basée sur les enseignements des Témoins de Jéhovah.
-          3. VERSETS : Inclus systématiquement les versets bibliques (TMN).
-          4. SOURCES : À la fin, liste toutes les sources (articles, vidéos, images) avec des liens directs.
-          
-          Assure-toi que le contenu est strictement basé sur le texte fourni et les publications officielles.`;
-        } else {
-          explanationPrompt = `The user wants an analysis of this URL: ${articleUrl}. \nQuestion: "${questionOrSubject}"\nUser Preferences: ${JSON.stringify(settings?.answerPreferences || [])}\n${contentInclusionInstructions}\nUse your Google Search tool to read the content of the URL if possible.
-          
-          STRUCTURE DE LA RÉPONSE :
-          1. EXPLICATION : Fournis une explication détaillée et fidèle basée sur les enseignements des Témoins de Jéhovah.
-          2. VERSETS : Inclus systématiquement les versets bibliques (TMN).
-          3. SOURCES : À la fin, liste toutes les sources (articles, vidéos, images) avec des liens directs.
-          
-          Formatte la réponse en Markdown. Inclus le titre de l'article et le lien [Lien de l'article](${articleUrl}).`;
-        }
-
-        return await ai.models.generateContent({
-          model: 'gemini-3-flash-preview',
-          contents: explanationPrompt,
-          config
-        });
-      }
-    };
-
-    let result;
-    try {
-      result = await attemptGeneration(true);
-    } catch (e) {
-      const isQuotaError = e.message?.includes("429") || e.message?.includes("quota");
-      if (isQuotaError) {
-        console.warn("Search quota hit, falling back to non-search generation...");
-        result = await attemptGeneration(false);
-      } else {
-        throw e;
-      }
+    // Fetch main article data
+    const articleData = await fetchArticleData(articleUrl);
+    if (!articleData) {
+      return res.status(500).json({ message: "Failed to fetch article content." });
     }
 
     if (confirmMode) {
-      const metadata = JSON.parse(result.text);
       return res.status(200).json({
-        previewTitle: metadata.title || "Article trouvé",
-        previewSummary: metadata.summary || metadata.themeVerse || "Aperçu non disponible.",
-        previewImage: metadata.image || "https://assets.jw.org/assets/m/jwb/jwb_placeholder.png",
-        previewInfos: metadata.themeVerse ? `Verset Thème: ${metadata.themeVerse}` : `Source: ${new URL(articleUrl).hostname}`
+        previewTitle: articleData.title || "Article trouvé",
+        previewSummary: articleData.summary || "Aperçu non disponible.",
+        previewImage: articleData.image || "https://assets.jw.org/assets/m/jwb/jwb_placeholder.png",
+        previewInfos: articleData.themeVerse ? `Verset Thème: ${articleData.themeVerse}` : `Source: ${new URL(articleUrl).hostname}`,
+        url: articleUrl
       });
-    } else {
-      return res.status(200).json({ text: result.text + (result.groundingMetadata ? "" : "\n\n*(Note: Cette réponse a été générée sans recherche en direct car le quota de recherche est saturé)*") });
     }
+
+    // Full Generation Mode
+    let contentInclusionInstructions = "";
+    if (contentOptions) {
+      if (contentOptions.includeArticles) contentInclusionInstructions += "Include references to other relevant articles from jw.org or wol.jw.org.\n";
+      if (contentOptions.includeImages) contentInclusionInstructions += "Describe relevant images or visual aids that could be used.\n";
+      if (contentOptions.includeVideos) contentInclusionInstructions += "Suggest relevant videos from jw.org.\n";
+      contentInclusionInstructions += "Include key Bible verses (NWT) - this is MANDATORY.\n";
+    }
+
+    // If "Tell" intent, try to find Bible text first
+    let bibleText = "";
+    if (isTellIntent) {
+      const bibleSearch = await searchJW(`Bible ${questionOrSubject}`, userLanguage);
+      if (bibleSearch.length > 0) {
+        const bibleData = await fetchArticleData(bibleSearch[0]);
+        if (bibleData) bibleText = bibleData.bodyText;
+      }
+    }
+
+    const explanationPrompt = `
+    Question de l'utilisateur : "${questionOrSubject}"
+    Article Principal : ${articleData.title} (${articleUrl})
+    Contenu de l'article : "${articleData.bodyText.substring(0, 15000)}"
+    ${bibleText ? `Texte Biblique : "${bibleText.substring(0, 5000)}"` : ""}
+    
+    INSTRUCTIONS DE RÉPONSE :
+    ${contentInclusionInstructions}
+    1. TEXTE DE L'ARTICLE : Présente le texte brut extrait de l'article (ou un résumé fidèle si trop long).
+    2. TEXTE BIBLIQUE : Affiche le texte biblique complet concerné (verset ou chapitre).
+    3. EXPLICATION : Fournis une explication pédagogique détaillée, fidèle aux enseignements des Témoins de Jéhovah.
+    4. ANALYSE : ${isTellIntent ? "Détaille les aspects historiques et prophétiques du récit." : "Clarifie le sujet en utilisant les publications les plus récentes."}
+    5. SOURCES (MANDATOIRE) : À la fin, liste impérativement les liens directs vers :
+       - Les articles cités (jw.org / wol.jw.org)
+       - Les vidéos suggérées (jw.org)
+       - Les images sources
+    
+    Formatte la réponse en Markdown. Utilise des titres clairs.
+    Lien de l'article source : [${articleData.title}](${articleUrl})`;
+
+    const result = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: explanationPrompt,
+      config: { tools: [{ googleSearch: {} }] }
+    });
+
+    return res.status(200).json({ text: result.text });
 
   } catch (error) {
     console.error('API Error in search-content:', error);

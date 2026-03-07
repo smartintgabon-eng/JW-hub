@@ -184,6 +184,7 @@ const StudyTool: React.FC<Props> = ({ type, onGenerated, settings, setGlobalLoad
       } else {
         const data = await performSearch(mainLink, settings, undefined, true);
         setArticleConfirmed(data);
+        if (data.url) setMainLink(data.url); // Update with the actual found URL
       }
     } catch (err: any) {
       setError(err.message || getLocalizedText(settings, 'cannotAccessArticle'));

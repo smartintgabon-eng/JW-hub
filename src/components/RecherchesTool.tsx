@@ -115,6 +115,7 @@ const RecherchesTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadi
       const data = await performSearch(query, settings, undefined, true); 
       if (data.previewTitle) {
         setArticleConfirmed(data);
+        if (data.url) setQuery(data.url); // Update with the actual found URL
       } else {
         setError(getLocalizedText(settings, 'noArticleFound'));
       }
