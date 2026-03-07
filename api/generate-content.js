@@ -6,6 +6,7 @@ function getAiClient() {
   if (!aiClient) {
     const candidates = [
       process.env.GEMINI_API_KEY,
+      process.env.VITE_GEMINI_API_KEY,
       process.env.REACT_APP_GEMINI_API_KEY,
       process.env.GOOGLE_API_KEY,
       process.env.API_KEY
@@ -49,6 +50,16 @@ async function scrapeUrl(url) {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
           'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+          'Sec-Ch-Ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+          'Sec-Ch-Ua-Mobile': '?0',
+          'Sec-Ch-Ua-Platform': '"Windows"',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Upgrade-Insecure-Requests': '1',
           'Referer': 'https://www.google.com/'
         }
       });
@@ -171,7 +182,14 @@ ${commonInstructions}`;
       IMPORTANT: Your response must be strictly based on the provided content and the teachings found on jw.org and wol.jw.org. Use the Google Search tool to verify information on these sites if needed, especially looking for French content (lp-f, r30) if the user language is French.`;
       
       if (type === 'WATCHTOWER') {
-        prompt += `This is a Watchtower study article. Format the response with a clear title, a summary, and a detailed, point-by-point explanation for each paragraph or section. IMPORTANT: Also include the revision questions at the end and provide answers based on the article content.`;
+        prompt += `\nThis is a Watchtower study article. 
+        Format the response STRICTLY as follows, without skipping any paragraphs or questions:
+        1. A clear title.
+        2. A brief summary of the article.
+        3. Detailed answers to EVERY paragraph question, following the EXACT numerical order of the article (e.g., 1, 2, 3, 4-5, 6, etc.). 
+        4. For each paragraph or group of paragraphs, you MUST state the question first, then provide a detailed, faithful, and point-by-point explanation based on the article content.
+        5. Include the revision questions at the end with their respective answers, also in numerical order.
+        DO NOT group questions unless they are explicitly grouped in the article (e.g., 4-5).`;
       } else if (type === 'MINISTRY') {
         prompt += `This is a Ministry Workbook meeting part (${part || 'full'}). Format the response appropriately for this specific part, providing practical points, scriptures, and clear explanations.`;
       } else if (type === 'PREDICATION') {

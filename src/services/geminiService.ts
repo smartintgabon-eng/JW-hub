@@ -1,10 +1,6 @@
 import { AppSettings, AppView, GeneratedStudy, StudyPart, PredicationType } from '../types';
-import { 
-  generateStudyContentFrontend, 
-  generateDiscourseContentFrontend, 
-  generateDiscourseThemeFrontend, 
-  performSearchFrontend 
-} from './geminiFrontend';
+import { callGenerateContentApi } from './apiService';
+import { callSearchContentApi } from './searchApiService';
 import { ContentOptions } from '../components/ContentInclusion';
 
 export const generateStudyContent = async (
@@ -16,13 +12,14 @@ export const generateStudyContent = async (
   preachingType?: PredicationType
 ): Promise<GeneratedStudy> => {
   
-  const result = await generateStudyContentFrontend(
+  const result = await callGenerateContentApi(
     view === AppView.MINISTRY ? 'MINISTRY' : view === AppView.PREDICATION ? 'PREDICATION' : 'WATCHTOWER',
     input,
-    settings,
-    contentOptions,
     part,
-    preachingType
+    settings,
+    false,
+    preachingType,
+    contentOptions
   );
 
   return {
@@ -31,14 +28,23 @@ export const generateStudyContent = async (
     title: result.title || "Nouvelle Étude",
     content: result.text,
     date: new Date().toISOString(),
-    rawSources: result.rawSources
+    rawSources: result.rawSources || []
   };
 };
 
 export const generateDiscourseTheme = async (
   input: string
 ): Promise<string> => {
-  return await generateDiscourseThemeFrontend(input);
+  // We don't have a direct theme API, but we can use generate-content with a specific type
+  const result = await callGenerateContentApi(
+    'DISCOURS_THEME',
+    input,
+    'tout',
+    { language: 'fr' } as AppSettings, // Minimal settings
+    false,
+    undefined
+  );
+  return result.theme || result.text.trim();
 };
 
 export const generateDiscourseContent = async (
@@ -48,11 +54,15 @@ export const generateDiscourseContent = async (
   settings: AppSettings
 ): Promise<GeneratedStudy> => {
   
-  const result = await generateDiscourseContentFrontend(
-    discoursType,
-    time,
-    theme,
-    settings
+  const result = await callGenerateContentApi(
+    'DISCOURS',
+    '',
+    'tout',
+    settings,
+    false,
+    undefined,
+    undefined,
+    { discoursType, time, theme }
   );
 
   return {
@@ -71,5 +81,5 @@ export const performSearch = async (
   contentOptions?: ContentOptions,
   confirmMode: boolean = false
 ) => {
-  return await performSearchFrontend(query, settings, confirmMode, contentOptions);
+  return await callSearchContentApi(query, settings, confirmMode, contentOptions);
 };
