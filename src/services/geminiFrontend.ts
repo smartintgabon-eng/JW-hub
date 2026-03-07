@@ -25,51 +25,68 @@ export const generateContentFrontend = async (
   prompt: string,
   useSearch: boolean = true,
   useThinking: boolean = false,
-  retries: number = 3
+  retries: number = 2
 ) => {
   const ai = getGenAI();
-  const config: any = {};
   
-  // Only use search if explicitly requested and prompt seems to need it
-  if (useSearch) {
-    config.tools = [{ googleSearch: {} }];
-  }
+  // Internal function to attempt generation
+  const attempt = async (withSearch: boolean) => {
+    const config: any = {};
+    if (withSearch) {
+      config.tools = [{ googleSearch: {} }];
+    }
+    if (useThinking && modelName.includes("pro")) {
+      config.thinkingConfig = { thinkingLevel: ThinkingLevel.HIGH };
+    }
 
-  if (useThinking && modelName.includes("pro")) {
-    config.thinkingConfig = { thinkingLevel: ThinkingLevel.HIGH };
-  }
+    return await ai.models.generateContent({
+      model: modelName,
+      contents: prompt,
+      config
+    });
+  };
 
   for (let i = 0; i < retries; i++) {
     try {
-      const response = await ai.models.generateContent({
-        model: modelName,
-        contents: prompt,
-        config
-      });
+      // First attempt (usually with search)
+      const response = await attempt(useSearch);
 
       return {
         text: response.text,
         groundingChunks: response.candidates?.[0]?.groundingMetadata?.groundingChunks
       };
     } catch (error: any) {
-      const isQuotaError = error.message?.includes("429") || error.message?.includes("quota");
+      const errorMsg = error.message || "";
+      const isQuotaError = errorMsg.includes("429") || errorMsg.includes("quota") || errorMsg.includes("limit");
       
-      if (isQuotaError && i < retries - 1) {
-        // Wait longer each time (2s, 4s, 6s)
+      // CRITICAL FALLBACK: If search tool is causing quota issues, try WITHOUT search
+      if (isQuotaError && useSearch) {
+        console.warn("Quota de recherche atteint. Tentative de secours sans recherche Google...");
+        try {
+          const fallbackResponse = await attempt(false);
+          return {
+            text: fallbackResponse.text + "\n\n*(Note: Cette réponse a été générée sans recherche en direct car le quota de recherche est saturé)*",
+            groundingChunks: []
+          };
+        } catch (fallbackError) {
+          // If even fallback fails, we continue the retry loop
+        }
+      }
+
+      if (i < retries - 1) {
         const waitTime = (i + 1) * 2000;
-        console.warn(`Quota atteint. Nouvelle tentative dans ${waitTime/1000}s... (Essai ${i + 1}/${retries})`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
         continue;
       }
 
       console.error("Gemini Frontend Error:", error);
       if (isQuotaError) {
-        throw new Error("Le quota de l'IA est temporairement saturé. Veuillez patienter 1 minute et réessayer. (Note: Le plan gratuit est limité en nombre de recherches par minute)");
+        throw new Error("Le service est temporairement saturé sur Vercel. Veuillez réessayer dans 1 minute. (Conseil: Le plan gratuit de Google est très limité sur les sites externes)");
       }
       throw error;
     }
   }
-  throw new Error("Échec après plusieurs tentatives suite à un dépassement de quota.");
+  throw new Error("Échec de la génération après plusieurs tentatives.");
 };
 
 export const performSearchFrontend = async (
