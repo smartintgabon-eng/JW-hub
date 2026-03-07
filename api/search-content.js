@@ -36,27 +36,54 @@ function getAiClient() {
   return aiClient;
 }
 
+// Simple in-memory cache as fallback if KV is missing
+const localCache = new Map();
+
+async function getFromCache(key) {
+  try {
+    if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+      return await kv.get(key);
+    }
+  } catch (e) {
+    console.warn("KV Cache read error, falling back to local:", e.message);
+  }
+  return localCache.get(key);
+}
+
+async function setToCache(key, value, ttlSeconds) {
+  try {
+    if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+      await kv.set(key, value, { ex: ttlSeconds });
+      return;
+    }
+  } catch (e) {
+    console.warn("KV Cache write error, falling back to local:", e.message);
+  }
+  localCache.set(key, value);
+  // Simple cleanup for local cache to prevent memory leaks
+  if (localCache.size > 100) {
+    const firstKey = localCache.keys().next().value;
+    localCache.delete(firstKey);
+  }
+}
+
 async function fetchArticleData(url) {
   if (!url || !url.startsWith('http')) return null;
   
   // Try to get from cache first
-  try {
-    const cached = await kv.get(`article:${url}`);
-    if (cached) {
-      console.log(`Cache hit for article: ${url}`);
-      return cached;
-    }
-  } catch (e) {
-    console.warn("KV Cache read error:", e);
+  const cached = await getFromCache(`article:${url}`);
+  if (cached) {
+    console.log(`Cache hit for article: ${url}`);
+    return cached;
   }
 
-  const maxRetries = 3;
+  const maxRetries = 2; // Reduced retries to avoid saturation
   let attempt = 0;
 
   while (attempt < maxRetries) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout for Pro mode
 
       const response = await fetch(url, {
         signal: controller.signal,
@@ -117,11 +144,7 @@ async function fetchArticleData(url) {
       const articleData = { title, summary, image, bodyText, themeVerse, url };
       
       // Store in cache for 24 hours
-      try {
-        await kv.set(`article:${url}`, articleData, { ex: 86400 });
-      } catch (e) {
-        console.warn("KV Cache write error:", e);
-      }
+      await setToCache(`article:${url}`, articleData, 86400);
 
       return articleData;
     } catch (error) {
@@ -215,7 +238,8 @@ export default async function handler(req, res) {
       if (allResults.length > 0) {
         articleUrl = allResults[0]; // Take the first most relevant result
       } else {
-        // Fallback to AI search if direct scraping search fails
+        // Fallback to AI search ONLY if direct scraping search fails
+        // This saves tokens and uses the "Pro" power only when necessary
         const searchPrompt = `Based on the user's question "${questionOrSubject}" in language "${userLanguage}", find the single most relevant article URL from wol.jw.org or jw.org. 
         IMPORTANT: For French searches, look for URLs containing 'lp-f' and 'r30' parameters or content in French. 
         Return ONLY the URL.`;
@@ -227,6 +251,9 @@ export default async function handler(req, res) {
         });
         articleUrl = urlResult.text.trim();
       }
+    } else {
+      // If it IS a URL, we just use it directly. No Google Search needed.
+      console.log("Direct URL provided, skipping search step.");
     }
 
     if (!articleUrl || !articleUrl.startsWith('http')) {
@@ -290,24 +317,18 @@ export default async function handler(req, res) {
     Formatte la réponse en Markdown. Utilise des titres clairs.
     Lien de l'article source : [${articleData.title}](${articleUrl})`;
 
-    // Use streaming for full generation to avoid Vercel timeout
-    const stream = await ai.models.generateContentStream({
+    // Full Generation Mode (Standard POST, no streaming for now)
+    const result = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: explanationPrompt,
       config: { tools: [{ googleSearch: {} }] }
     });
 
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.setHeader('Transfer-Encoding', 'chunked');
-
-    for await (const chunk of stream) {
-      if (chunk.text) {
-        res.write(chunk.text);
-      }
+    if (!result || !result.text) {
+      throw new Error("AI returned empty response");
     }
-    
-    res.end();
-    return;
+
+    return res.status(200).json({ text: result.text });
 
   } catch (error) {
     console.error('API Error in search-content:', error);

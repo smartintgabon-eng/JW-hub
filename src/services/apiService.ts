@@ -14,55 +14,67 @@ export const callGenerateContentApi = async (
   onStream?: (text: string) => void
 ): Promise<{ text: string; title: string; theme?: string; rawSources?: GeneratedStudy['rawSources']; aiExplanation?: string }> => {
 
-  const response = await fetch('/api/generate-content', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      type,
-      input,
-      part,
-      settings,
-      isInitialSearchForPreview,
-      preachingType,
-      contentOptions,
-      articleReferences: contentOptions?.articleLinks,
-      ...extraParams 
-    }),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for Pro mode
 
-  if (!response.ok) {
-    let errorData;
-    try {
-      errorData = await response.json();
-    } catch {
-      throw new Error(`Server Error: ${response.status}`);
+  try {
+    const response = await fetch('/api/generate-content', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        type,
+        input,
+        part,
+        settings,
+        isInitialSearchForPreview,
+        preachingType,
+        contentOptions,
+        articleReferences: contentOptions?.articleLinks,
+        ...extraParams 
+      }),
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error("QUOTA_EXCEEDED: Quota d'IA épuisé. Veuillez patienter quelques minutes.");
+      }
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        throw new Error(`Server Error: ${response.status}`);
+      }
+      throw new Error(errorData.message || `API Error: ${response.status}`);
     }
-    throw new Error(errorData.message || `API Error: ${response.status}`);
-  }
 
-  if (type === 'DISCOURS_THEME') {
-    return response.json();
-  }
-
-  const reader = response.body?.getReader();
-  if (!reader) throw new Error("No response body");
-
-  let fullText = "";
-  const decoder = new TextDecoder();
-
-  let done = false;
-  while (!done) {
-    const { done: readerDone, value } = await reader.read();
-    if (readerDone) {
-      done = true;
-      break;
+    const data = await response.json();
+    
+    // Si on avait un callback de stream, on l'appelle une fois avec le texte complet pour la compatibilité UI
+    if (onStream && data.text) {
+      onStream(data.text);
     }
-    const chunk = decoder.decode(value, { stream: true });
-    fullText += chunk;
-    if (onStream) onStream(fullText);
-  }
 
-  return { text: fullText, title: "Generated Content" };
+    if (type === 'DISCOURS_THEME') {
+      return data;
+    }
+
+    return { 
+      text: data.text || "", 
+      title: data.title || "Generated Content",
+      theme: data.theme,
+      rawSources: data.rawSources,
+      aiExplanation: data.aiExplanation || data.text
+    };
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      throw new Error("TIMEOUT: La requête a dépassé 30 secondes et a été annulée.");
+    }
+    throw err;
+  }
 };

@@ -22,54 +22,64 @@ export const callSearchContentApi = async (
     url?: string;
 }> => {
 
-  const response = await fetch('/api/search-content', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      questionOrSubject,
-      settings,
-      confirmMode, 
-      contentOptions,
-      part,
-      articleReferences: contentOptions?.articleLinks
-    }),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for Pro mode
 
-  if (!response.ok) {
-    let errorData;
-    try {
-      errorData = await response.json();
-    } catch {
-      throw new Error(`Server Error: ${response.status}`);
+  try {
+    const response = await fetch('/api/search-content', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        questionOrSubject,
+        settings,
+        confirmMode, 
+        contentOptions,
+        part,
+        articleReferences: contentOptions?.articleLinks
+      }),
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error("QUOTA_EXCEEDED: Quota d'IA épuisé. Veuillez patienter quelques minutes.");
+      }
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        throw new Error(`Server Error: ${response.status}`);
+      }
+      throw new Error(errorData.message || `API Error: ${response.status}`);
     }
-    throw new Error(errorData.message || `API Error: ${response.status}`);
-  }
 
-  // If confirmMode, it's JSON
-  if (confirmMode) {
-    return response.json();
-  }
-
-  // If not confirmMode, it's a stream
-  const reader = response.body?.getReader();
-  if (!reader) throw new Error("No response body");
-
-  let fullText = "";
-  const decoder = new TextDecoder();
-
-  let done = false;
-  while (!done) {
-    const { done: readerDone, value } = await reader.read();
-    if (readerDone) {
-      done = true;
-      break;
+    const data = await response.json();
+    
+    // Si on avait un callback de stream, on l'appelle une fois avec le texte complet pour la compatibilité UI
+    if (onStream && data.text) {
+      onStream(data.text);
     }
-    const chunk = decoder.decode(value, { stream: true });
-    fullText += chunk;
-    if (onStream) onStream(fullText);
-  }
 
-  return { text: fullText, title: questionOrSubject };
+    if (confirmMode) {
+      return data;
+    }
+
+    return { 
+      text: data.text || "", 
+      title: data.title || questionOrSubject,
+      theme: data.theme,
+      rawSources: data.rawSources,
+      aiExplanation: data.aiExplanation || data.text
+    };
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      throw new Error("TIMEOUT: La recherche a dépassé 30 secondes et a été annulée.");
+    }
+    throw err;
+  }
 };

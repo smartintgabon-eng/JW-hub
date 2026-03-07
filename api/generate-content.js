@@ -36,25 +36,52 @@ function getAiClient() {
   return aiClient;
 }
 
-async function scrapeUrl(url) {
-  // Try cache first
+// Simple in-memory cache as fallback if KV is missing
+const localCache = new Map();
+
+async function getFromCache(key) {
   try {
-    const cached = await kv.get(`scrape:${url}`);
-    if (cached) {
-      console.log(`Cache hit for scrape: ${url}`);
-      return cached;
+    if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+      return await kv.get(key);
     }
   } catch (e) {
-    console.warn("KV Cache scrape read error:", e);
+    console.warn("KV Cache read error, falling back to local:", e.message);
+  }
+  return localCache.get(key);
+}
+
+async function setToCache(key, value, ttlSeconds) {
+  try {
+    if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+      await kv.set(key, value, { ex: ttlSeconds });
+      return;
+    }
+  } catch (e) {
+    console.warn("KV Cache write error, falling back to local:", e.message);
+  }
+  localCache.set(key, value);
+  // Simple cleanup for local cache to prevent memory leaks
+  if (localCache.size > 100) {
+    const firstKey = localCache.keys().next().value;
+    localCache.delete(firstKey);
+  }
+}
+
+async function scrapeUrl(url) {
+  // Try cache first
+  const cached = await getFromCache(`scrape:${url}`);
+  if (cached) {
+    console.log(`Cache hit for scrape: ${url}`);
+    return cached;
   }
 
-  const maxRetries = 3;
+  const maxRetries = 2; // Reduced retries
   let attempt = 0;
 
   while (attempt < maxRetries) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout for Pro mode
 
       const response = await fetch(url, {
         signal: controller.signal,
@@ -97,11 +124,7 @@ async function scrapeUrl(url) {
       const cleanContent = content.replace(/\s+/g, ' ').trim().substring(0, 5000); // Limit to 5000 for "Fast" mode
       
       // Store in cache for 24 hours
-      try {
-        await kv.set(`scrape:${url}`, cleanContent, { ex: 86400 });
-      } catch (e) {
-        console.warn("KV Cache scrape write error:", e);
-      }
+      await setToCache(`scrape:${url}`, cleanContent, 86400);
 
       return cleanContent;
     } catch (error) {
@@ -248,24 +271,14 @@ ${commonInstructions}`;
       return res.status(200).json({ theme: result.text.trim() });
     }
 
-    // Use streaming for all other types to avoid Vercel timeout
-    const stream = await ai.models.generateContentStream({
-      model: 'gemini-3-flash-preview',
-      contents: prompt,
-      config: { tools: [{ googleSearch: {} }] }
-    });
-
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.setHeader('Transfer-Encoding', 'chunked');
-
-    for await (const chunk of stream) {
-      if (chunk.text) {
-        res.write(chunk.text);
-      }
-    }
+    // Standard POST generation (no streaming for now)
+    const result = await attemptGeneration(true);
     
-    res.end();
-    return;
+    if (!result || !result.text) {
+      throw new Error("AI returned empty response");
+    }
+
+    return res.status(200).json({ text: result.text });
 
   } catch (error) {
     console.error('API Error in generate-content:', error);

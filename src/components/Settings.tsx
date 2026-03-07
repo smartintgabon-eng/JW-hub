@@ -18,8 +18,6 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
   const [bgQuery, setBgQuery] = useState('');
   const [btnColorDescription, setBtnColorDescription] = useState<string | null>(null);
   const [bgColorDescription, setBgColorDescription] = useState<string | null>(null);
-  const [isGuessingBtn, setIsGuessingBtn] = useState(false);
-  const [isGuessingBg, setIsGuessingBg] = useState(false);
 
   useEffect(() => {
     setDraft(settings);
@@ -27,48 +25,55 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
 
   const isHexCode = (str: string) => /^#([0-9A-F]{3}){1,2}$/i.test(str);
 
-  const handleGuessColor = React.useCallback(async (colorInput: string, setColorDescription: (desc: string | null) => void, setLoader: (l: boolean) => void, type: 'btn' | 'bg') => {
-    if (!colorInput || colorInput.length < 3) {
-      setColorDescription(null);
+  const handleGuessColor = React.useCallback((colorInput: string, type: 'btn' | 'bg') => {
+    if (!colorInput || colorInput.length < 2) {
       return;
     }
 
-    // Si c'est déjà un code hexadécimal, on l'applique directement sans appeler l'IA
+    // Si c'est déjà un code hexadécimal, on l'applique directement
     if (isHexCode(colorInput)) {
       if (type === 'btn') {
         setDraft(prev => ({ ...prev, btnColor: colorInput }));
       } else {
         setDraft(prev => ({ ...prev, bgColor: colorInput }));
       }
-      setColorDescription(null);
       return;
     }
 
-    setLoader(true);
-    try {
-      const response = await fetch('/api/guess-color', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: colorInput }), // The API expects 'text'
-      });
-      const data = await response.json();
-      if (data.hex) {
-        setColorDescription(`Couleur trouvée: ${data.hex}`);
-        if (type === 'btn') {
-          setDraft(prev => ({ ...prev, btnColor: data.hex }));
-          setBtnQuery(data.hex);
-        } else {
-          setDraft(prev => ({ ...prev, bgColor: data.hex }));
-          setBgQuery(data.hex);
-        }
+    // Fallback local pour les noms de couleurs courants (Point 3 de la demande)
+    const colorMap: Record<string, string> = {
+      'bleu': '#4a70b5',
+      'rouge': '#ef4444',
+      'vert': '#22c55e',
+      'jaune': '#eab308',
+      'noir': '#09090b',
+      'blanc': '#ffffff',
+      'gris': '#71717a',
+      'indigo': '#6366f1',
+      'violet': '#8b5cf6',
+      'rose': '#ec4899',
+      'orange': '#f97316',
+      'marron': '#78350f',
+      'olive': '#5A5A40',
+      'ciel': '#0ea5e9',
+      'ocean': '#0369a1',
+      'foret': '#14532d',
+      'or': '#fbbf24',
+      'argent': '#d1d5db'
+    };
+
+    const normalizedInput = colorInput.toLowerCase().trim();
+    const foundHex = colorMap[normalizedInput] || Object.entries(colorMap).find(([name]) => normalizedInput.includes(name))?.[1];
+
+    if (foundHex) {
+      if (type === 'btn') {
+        setDraft(prev => ({ ...prev, btnColor: foundHex }));
+        setBtnQuery(foundHex);
       } else {
-        setColorDescription("Impossible d'analyser cette couleur.");
+        setDraft(prev => ({ ...prev, bgColor: foundHex }));
+        setBgQuery(foundHex);
       }
-    } catch (error) {
-      console.error('Error guessing color:', error);
-      setColorDescription("Erreur d'analyse de couleur.");
-    } finally {
-      setLoader(false);
+      return;
     }
   }, []);
 
@@ -97,7 +102,7 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
           setDraft(prev => ({ ...prev, btnColor: btnQuery }));
           setBtnColorDescription(null);
         } else {
-          handleGuessColor(btnQuery, setBtnColorDescription, setIsGuessingBtn, 'btn');
+          handleGuessColor(btnQuery, 'btn');
         }
       }
     }, 1000);
@@ -112,7 +117,7 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
           setDraft(prev => ({ ...prev, bgColor: bgQuery }));
           setBgColorDescription(null);
         } else {
-          handleGuessColor(bgQuery, setBgColorDescription, setIsGuessingBg, 'bg');
+          handleGuessColor(bgQuery, 'bg');
         }
       }
     }, 1000);
