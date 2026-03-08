@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Palette, Check, Trash2, RotateCcw, ListFilter, Globe, Smartphone, Loader2 } from 'lucide-react';
 import { saveSettings, clearHistoryOnly, totalReset } from '../utils/storage.ts';
 import { AppSettings, AppView } from '../types.ts';
+import { ALL_COLORS } from '../utils/colors.ts';
 
 const colorSuggestions = [
   { name: 'Bleu JW', hex: '#4a70b5' },
@@ -42,30 +43,23 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
       return;
     }
 
-    // Fallback local pour les noms de couleurs courants (Point 3 de la demande)
-    const colorMap: Record<string, string> = {
-      'bleu': '#4a70b5',
-      'rouge': '#ef4444',
-      'vert': '#22c55e',
-      'jaune': '#eab308',
-      'noir': '#09090b',
-      'blanc': '#ffffff',
-      'gris': '#71717a',
-      'indigo': '#6366f1',
-      'violet': '#8b5cf6',
-      'rose': '#ec4899',
-      'orange': '#f97316',
-      'marron': '#78350f',
-      'olive': '#5A5A40',
-      'ciel': '#0ea5e9',
-      'ocean': '#0369a1',
-      'foret': '#14532d',
-      'or': '#fbbf24',
-      'argent': '#d1d5db'
-    };
-
     const normalizedInput = colorInput.toLowerCase().trim();
-    const foundHex = colorMap[normalizedInput] || Object.entries(colorMap).find(([name]) => normalizedInput.includes(name))?.[1];
+    
+    // Stratégie de recherche améliorée :
+    // 1. Correspondance exacte
+    // 2. Correspondance partielle (le nom de la couleur est dans l'input), en priorisant les noms les plus longs
+    
+    let foundHex = ALL_COLORS[normalizedInput];
+
+    if (!foundHex) {
+      // Trier les clés par longueur décroissante pour matcher "vert forêt" avant "vert"
+      const sortedKeys = Object.keys(ALL_COLORS).sort((a, b) => b.length - a.length);
+      
+      const matchingKey = sortedKeys.find(name => normalizedInput.includes(name));
+      if (matchingKey) {
+        foundHex = ALL_COLORS[matchingKey];
+      }
+    }
 
     if (foundHex) {
       if (type === 'btn') {
@@ -79,7 +73,15 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
     }
   }, []);
 
-  const getSuggestions = (q: string) => colorSuggestions.filter(c => c.name.toLowerCase().includes(q.toLowerCase())).slice(0, 4);
+  // Recherche de suggestions plus large
+  const getSuggestions = (q: string) => {
+    if (!q || q.length < 2) return colorSuggestions;
+    const lowerQ = q.toLowerCase();
+    return Object.entries(ALL_COLORS)
+      .filter(([name]) => name.includes(lowerQ))
+      .slice(0, 8) // Plus de résultats
+      .map(([name, hex]) => ({ name, hex }));
+  };
 
   const saveVisuals = () => {
     setSettings(draft);
@@ -96,7 +98,7 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
     alert("Préférences IA sauvegardées !");
   };
 
-  // Debounced auto-guess pour btnQuery
+  // Debounced auto-guess pour btnQuery (2000ms)
   useEffect(() => {
     const timer = setTimeout(() => {
       if (btnQuery && btnQuery.length > 2) {
@@ -109,11 +111,11 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
           setIsGuessingBtn(false);
         }
       }
-    }, 1000);
+    }, 2000); // Augmenté à 2s
     return () => clearTimeout(timer);
   }, [btnQuery, handleGuessColor]);
 
-  // Debounced auto-guess pour bgQuery
+  // Debounced auto-guess pour bgQuery (2000ms)
   useEffect(() => {
     const timer = setTimeout(() => {
       if (bgQuery && bgQuery.length > 2) {
@@ -126,7 +128,7 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
           setIsGuessingBg(false);
         }
       }
-    }, 1000);
+    }, 2000); // Augmenté à 2s
     return () => clearTimeout(timer);
   }, [bgQuery, handleGuessColor]);
   return (
@@ -165,8 +167,8 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
             </div>
           )}
           <div className="flex flex-wrap gap-2 mt-3">
-            {getSuggestions(btnQuery).map(c => (
-              <button key={c.hex} onClick={() => {setDraft({...draft, btnColor: c.hex}); setBtnQuery(c.name); setBtnColorDescription(null);}} className="text-[10px] px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all">● {c.name}</button>
+            {getSuggestions(btnQuery).map((c, index) => (
+              <button key={index} onClick={() => {setDraft({...draft, btnColor: c.hex}); setBtnQuery(c.name); setBtnColorDescription(null);}} className="text-[10px] px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all">● {c.name}</button>
             ))}
           </div>
         </div>
@@ -192,8 +194,8 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
             </div>
           )}
           <div className="flex flex-wrap gap-2 mt-3">
-            {getSuggestions(bgQuery).map(c => (
-              <button key={c.hex} onClick={() => {setDraft({...draft, bgColor: c.hex}); setBgQuery(c.name); setBgColorDescription(null);}} className="text-[10px] px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all">● {c.name}</button>
+            {getSuggestions(bgQuery).map((c, index) => (
+              <button key={index} onClick={() => {setDraft({...draft, bgColor: c.hex}); setBgQuery(c.name); setBgColorDescription(null);}} className="text-[10px] px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all">● {c.name}</button>
             ))}
           </div>
         </div>

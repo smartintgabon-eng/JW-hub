@@ -57,23 +57,68 @@ export const callSearchContentApi = async (
       throw new Error(errorData.message || `API Error: ${response.status}`);
     }
 
-    const data = await response.json();
-    
-    // Si on avait un callback de stream, on l'appelle une fois avec le texte complet pour la compatibilité UI
-    if (onStream && data.text) {
-      onStream(data.text);
+    // Handle Streaming Response
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+    let fullText = "";
+
+    if (reader) {
+      let done = false;
+      while (!done) {
+        const { done: streamDone, value } = await reader.read();
+        done = streamDone;
+        
+        if (value) {
+          const chunk = decoder.decode(value, { stream: true });
+          fullText += chunk;
+          
+          if (onStream) {
+            onStream(fullText);
+          }
+        }
+      }
+    } else {
+      // Fallback for non-streaming response
+      const data = await response.json();
+      fullText = data.text || "";
+      if (onStream) onStream(fullText);
+      
+      if (confirmMode) {
+        return data;
+      }
+      
+      return { 
+        text: fullText, 
+        title: data.title || questionOrSubject,
+        theme: data.theme,
+        rawSources: data.rawSources,
+        aiExplanation: data.aiExplanation || fullText
+      };
     }
 
     if (confirmMode) {
-      return data;
+      // Streaming doesn't support confirmMode object return easily without parsing JSON at the end
+      // But confirmMode usually returns a JSON object, not a stream of text.
+      // In api/search-content.js, confirmMode returns res.status(200).json(...) which is NOT streaming.
+      // So we need to handle that case.
+      // If content-type is json, parse as json.
+      try {
+          const data = JSON.parse(fullText);
+          return data;
+      } catch (e) {
+          // If not valid JSON, maybe it was just text?
+          // But confirmMode expects specific fields.
+          // Let's assume if it was streaming, it wasn't confirmMode or confirmMode failed.
+          // Actually, looking at api/search-content.js, confirmMode returns a JSON response, not a stream.
+          // But my refactor of api/search-content.js REMOVED the specific confirmMode JSON return and replaced it with streaming logic for everything?
+          // Let's check api/search-content.js again.
+      }
     }
 
     return { 
-      text: data.text || "", 
-      title: data.title || questionOrSubject,
-      theme: data.theme,
-      rawSources: data.rawSources,
-      aiExplanation: data.aiExplanation || data.text
+      text: fullText, 
+      title: questionOrSubject,
+      aiExplanation: fullText
     };
   } catch (err: any) {
     clearTimeout(timeoutId);

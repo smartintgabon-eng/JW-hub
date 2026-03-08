@@ -52,23 +52,53 @@ export const callGenerateContentApi = async (
       throw new Error(errorData.message || `API Error: ${response.status}`);
     }
 
-    const data = await response.json();
-    
-    // Si on avait un callback de stream, on l'appelle une fois avec le texte complet pour la compatibilité UI
-    if (onStream && data.text) {
-      onStream(data.text);
+    // Handle Streaming Response
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+    let fullText = "";
+
+    if (reader) {
+      let done = false;
+      while (!done) {
+        const { done: streamDone, value } = await reader.read();
+        done = streamDone;
+        
+        if (value) {
+          const chunk = decoder.decode(value, { stream: true });
+          fullText += chunk;
+          
+          if (onStream) {
+            onStream(fullText);
+          }
+        }
+      }
+    } else {
+      // Fallback for non-streaming response (e.g. cached JSON)
+      const data = await response.json();
+      fullText = data.text || "";
+      if (onStream) onStream(fullText);
+      
+      if (type === 'DISCOURS_THEME') {
+        return data;
+      }
+      
+      return { 
+        text: fullText, 
+        title: data.title || "Generated Content",
+        theme: data.theme,
+        rawSources: data.rawSources,
+        aiExplanation: data.aiExplanation || fullText
+      };
     }
 
     if (type === 'DISCOURS_THEME') {
-      return data;
+      return { text: fullText, title: fullText, theme: fullText };
     }
 
     return { 
-      text: data.text || "", 
-      title: data.title || "Generated Content",
-      theme: data.theme,
-      rawSources: data.rawSources,
-      aiExplanation: data.aiExplanation || data.text
+      text: fullText, 
+      title: "Generated Content",
+      aiExplanation: fullText
     };
   } catch (err: any) {
     clearTimeout(timeoutId);

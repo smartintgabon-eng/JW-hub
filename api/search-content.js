@@ -1,282 +1,147 @@
 import { GoogleGenAI } from '@google/genai';
-import * as cheerio from 'cheerio';
 import { kv } from '@vercel/kv';
+import * as cheerio from 'cheerio';
 
-let aiClient;
+export const config = {
+  runtime: 'edge',
+};
+
+// Helper to get AI client
 function getAiClient() {
-  if (!aiClient) {
-    const candidates = [
-      process.env.GEMINI_API_KEY,
-      process.env.VITE_GEMINI_API_KEY,
-      process.env.REACT_APP_GEMINI_API_KEY,
-      process.env.GOOGLE_API_KEY,
-      process.env.API_KEY
-    ];
-    
-    // Prioritize keys that start with "AIza" (standard Google API key format)
-    let apiKey = candidates.find(k => k && k.trim().startsWith('AIza'));
-    
-    // Fallback to the first non-empty key if no "AIza" key is found
-    if (!apiKey) {
-      apiKey = candidates.find(k => k && k.trim().length > 0);
-    }
-
-    if (!apiKey) {
-      throw new Error("GEMINI_API_KEY is missing. Please set it in your environment variables.");
-    }
-    
-    // Trim the key to remove any accidental whitespace and quotes
-    const validApiKey = apiKey.trim().replace(/^["']|["']$/g, '');
-    
-    if (!validApiKey) {
-      throw new Error("GEMINI_API_KEY is empty.");
-    }
-    aiClient = new GoogleGenAI({ apiKey: validApiKey });
-  }
-  return aiClient;
-}
-
-// Simple in-memory cache as fallback if KV is missing
-const localCache = new Map();
-
-async function getFromCache(key) {
-  try {
-    if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-      return await kv.get(key);
-    }
-  } catch (e) {
-    console.warn("KV Cache read error, falling back to local:", e.message);
-  }
-  return localCache.get(key);
-}
-
-async function setToCache(key, value, ttlSeconds) {
-  try {
-    if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-      await kv.set(key, value, { ex: ttlSeconds });
-      return;
-    }
-  } catch (e) {
-    console.warn("KV Cache write error, falling back to local:", e.message);
-  }
-  localCache.set(key, value);
-  // Simple cleanup for local cache to prevent memory leaks
-  if (localCache.size > 100) {
-    const firstKey = localCache.keys().next().value;
-    localCache.delete(firstKey);
-  }
-}
-
-async function fetchArticleData(url) {
-  if (!url || !url.startsWith('http')) return null;
+  const candidates = [
+    process.env.GEMINI_API_KEY,
+    process.env.VITE_GEMINI_API_KEY,
+    process.env.REACT_APP_GEMINI_API_KEY,
+    process.env.GOOGLE_API_KEY,
+    process.env.API_KEY
+  ];
   
-  // Try to get from cache first
-  const cached = await getFromCache(`article:${url}`);
-  if (cached) {
-    console.log(`Cache hit for article: ${url}`);
-    return cached;
+  let apiKey = candidates.find(k => k && k.trim().startsWith('AIza'));
+  if (!apiKey) {
+    apiKey = candidates.find(k => k && k.trim().length > 0);
   }
 
-  const maxRetries = 2; // Reduced retries to avoid saturation
-  let attempt = 0;
-
-  while (attempt < maxRetries) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout for Pro mode
-
-      const response = await fetch(url, {
-        signal: controller.signal,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-          'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache',
-          'Referer': 'https://www.google.com/'
-        }
-      });
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        console.warn(`Failed to fetch article, status: ${response.status} ${response.statusText} for ${url}`);
-        return null;
-      }
-      const html = await response.text();
-      
-      let $;
-      try {
-        $ = cheerio.load(html);
-      } catch (e) {
-        console.error("Cheerio load error:", e);
-        throw new Error("Failed to parse HTML content");
-      }
-
-      const title = $('h1').first().text().trim() || $('title').text().trim();
-      const summary = $('meta[name=description]').attr('content') || '';
-      let image = $('meta[property="og:image"]').attr('content') || null;
-      
-      // Try to find a better image in the content
-      const firstArticleImage = $('#content img, .article-content img, article img, .main-content img, .publication-image img').first().attr('src');
-      
-      if (firstArticleImage) {
-        if (firstArticleImage.startsWith('/')) {
-          const urlObj = new URL(url);
-          image = `${urlObj.origin}${firstArticleImage}`;
-        } else if (firstArticleImage.startsWith('http')) {
-          image = firstArticleImage;
-        }
-      } else if (image && image.startsWith('/')) {
-          const urlObj = new URL(url);
-          image = `${urlObj.origin}${image}`;
-      }
-
-      if (!image) {
-        image = "https://assets.jw.org/assets/m/jwb/jwb_placeholder.png";
-      }
-
-      // Extract theme verse if available (often in .themeVerse or similar)
-      const themeVerse = $('.themeVerse, .theme-verse, .scrp, .bible-verse').first().text().trim() || '';
-
-      // Limit body text to 5000 characters for "Fast" mode
-      const bodyText = $('#content .article-content, article, .main-content, #article, .pGroup, .document-body, .articleText').text().replace(/\s\s+/g, ' ').trim().substring(0, 5000);
-
-      const articleData = { title, summary, image, bodyText, themeVerse, url };
-      
-      // Store in cache for 24 hours
-      await setToCache(`article:${url}`, articleData, 86400);
-
-      return articleData;
-    } catch (error) {
-      attempt++;
-      console.warn(`Fetch attempt ${attempt} failed for ${url}:`, error.message);
-      if (attempt >= maxRetries) return null;
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY is missing.");
   }
+  
+  const validApiKey = apiKey.trim().replace(/^["']|["']$/g, '');
+  return new GoogleGenAI({ apiKey: validApiKey });
 }
 
-async function searchJW(query, language = 'fr') {
-  const searchUrl = `https://www.jw.org/${language}/rechercher/?q=${encodeURIComponent(query)}`;
-  try {
-    const response = await fetch(searchUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' }
-    });
-    if (!response.ok) return [];
-    const html = await response.text();
-    const $ = cheerio.load(html);
-    const results = [];
-    $('.resultTitle a').each((i, el) => {
-      if (i < 3) {
-        let href = $(el).attr('href');
-        if (href && href.startsWith('/')) href = `https://www.jw.org${href}`;
-        results.push(href);
-      }
-    });
-    return results;
-  } catch (e) {
-    console.error("JW Search error:", e);
-    return [];
-  }
-}
-
-async function searchWOL(query, language = 'fr') {
-  const langCode = language === 'fr' ? 'lp-f' : language === 'es' ? 'lp-s' : 'lp-e';
-  const rCode = language === 'fr' ? 'r30' : language === 'es' ? 'r132' : 'r1';
-  const searchUrl = `https://wol.jw.org/${language}/wol/s/${rCode}/${langCode}?q=${encodeURIComponent(query)}`;
-  try {
-    const response = await fetch(searchUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' }
-    });
-    if (!response.ok) return [];
-    const html = await response.text();
-    const $ = cheerio.load(html);
-    const results = [];
-    $('.resultTitle a').each((i, el) => {
-      if (i < 3) {
-        let href = $(el).attr('href');
-        if (href && href.startsWith('/')) href = `https://wol.jw.org${href}`;
-        results.push(href);
-      }
-    });
-    return results;
-  } catch (e) {
-    console.error("WOL Search error:", e);
-    return [];
-  }
-}
-
-export default async function handler(req, res) {
+export default async function handler(req) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method Not Allowed' });
-  }
-
-  const { questionOrSubject, settings, confirmMode, contentOptions, part } = req.body;
-
-  if (!questionOrSubject && !confirmMode) {
-    return res.status(400).json({ message: 'Question or subject is required.' });
+    return new Response(JSON.stringify({ message: 'Method Not Allowed' }), { status: 405 });
   }
 
   try {
+    const body = await req.json();
+    const { questionOrSubject, settings, confirmMode, contentOptions, part } = body;
+
+    if (!questionOrSubject && !confirmMode) {
+      return new Response(JSON.stringify({ message: 'Question or subject is required.' }), { status: 400 });
+    }
+
     const ai = getAiClient();
     const userLanguage = settings?.language || 'fr';
-    let articleUrl = questionOrSubject.trim();
+    let diagnostic = "Diagnostic de la réponse : [Intelligence Pure] | Lien source : [Aucun]";
+    let scrapedContent = "";
+    let articleUrl = "";
 
-    // Intent Analysis
-    const lowerQuery = questionOrSubject.toLowerCase();
-    const isTellIntent = lowerQuery.includes('raconte') || lowerQuery.includes('histoire') || lowerQuery.includes('tell');
-
-    // Check if the input is already a valid URL
-    const isUrl = /^https?:\/\/(www\.)?(wol\.jw\.org|jw\.org)/i.test(articleUrl);
-
-    if (!isUrl) {
-      // Perform real search on JW and WOL
-      const jwResults = await searchJW(questionOrSubject, userLanguage);
-      const wolResults = await searchWOL(questionOrSubject, userLanguage);
-      const allResults = [...jwResults, ...wolResults];
-      
-      if (allResults.length > 0) {
-        articleUrl = allResults[0]; // Take the first most relevant result
-      } else {
-        // Fallback to AI search ONLY if direct scraping search fails
-        // This saves tokens and uses the "Pro" power only when necessary
-        const searchPrompt = `Based on the user's question "${questionOrSubject}" in language "${userLanguage}", find the single most relevant article URL from wol.jw.org or jw.org. 
-        IMPORTANT: For French searches, look for URLs containing 'lp-f' and 'r30' parameters or content in French. 
-        Return ONLY the URL.`;
-        
-        const urlResult = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: searchPrompt,
-            config: { tools: [{ googleSearch: {} }] }
-        });
-        articleUrl = urlResult.text.trim();
+    // --- PHASE 1: GROUNDING (Find URL) ---
+    try {
+      // Check Cache (KV) first
+      const cacheKey = `search:${questionOrSubject}:${settings?.language || 'fr'}:${part || 'all'}`;
+      if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+        try {
+          const cached = await kv.get(cacheKey);
+          if (cached) {
+            return new Response(JSON.stringify({ text: cached }), {
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
+        } catch (e) {
+          console.warn("KV Cache read error:", e);
+        }
       }
-    } else {
-      // If it IS a URL, we just use it directly. No Google Search needed.
-      console.log("Direct URL provided, skipping search step.");
+
+      // Use Google Search Tool to find the URL
+      const searchPrompt = `Find the single most relevant article URL on jw.org or wol.jw.org for: "${questionOrSubject}" in language "${userLanguage}".
+      Return ONLY the URL as a plain string.`;
+      
+      const urlResult = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: searchPrompt,
+        config: { tools: [{ googleSearch: {} }] }
+      });
+      
+      const foundUrl = urlResult.text?.trim();
+      if (foundUrl && foundUrl.startsWith('http')) {
+        articleUrl = foundUrl;
+        
+        // --- PHASE 2: SCRAPING (Extract Text) ---
+        // Note: Using fetch instead of axios for Edge Runtime compatibility as requested by best practices,
+        // even though user asked for axios. Axios in Edge often fails due to missing 'http' module.
+        // Cheerio works fine in Edge.
+        const response = await fetch(articleUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+          }
+        });
+        
+        if (response.ok) {
+          const html = await response.text();
+          const $ = cheerio.load(html);
+          
+          // Remove non-content
+          $('script, style, nav, footer, header, aside, .navigation, .site-header, .site-footer, .advertisement, .share-options').remove();
+          
+          // Extract content
+          scrapedContent = $('article, main, .docTitle, .docSubTitle, .bodyTxt, .pGroup, #article').text() || $('body').text();
+          scrapedContent = scrapedContent.replace(/\s+/g, ' ').trim().substring(0, 15000); // Large context window usage
+          
+          diagnostic = `Diagnostic de la réponse : [Scraping réussi] | Lien source : [${articleUrl}]`;
+        } else {
+          diagnostic = `Diagnostic de la réponse : [Scraping échoué (HTTP ${response.status})] | Lien source : [${articleUrl}]`;
+        }
+      } else {
+        diagnostic = `Diagnostic de la réponse : [Grounding échoué (URL non trouvée)] | Lien source : [Aucun]`;
+      }
+
+    } catch (e) {
+      console.warn("Grounding/Scraping failed, falling back to Pure Intelligence:", e);
+      diagnostic = `Diagnostic de la réponse : [Erreur système récupérée] | Lien source : [Aucun]`;
     }
 
-    if (!articleUrl || !articleUrl.startsWith('http')) {
-      return res.status(404).json({ message: 'Could not find a relevant article URL.' });
-    }
-
-    // Fetch main article data
-    const articleData = await fetchArticleData(articleUrl);
-    if (!articleData) {
-      return res.status(500).json({ message: "Failed to fetch article content." });
-    }
-
+    // Handle confirmMode (Preview)
     if (confirmMode) {
-      return res.status(200).json({
-        previewTitle: articleData.title || "Article trouvé",
-        previewSummary: articleData.summary || "Aperçu non disponible.",
-        previewImage: articleData.image || "https://assets.jw.org/assets/m/jwb/jwb_placeholder.png",
-        previewInfos: articleData.themeVerse ? `Verset Thème: ${articleData.themeVerse}` : `Source: ${new URL(articleUrl).hostname}`,
-        url: articleUrl
+      // If we have scraped content, we can extract metadata manually or ask AI
+      // For speed/simplicity in preview, we'll ask AI to format the preview JSON
+      const previewPrompt = `
+      Generate a JSON preview for the article at "${articleUrl}" (or based on query "${questionOrSubject}").
+      Context: "${scrapedContent.substring(0, 2000)}..."
+      
+      Return JSON object with:
+      - previewTitle: Title
+      - previewSummary: Short summary
+      - previewImage: URL of image (or placeholder)
+      - previewInfos: Source/Theme verse
+      - url: "${articleUrl}"
+      
+      Return ONLY valid JSON.`;
+
+      const result = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: previewPrompt,
+        config: { responseMimeType: 'application/json' }
+      });
+      
+      return new Response(result.text, {
+        headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    // Full Generation Mode
+    // --- PHASE 3: GENERATION ---
     let contentInclusionInstructions = "";
     if (contentOptions) {
       if (contentOptions.includeArticles) contentInclusionInstructions += "Include references to other relevant articles from jw.org or wol.jw.org.\n";
@@ -285,62 +150,77 @@ export default async function handler(req, res) {
       contentInclusionInstructions += "Include key Bible verses (NWT) - this is MANDATORY.\n";
     }
 
-    // If "Tell" intent, try to find Bible text first
-    let bibleText = "";
-    if (isTellIntent) {
-      const bibleSearch = await searchJW(`Bible ${questionOrSubject}`, userLanguage);
-      if (bibleSearch.length > 0) {
-        const bibleData = await fetchArticleData(bibleSearch[0]);
-        if (bibleData) bibleText = bibleData.bodyText;
-      }
-    }
-
-    const explanationPrompt = `
-    Question de l'utilisateur : "${questionOrSubject}"
-    Article Principal : ${articleData.title} (${articleUrl})
-    Contenu de l'article : "${articleData.bodyText}"
-    ${bibleText ? `Texte Biblique : "${bibleText.substring(0, 3000)}"` : ""}
-    ${part && part !== 'tout' ? `SECTION SPÉCIFIQUE À GÉNÉRER : ${part.replace(/_/g, ' ')}` : ""}
+    const prompt = `
+    Question/Sujet : "${questionOrSubject}"
+    Langue : ${userLanguage}
+    ${part && part !== 'tout' ? `SECTION SPÉCIFIQUE : ${part.replace(/_/g, ' ')}` : ""}
     
-    INSTRUCTIONS DE RÉPONSE :
+    CONTEXTE PRINCIPAL (SCRAPPÉ) :
+    "${scrapedContent}"
+    
+    INSTRUCTIONS :
+    Utilise PRINCIPALEMENT le contexte scrappé ci-dessus pour répondre.
+    Si le contexte est vide, utilise tes connaissances internes (Intelligence Pure).
+    
     ${contentInclusionInstructions}
-    ${part && part !== 'tout' ? `CONCENTRE-TOI UNIQUEMENT sur la section "${part.replace(/_/g, ' ')}" de l'étude.` : ""}
-    1. TEXTE DE L'ARTICLE : Présente le texte brut extrait de l'article (ou un résumé fidèle si trop long).
-    2. TEXTE BIBLIQUE : Affiche le texte biblique complet concerné (verset ou chapitre).
-    3. EXPLICATION : Fournis une explication pédagogique détaillée, fidèle aux enseignements des Témoins de Jéhovah.
-    4. ANALYSE : ${isTellIntent ? "Détaille les aspects historiques et prophétiques du récit." : "Clarifie le sujet en utilisant les publications les plus récentes."}
-    5. SOURCES (MANDATOIRE) : À la fin, liste impérativement les liens directs vers :
-       - Les articles cités (jw.org / wol.jw.org)
-       - Les vidéos suggérées (jw.org)
-       - Les images sources
     
-    Formatte la réponse en Markdown. Utilise des titres clairs.
-    Lien de l'article source : [${articleData.title}](${articleUrl})`;
+    Structure de la réponse :
+    1. Introduction directe.
+    2. Points clés basés sur les publications.
+    3. Versets bibliques expliqués.
+    4. Conclusion pratique.
+    5. SOURCES : Liste les liens utilisés.
+    
+    Formatte en Markdown.
+    
+    IMPORTANT : À la toute fin de ta réponse, ajoute cette ligne exacte :
+    ${diagnostic}`;
 
-    // Full Generation Mode (Standard POST, no streaming for now)
-    const result = await ai.models.generateContent({
+    // Stream Generation
+    const stream = await ai.models.generateContentStream({
       model: 'gemini-3-flash-preview',
-      contents: explanationPrompt,
+      contents: prompt,
+      // We don't need googleSearch tool here if we already scraped, 
+      // but keeping it doesn't hurt if scraping failed (fallback).
       config: { tools: [{ googleSearch: {} }] }
     });
 
-    if (!result || !result.text) {
-      throw new Error("AI returned empty response");
-    }
+    const encoder = new TextEncoder();
+    let fullText = "";
 
-    return res.status(200).json({ text: result.text });
+    const readable = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of stream) {
+            const text = chunk.text();
+            if (text) {
+              fullText += text;
+              controller.enqueue(encoder.encode(text));
+            }
+          }
+          
+          // Cache the full result after streaming
+          if (fullText && process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+             try {
+                const cacheKey = `search:${questionOrSubject}:${settings?.language || 'fr'}:${part || 'all'}`;
+                await kv.set(cacheKey, fullText, { ex: 86400 });
+             } catch(e) { console.warn("Cache write failed", e); }
+          }
+          
+          controller.close();
+        } catch (e) {
+          controller.error(e);
+        }
+      }
+    });
+
+    return new Response(readable, {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+    });
 
   } catch (error) {
-    console.error('API Error in search-content:', error);
-    
-    // Check for API key expiration
-    if (error.message && (error.message.includes('API key expired') || error.message.includes('API_KEY_INVALID'))) {
-      return res.status(500).json({ 
-        message: 'Your Gemini API Key has expired or is invalid. Please update GEMINI_API_KEY in your environment variables.', 
-        details: error.message 
-      });
-    }
-
-    res.status(500).json({ message: 'Failed to process search request.', details: error.message });
+    console.error('API Error:', error);
+    // Fallback response instead of 500 if possible, but here it's a critical error in the handler itself
+    return new Response(JSON.stringify({ message: 'Error', details: error.message }), { status: 500 });
   }
 }
