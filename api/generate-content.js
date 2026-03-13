@@ -83,11 +83,13 @@ export default async function handler(req) {
     
     const contentToAnalyze = manualText || input || text;
     const contentString = Array.isArray(contentToAnalyze) ? contentToAnalyze.join('\n') : contentToAnalyze;
-    const urlMatch = contentString ? contentString.match(/https?:\/\/[^\s]+/) : null;
     
-    const withSearch = !!urlMatch || (contentOptions && contentOptions.includeArticles) || (articleReferences && articleReferences.length > 0);
+    // Determine if we should use search/scraping
+    const isManualText = !!manualText;
+    const urlMatch = contentString && !isManualText ? contentString.match(/https?:\/\/[^\s]+/) : null;
+    const withSearch = !isManualText && (!!urlMatch || (contentOptions && contentOptions.includeArticles) || (articleReferences && articleReferences.length > 0));
     
-    let diagnostic = "Diagnostic de la réponse : [Intelligence Pure] | Lien source : [Aucun]";
+    let diagnostic = isManualText ? "Diagnostic : [Analyse de texte manuel]" : "Diagnostic : [Recherche]";
     let scrapedContent = "";
     let articleUrl = "";
 
@@ -99,52 +101,63 @@ export default async function handler(req) {
         } else if (articleReferences && articleReferences.length > 0) {
            articleUrl = articleReferences[0];
         } else {
-           // Find URL via Google Search
-           const searchPrompt = `Find the single most relevant article URL on jw.org or wol.jw.org for: "${input || theme}" in language "${userLanguage}".
-           Return ONLY the URL as a plain string.`;
+           // Parallel search on wol.jw.org and jw.org
+           const searchPromptWol = `Find the single most relevant article URL on wol.jw.org for: "${input || theme}" in language "${userLanguage}". Return ONLY the URL as a plain string.`;
+           const searchPromptJw = `Find the single most relevant article URL on jw.org for: "${input || theme}" in language "${userLanguage}". Return ONLY the URL as a plain string.`;
            
-           const urlResult = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: searchPrompt,
-            config: { tools: [{ googleSearch: {} }] }
-          });
+           const [wolResult, jwResult] = await Promise.allSettled([
+             ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptWol, config: { tools: [{ googleSearch: {} }] } }),
+             ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptJw, config: { tools: [{ googleSearch: {} }] } })
+           ]);
           
-          const foundUrl = urlResult.text?.trim();
-          if (foundUrl && foundUrl.startsWith('http')) {
-            articleUrl = foundUrl;
-          }
+          const wolUrl = wolResult.status === 'fulfilled' ? wolResult.value.text?.trim() : null;
+          const jwUrl = jwResult.status === 'fulfilled' ? jwResult.value.text?.trim() : null;
+
+          articleUrl = (wolUrl && wolUrl.startsWith('http')) ? wolUrl : ((jwUrl && jwUrl.startsWith('http')) ? jwUrl : null);
         }
 
         if (articleUrl) {
-           // Scraping
-           const response = await fetch(articleUrl, {
-              headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+           // Scraping (5s Timeout)
+           const controller = new AbortController();
+           const timeoutId = setTimeout(() => controller.abort(), 5000);
+           
+           try {
+             const response = await fetch(articleUrl, {
+                signal: controller.signal,
+                headers: {
+                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+                }
+              });
+              
+              clearTimeout(timeoutId);
+              
+              if (response.ok) {
+                const html = await response.text();
+                const $ = cheerio.load(html);
+                
+                // Remove non-content
+                $('script, style, nav, footer, header, aside, .navigation, .site-header, .site-footer, .advertisement, .share-options').remove();
+                
+                // Extract content
+                scrapedContent = $('article, main, .docTitle, .docSubTitle, .bodyTxt, .pGroup, #article').text() || $('body').text();
+                scrapedContent = scrapedContent.replace(/\s+/g, ' ').trim().substring(0, 15000);
+                
+                diagnostic = `Diagnostic : [Scraping]`;
+              } else {
+                diagnostic = `Diagnostic : [Recherche]`;
               }
-            });
-            
-            if (response.ok) {
-              const html = await response.text();
-              const $ = cheerio.load(html);
-              
-              // Remove non-content
-              $('script, style, nav, footer, header, aside, .navigation, .site-header, .site-footer, .advertisement, .share-options').remove();
-              
-              // Extract content
-              scrapedContent = $('article, main, .docTitle, .docSubTitle, .bodyTxt, .pGroup, #article').text() || $('body').text();
-              scrapedContent = scrapedContent.replace(/\s+/g, ' ').trim().substring(0, 15000);
-              
-              diagnostic = `Diagnostic de la réponse : [Scraping réussi] | Lien source : [${articleUrl}]`;
-            } else {
-              diagnostic = `Diagnostic de la réponse : [Scraping échoué (HTTP ${response.status})] | Lien source : [${articleUrl}]`;
-            }
+           } catch (e) {
+              clearTimeout(timeoutId);
+              console.warn("Scraping failed or timed out:", e);
+              diagnostic = `Diagnostic : [Recherche]`;
+           }
         } else {
-           diagnostic = `Diagnostic de la réponse : [Grounding échoué (URL non trouvée)] | Lien source : [Aucun]`;
+           diagnostic = `Diagnostic : [Recherche]`;
         }
 
       } catch (e) {
-        console.warn("Grounding/Scraping failed, falling back to Pure Intelligence:", e);
-        diagnostic = `Diagnostic de la réponse : [Erreur système récupérée] | Lien source : [Aucun]`;
+        console.warn("Grounding failed, falling back to Pure Intelligence:", e);
+        diagnostic = `Diagnostic : [Recherche]`;
       }
     }
     
@@ -172,7 +185,7 @@ ${articleReferences && articleReferences.length > 0 ? `Références articles: ${
 
 INSTRUCTIONS :
 Utilise le contenu scrappé ci-dessus comme source principale.
-Si vide, utilise tes connaissances.
+Si le contexte est vide, ignore le scraping et utilise UNIQUEMENT le contenu brut fourni par la recherche Google (Grounding).
 
 Format Markdown.`;
     }
@@ -180,10 +193,12 @@ Format Markdown.`;
     prompt += `\n\nIMPORTANT : À la toute fin de ta réponse, ajoute cette ligne exacte :\n${diagnostic}`;
 
     // Stream Generation
+    const config = withSearch ? { tools: [{ googleSearch: {} }] } : {};
+    
     const stream = await ai.models.generateContentStream({
       model: 'gemini-3-flash-preview',
       contents: prompt,
-      config: { tools: [{ googleSearch: {} }] }
+      config
     });
 
     const encoder = new TextEncoder();
@@ -220,6 +235,18 @@ Format Markdown.`;
 
   } catch (error) {
     console.error('API Error:', error);
-    return new Response(JSON.stringify({ message: 'Error', details: error.message }), { status: 500 });
+    const errorMessage = "Désolé, je n'ai pas pu récupérer cette information, veuillez réessayer.";
+    
+    const encoder = new TextEncoder();
+    const readable = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(errorMessage));
+        controller.close();
+      }
+    });
+
+    return new Response(readable, {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+    });
   }
 }

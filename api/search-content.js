@@ -44,11 +44,11 @@ export default async function handler(req) {
 
     const ai = getAiClient();
     const userLanguage = settings?.language || 'fr';
-    let diagnostic = "Diagnostic de la réponse : [Intelligence Pure] | Lien source : [Aucun]";
+    let diagnostic = "Diagnostic : [Recherche]";
     let scrapedContent = "";
     let articleUrl = "";
 
-    // --- PHASE 1: GROUNDING (Find URL) ---
+    // --- PHASE 1: GROUNDING (Parallel Search) ---
     try {
       // Check Cache (KV) first
       const cacheKey = `search:${questionOrSubject}:${settings?.language || 'fr'}:${part || 'all'}`;
@@ -65,52 +65,60 @@ export default async function handler(req) {
         }
       }
 
-      // Use Google Search Tool to find the URL
-      const searchPrompt = `Find the single most relevant article URL on jw.org or wol.jw.org for: "${questionOrSubject}" in language "${userLanguage}".
-      Return ONLY the URL as a plain string.`;
+      // Parallel search on wol.jw.org and jw.org
+      const searchPromptWol = `Find the single most relevant article URL on wol.jw.org for: "${questionOrSubject}" in language "${userLanguage}". Return ONLY the URL as a plain string.`;
+      const searchPromptJw = `Find the single most relevant article URL on jw.org for: "${questionOrSubject}" in language "${userLanguage}". Return ONLY the URL as a plain string.`;
       
-      const urlResult = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: searchPrompt,
-        config: { tools: [{ googleSearch: {} }] }
-      });
+      const [wolResult, jwResult] = await Promise.allSettled([
+        ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptWol, config: { tools: [{ googleSearch: {} }] } }),
+        ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptJw, config: { tools: [{ googleSearch: {} }] } })
+      ]);
       
-      const foundUrl = urlResult.text?.trim();
-      if (foundUrl && foundUrl.startsWith('http')) {
-        articleUrl = foundUrl;
+      const wolUrl = wolResult.status === 'fulfilled' ? wolResult.value.text?.trim() : null;
+      const jwUrl = jwResult.status === 'fulfilled' ? jwResult.value.text?.trim() : null;
+
+      articleUrl = (wolUrl && wolUrl.startsWith('http')) ? wolUrl : ((jwUrl && jwUrl.startsWith('http')) ? jwUrl : null);
+
+      if (articleUrl) {
+        // --- PHASE 2: SCRAPING (5s Timeout) ---
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
         
-        // --- PHASE 2: SCRAPING (Extract Text) ---
-        // Note: Using fetch instead of axios for Edge Runtime compatibility as requested by best practices,
-        // even though user asked for axios. Axios in Edge often fails due to missing 'http' module.
-        // Cheerio works fine in Edge.
-        const response = await fetch(articleUrl, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+        try {
+          const response = await fetch(articleUrl, {
+            signal: controller.signal,
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+            }
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (response.ok) {
+            const html = await response.text();
+            const $ = cheerio.load(html);
+            
+            // Remove non-content
+            $('script, style, nav, footer, header, aside, .navigation, .site-header, .site-footer, .advertisement, .share-options').remove();
+            
+            // Extract content
+            scrapedContent = $('article, main, .docTitle, .docSubTitle, .bodyTxt, .pGroup, #article').text() || $('body').text();
+            scrapedContent = scrapedContent.replace(/\s+/g, ' ').trim().substring(0, 15000); // Large context window usage
+            
+            diagnostic = `Diagnostic : [Scraping]`;
           }
-        });
-        
-        if (response.ok) {
-          const html = await response.text();
-          const $ = cheerio.load(html);
-          
-          // Remove non-content
-          $('script, style, nav, footer, header, aside, .navigation, .site-header, .site-footer, .advertisement, .share-options').remove();
-          
-          // Extract content
-          scrapedContent = $('article, main, .docTitle, .docSubTitle, .bodyTxt, .pGroup, #article').text() || $('body').text();
-          scrapedContent = scrapedContent.replace(/\s+/g, ' ').trim().substring(0, 15000); // Large context window usage
-          
-          diagnostic = `Diagnostic de la réponse : [Scraping réussi] | Lien source : [${articleUrl}]`;
-        } else {
-          diagnostic = `Diagnostic de la réponse : [Scraping échoué (HTTP ${response.status})] | Lien source : [${articleUrl}]`;
+        } catch (e) {
+          clearTimeout(timeoutId);
+          console.warn("Scraping failed or timed out:", e);
+          diagnostic = `Diagnostic : [Recherche]`;
         }
       } else {
-        diagnostic = `Diagnostic de la réponse : [Grounding échoué (URL non trouvée)] | Lien source : [Aucun]`;
+        diagnostic = `Diagnostic : [Recherche]`;
       }
 
     } catch (e) {
-      console.warn("Grounding/Scraping failed, falling back to Pure Intelligence:", e);
-      diagnostic = `Diagnostic de la réponse : [Erreur système récupérée] | Lien source : [Aucun]`;
+      console.warn("Grounding failed, falling back to Pure Intelligence:", e);
+      diagnostic = `Diagnostic : [Recherche]`;
     }
 
     // Handle confirmMode (Preview)
@@ -160,7 +168,7 @@ export default async function handler(req) {
     
     INSTRUCTIONS :
     Utilise PRINCIPALEMENT le contexte scrappé ci-dessus pour répondre.
-    Si le contexte est vide, utilise tes connaissances internes (Intelligence Pure).
+    Si le contexte est vide, ignore le scraping et utilise UNIQUEMENT le contenu brut fourni par la recherche Google (Grounding).
     
     ${contentInclusionInstructions}
     
@@ -220,7 +228,35 @@ export default async function handler(req) {
 
   } catch (error) {
     console.error('API Error:', error);
-    // Fallback response instead of 500 if possible, but here it's a critical error in the handler itself
-    return new Response(JSON.stringify({ message: 'Error', details: error.message }), { status: 500 });
+    
+    // Fallback message requested by user
+    const errorMessage = "Désolé, je n'ai pas pu récupérer cette information, veuillez réessayer.";
+    
+    // If it's a JSON request (like confirmMode), return JSON
+    let isConfirmMode = false;
+    try {
+      // Try to parse if not already parsed, but in most cases it failed during processing
+      // We can check if we already have confirmMode from the top of the function
+      if (typeof confirmMode !== 'undefined' && confirmMode) {
+        isConfirmMode = true;
+      }
+    } catch(e) {}
+
+    if (isConfirmMode) {
+      return new Response(JSON.stringify({ message: errorMessage }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Otherwise return a stream with the error message so the UI displays it gracefully
+    const encoder = new TextEncoder();
+    const readable = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(errorMessage));
+        controller.close();
+      }
+    });
+    
+    return new Response(readable, {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+    });
   }
 }

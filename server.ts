@@ -10,10 +10,59 @@ dotenv.config();
 // Import API handlers
 import searchContentHandler from './api/search-content.js';
 import generateContentHandler from './api/generate-content.js';
-import guessColorHandler from './api/guess-color.js';
+import getColorHandler from './api/get-color.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Adapter to convert Express req to Web Request
+function createWebRequest(req: express.Request): Request {
+  const url = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(req.headers)) {
+    if (typeof value === 'string') {
+      headers.set(key, value);
+    } else if (Array.isArray(value)) {
+      value.forEach(v => headers.append(key, v));
+    }
+  }
+
+  const init: RequestInit = {
+    method: req.method,
+    headers,
+  };
+
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    // We stringify the body because express.json() already parsed it
+    init.body = req.body ? JSON.stringify(req.body) : null;
+  }
+
+  return new Request(url, init);
+}
+
+// Adapter to convert Web Response to Express res
+async function handleWebResponse(webRes: Response, res: express.Response) {
+  res.status(webRes.status);
+  webRes.headers.forEach((value, key) => {
+    res.setHeader(key, value);
+  });
+
+  if (webRes.body) {
+    const reader = webRes.body.getReader();
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        res.write(value);
+      }
+    } finally {
+      res.end();
+    }
+  } else {
+    const text = await webRes.text();
+    res.send(text);
+  }
+}
 
 async function startServer() {
   const app = express();
@@ -24,28 +73,21 @@ async function startServer() {
   // Helper to unwrap default exports
   const getHandler = (handler: any) => handler.default || handler;
 
-  // API Routes
-  app.post('/api/search-content', async (req, res, next) => {
+  // API Routes wrapper
+  const wrapApiRoute = (handlerModule: any) => async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
-      await getHandler(searchContentHandler)(req, res);
+      const webReq = createWebRequest(req);
+      const handler = getHandler(handlerModule);
+      const webRes = await handler(webReq);
+      await handleWebResponse(webRes, res);
     } catch (e) {
       next(e);
     }
-  });
-  app.post('/api/generate-content', async (req, res, next) => {
-    try {
-      await getHandler(generateContentHandler)(req, res);
-    } catch (e) {
-      next(e);
-    }
-  });
-  app.post('/api/guess-color', async (req, res, next) => {
-    try {
-      await getHandler(guessColorHandler)(req, res);
-    } catch (e) {
-      next(e);
-    }
-  });
+  };
+
+  app.post('/api/search-content', wrapApiRoute(searchContentHandler));
+  app.post('/api/generate-content', wrapApiRoute(generateContentHandler));
+  app.post('/api/get-color', wrapApiRoute(getColorHandler));
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {

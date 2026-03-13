@@ -2,16 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Palette, Check, Trash2, RotateCcw, ListFilter, Globe, Smartphone, Loader2 } from 'lucide-react';
 import { saveSettings, clearHistoryOnly, totalReset } from '../utils/storage.ts';
 import { AppSettings, AppView } from '../types.ts';
-import { ALL_COLORS } from '../utils/colors.ts';
-
-const colorSuggestions = [
-  { name: 'Bleu JW', hex: '#4a70b5' },
-  { name: 'Indigo', hex: '#6366f1' },
-  { name: 'Émeraude', hex: '#10b981' },
-  { name: 'Ambre', hex: '#f59e0b' },
-  { name: 'Rose', hex: '#ec4899' },
-  { name: 'Nuit', hex: '#09090b' }
-];
 
 const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, setView }: { settings: AppSettings, setSettings: any, deferredPrompt: any, handleInstallClick: () => void, setView: (view: AppView) => void }) => {
   const [draft, setDraft] = useState<AppSettings>(() => settings || { language: 'fr', btnColor: '#4a70b5', bgColor: '#09090b', answerPreferences: [] });
@@ -28,12 +18,27 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
 
   const isHexCode = (str: string) => /^#([0-9A-F]{3}){1,2}$/i.test(str);
 
-  const handleGuessColor = React.useCallback((colorInput: string, type: 'btn' | 'bg') => {
+  const getColorHex = async (colorName: string) => {
+    try {
+      const res = await fetch('/api/get-color', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ colorName })
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.hex; // Apply directly without verification
+    } catch (e) {
+      console.error(e);
+    }
+    return null;
+  };
+
+  const handleGuessColor = React.useCallback(async (colorInput: string, type: 'btn' | 'bg') => {
     if (!colorInput || colorInput.length < 2) {
       return;
     }
 
-    // Si c'est déjà un code hexadécimal, on l'applique directement
     if (isHexCode(colorInput)) {
       if (type === 'btn') {
         setDraft(prev => ({ ...prev, btnColor: colorInput }));
@@ -43,50 +48,20 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
       return;
     }
 
-    const normalizedInput = colorInput.toLowerCase().trim();
-    
-    // Stratégie de recherche améliorée :
-    // 1. Correspondance exacte
-    // 2. Correspondance partielle (le nom de la couleur est dans l'input), en priorisant les noms les plus longs
-    
-    let foundHex = ALL_COLORS[normalizedInput];
-
-    if (!foundHex) {
-      // Trier les clés par longueur décroissante pour matcher "vert forêt" avant "vert"
-      const sortedKeys = Object.keys(ALL_COLORS).sort((a, b) => b.length - a.length);
-      
-      const matchingKey = sortedKeys.find(name => normalizedInput.includes(name));
-      if (matchingKey) {
-        foundHex = ALL_COLORS[matchingKey];
-      }
-    }
-
-    if (foundHex) {
+    // Fallback to AI directly
+    const hex = await getColorHex(colorInput);
+    if (hex) {
       if (type === 'btn') {
-        setDraft(prev => ({ ...prev, btnColor: foundHex }));
-        setBtnQuery(foundHex);
+        setDraft(prev => ({ ...prev, btnColor: hex }));
       } else {
-        setDraft(prev => ({ ...prev, bgColor: foundHex }));
-        setBgQuery(foundHex);
+        setDraft(prev => ({ ...prev, bgColor: hex }));
       }
-      return;
     }
   }, []);
-
-  // Recherche de suggestions plus large
-  const getSuggestions = (q: string) => {
-    if (!q || q.length < 2) return colorSuggestions;
-    const lowerQ = q.toLowerCase();
-    return Object.entries(ALL_COLORS)
-      .filter(([name]) => name.includes(lowerQ))
-      .slice(0, 8) // Plus de résultats
-      .map(([name, hex]) => ({ name, hex }));
-  };
 
   const saveVisuals = () => {
     setSettings(draft);
     saveSettings(draft);
-    // Appliquer immédiatement les couleurs au site
     document.documentElement.style.setProperty('--btn-color', draft.btnColor);
     document.documentElement.style.setProperty('--bg-color', draft.bgColor);
     alert("Réglages visuels et langue enregistrés !");
@@ -98,7 +73,6 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
     alert("Préférences IA sauvegardées !");
   };
 
-  // Debounced auto-guess pour btnQuery (2000ms)
   useEffect(() => {
     const timer = setTimeout(() => {
       if (btnQuery && btnQuery.length > 2) {
@@ -107,15 +81,13 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
           setBtnColorDescription(null);
         } else {
           setIsGuessingBtn(true);
-          handleGuessColor(btnQuery, 'btn');
-          setIsGuessingBtn(false);
+          handleGuessColor(btnQuery, 'btn').finally(() => setIsGuessingBtn(false));
         }
       }
-    }, 2000); // Augmenté à 2s
+    }, 1500);
     return () => clearTimeout(timer);
   }, [btnQuery, handleGuessColor]);
 
-  // Debounced auto-guess pour bgQuery (2000ms)
   useEffect(() => {
     const timer = setTimeout(() => {
       if (bgQuery && bgQuery.length > 2) {
@@ -124,13 +96,13 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
           setBgColorDescription(null);
         } else {
           setIsGuessingBg(true);
-          handleGuessColor(bgQuery, 'bg');
-          setIsGuessingBg(false);
+          handleGuessColor(bgQuery, 'bg').finally(() => setIsGuessingBg(false));
         }
       }
-    }, 2000); // Augmenté à 2s
+    }, 1500);
     return () => clearTimeout(timer);
   }, [bgQuery, handleGuessColor]);
+
   return (
     <div className="max-w-2xl mx-auto p-4 space-y-8">
       {/* SECTION VISUELLE & LANGUE */}
@@ -166,11 +138,6 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
               <p className="text-xs leading-relaxed italic opacity-80">{btnColorDescription}</p>
             </div>
           )}
-          <div className="flex flex-wrap gap-2 mt-3">
-            {getSuggestions(btnQuery).map((c, index) => (
-              <button key={index} onClick={() => {setDraft({...draft, btnColor: c.hex}); setBtnQuery(c.name); setBtnColorDescription(null);}} className="text-[10px] px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all">● {c.name}</button>
-            ))}
-          </div>
         </div>
 
         {/* Fond (Point 2) */}
@@ -193,11 +160,6 @@ const Settings = ({ settings, setSettings, deferredPrompt, handleInstallClick, s
               <p className="text-xs leading-relaxed italic opacity-80">{bgColorDescription}</p>
             </div>
           )}
-          <div className="flex flex-wrap gap-2 mt-3">
-            {getSuggestions(bgQuery).map((c, index) => (
-              <button key={index} onClick={() => {setDraft({...draft, bgColor: c.hex}); setBgQuery(c.name); setBgColorDescription(null);}} className="text-[10px] px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-all">● {c.name}</button>
-            ))}
-          </div>
         </div>
 
         <button onClick={saveVisuals} className="w-full py-4 bg-white/10 hover:bg-white/20 rounded-xl font-bold uppercase text-xs transition-all">Sauvegarder le style</button>
