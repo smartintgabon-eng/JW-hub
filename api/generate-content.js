@@ -189,10 +189,8 @@ export default async function handler(req) {
     
     // Reconstruct the prompt logic briefly
     if (type === 'DISCOURS_THEME') {
-        prompt = `OBLIGATOIRE : Commence TOUJOURS ta réponse par un grand titre (H1) reprenant le thème exact : "# ${themeTitle}", suivi immédiatement sur la ligne suivante de la date du jour en italique : "*${today}*".
-        
-Génère un thème de discours biblique accrocheur et profond basé sur les publications des Témoins de Jéhovah.
-Critères : "${input || 'Aucun'}". Langue : ${userLanguage}. Court et percutant.`;
+        prompt = `Génère un thème de discours biblique accrocheur et profond basé sur les publications des Témoins de Jéhovah.
+Critères : "${input || 'Aucun'}". Langue : ${userLanguage}. Court et percutant. Ne renvoie QUE le thème, sans aucun autre texte.`;
     } else if (type === 'DISCOURS') {
         prompt = `OBLIGATOIRE : Commence TOUJOURS ta réponse par un grand titre (H1) reprenant le thème exact : "# ${themeTitle}", suivi immédiatement sur la ligne suivante de la date du jour en italique : "*${today}*".
 

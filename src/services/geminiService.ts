@@ -36,14 +36,15 @@ export const generateStudyContent = async (
 };
 
 export const generateDiscourseTheme = async (
-  input: string
+  input: string,
+  settings: AppSettings
 ): Promise<string> => {
   // We don't have a direct theme API, but we can use generate-content with a specific type
   const result = await callGenerateContentApi(
     'DISCOURS_THEME',
     input,
     'tout',
-    { language: 'fr' } as AppSettings, // Minimal settings
+    settings,
     false,
     undefined
   );
@@ -55,6 +56,7 @@ export const generateDiscourseContent = async (
   time: string,
   theme: string,
   settings: AppSettings,
+  contentOptions?: ContentOptions,
   onStream?: (text: string) => void
 ): Promise<GeneratedStudy> => {
   
@@ -65,7 +67,7 @@ export const generateDiscourseContent = async (
     settings,
     false,
     undefined,
-    undefined,
+    contentOptions,
     { discoursType, time, theme },
     onStream
   );

@@ -45,8 +45,6 @@ const NormalDiscourse: React.FC<NormalDiscourseProps> = ({ settings, setGlobalLo
   const handleGenerateThemeToggle = () => {
     setGenerateTheme(!generateTheme);
     setThemeInput('');
-    setGeneratedTheme(null); // Clear generated theme when toggling
-    setGeneratedDiscourse(null); // Clear generated discourse when toggling
   };
 
   const handleSubmit = async () => {
