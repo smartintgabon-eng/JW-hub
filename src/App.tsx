@@ -91,7 +91,21 @@ const App: React.FC = () => {
   const [history, setHistory] = useState<GeneratedStudy[]>(getHistory());
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [globalLoadingMessage, setGlobalLoadingMessage] = useState<string | null>(null); 
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
+  useEffect(() => {
+    const originalAlert = window.alert;
+    window.alert = (message: string) => {
+      if (message.toLowerCase().includes("réinitialis")) {
+        originalAlert(message);
+      } else {
+        setAlertMessage(message);
+      }
+    };
+    return () => {
+      window.alert = originalAlert;
+    };
+  }, []);
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
@@ -160,6 +174,33 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-row bg-[var(--bg-color)] text-[var(--text-color)] overflow-hidden">
+      {alertMessage && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-white/5">
+              <span className="text-sm font-bold uppercase tracking-wider text-white/70">Message</span>
+              <button 
+                onClick={() => setAlertMessage(null)}
+                className="text-white/50 hover:text-white hover:bg-red-500/80 p-1.5 rounded-md transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-6 text-white/90 text-base leading-relaxed">
+              {alertMessage}
+            </div>
+            <div className="px-6 py-4 bg-white/5 flex justify-end">
+              <button 
+                onClick={() => setAlertMessage(null)}
+                className="px-6 py-2 bg-[var(--btn-color)] text-[var(--btn-text)] font-bold rounded-xl hover:opacity-90 transition-opacity"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {globalLoadingMessage && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center z-[9999] text-white p-6 text-center">
           <Loader2 size={48} className="animate-spin text-[var(--btn-color)] mb-4" />

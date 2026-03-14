@@ -55,32 +55,13 @@ export default async function handler(req) {
       isInitialSearchForPreview 
     } = body;
 
-    // Check Cache (KV)
-    // Create a simple hash or key based on input
-    const cacheKey = `gen:${type}:${theme || input || 'default'}:${settings?.language || 'fr'}:${part || 'all'}`;
-    
-    try {
-      if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-        const cached = await kv.get(cacheKey);
-        if (cached) {
-          return new Response(JSON.stringify({ text: cached }), {
-            headers: { 'Content-Type': 'application/json' }
-          });
-        }
-      }
-    } catch (e) {
-      console.warn("KV Cache read error:", e);
-    }
-
     const ai = getAiClient();
     let prompt = '';
     const userLanguage = settings?.language || 'fr';
     const userPreferences = (settings?.answerPreferences || []).map(p => p.text).join(', ') || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.';
+    const today = new Date().toLocaleDateString(userLanguage, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const themeTitle = input || theme || "Analyse";
 
-    // Construct Prompt (Simplified for Edge - no scraping here, relying on input or search if needed)
-    // If scraping was needed, we assume it's done or we use Google Search tool if requested.
-    // The previous code had scraping logic. We'll replace it with Google Search tool if URL is present.
-    
     const contentToAnalyze = manualText || input || text;
     const contentString = Array.isArray(contentToAnalyze) ? contentToAnalyze.join('\n') : contentToAnalyze;
     
@@ -96,60 +77,105 @@ export default async function handler(req) {
     // --- PHASE 1 & 2: GROUNDING + SCRAPING (If applicable) ---
     if (withSearch && !isInitialSearchForPreview) {
       try {
-        if (urlMatch) {
-            articleUrl = urlMatch[0];
-        } else if (articleReferences && articleReferences.length > 0) {
-           articleUrl = articleReferences[0];
-        } else {
-           // Parallel search on wol.jw.org and jw.org
-           const searchPromptWol = `Find the single most relevant article URL on wol.jw.org for: "${input || theme}" in language "${userLanguage}". Return ONLY the URL as a plain string.`;
-           const searchPromptJw = `Find the single most relevant article URL on jw.org for: "${input || theme}" in language "${userLanguage}". Return ONLY the URL as a plain string.`;
-           
-           const [wolResult, jwResult] = await Promise.allSettled([
-             ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptWol, config: { tools: [{ googleSearch: {} }] } }),
-             ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptJw, config: { tools: [{ googleSearch: {} }] } })
-           ]);
-          
-          const wolUrl = wolResult.status === 'fulfilled' ? wolResult.value.text?.trim() : null;
-          const jwUrl = jwResult.status === 'fulfilled' ? jwResult.value.text?.trim() : null;
+        let urlsToScrape = [];
+        const groundingCacheKey = `grounding:${input || theme}:${userLanguage}`;
 
-          articleUrl = (wolUrl && wolUrl.startsWith('http')) ? wolUrl : ((jwUrl && jwUrl.startsWith('http')) ? jwUrl : null);
+        if (urlMatch) {
+            urlsToScrape.push(urlMatch[0]);
+        } else if (articleReferences && articleReferences.length > 0) {
+            urlsToScrape.push(articleReferences[0]);
+        } else {
+           // 1. Check if we already have the URLs cached for this exact query
+           if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+             try {
+               const cachedUrls = await kv.get(groundingCacheKey);
+               if (cachedUrls && Array.isArray(cachedUrls) && cachedUrls.length > 0) {
+                 urlsToScrape = cachedUrls;
+                 diagnostic = "Diagnostic : [Grounding en Cache + Scraping]";
+               }
+             } catch (e) {
+               console.warn("KV Cache read error:", e);
+             }
+           }
+
+           // 2. If no cached URLs, perform the Google Search
+           if (urlsToScrape.length === 0) {
+             // Parallel search strictly on wol.jw.org and jw.org using Gemini's Google Search tool
+             const searchPromptWol = `Utilise l'outil Google Search pour chercher EXCLUSIVEMENT à partir du lien "https://wol.jw.org/fr/wol/h/r30/lp-f" l'article le plus pertinent pour le sujet : "${input || theme}" en langue "${userLanguage}". Renvoie UNIQUEMENT l'URL exacte trouvée (commençant par http).`;
+             const searchPromptJw = `Utilise l'outil Google Search pour chercher EXCLUSIVEMENT à partir du lien "https://www.jw.org/fr/rechercher/?q=" l'article le plus pertinent pour le sujet : "${input || theme}" en langue "${userLanguage}". Renvoie UNIQUEMENT l'URL exacte trouvée (commençant par http).`;
+             
+             const [wolResult, jwResult] = await Promise.allSettled([
+               ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptWol, config: { tools: [{ googleSearch: {} }] } }),
+               ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptJw, config: { tools: [{ googleSearch: {} }] } })
+             ]);
+            
+            const wolUrl = wolResult.status === 'fulfilled' ? wolResult.value.text?.trim() : null;
+            const jwUrl = jwResult.status === 'fulfilled' ? jwResult.value.text?.trim() : null;
+
+            urlsToScrape = [...new Set([wolUrl, jwUrl].filter(url => url && url.startsWith('http')))];
+            
+            // Cache the found URLs
+            if (urlsToScrape.length > 0 && process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+              try {
+                await kv.set(groundingCacheKey, urlsToScrape, { ex: 86400 * 7 }); // Cache for 7 days
+              } catch (e) {
+                console.warn("KV Cache write error:", e);
+              }
+            }
+          }
         }
 
-        if (articleUrl) {
+        if (urlsToScrape.length > 0) {
            // Scraping (5s Timeout)
-           const controller = new AbortController();
-           const timeoutId = setTimeout(() => controller.abort(), 5000);
+           const scrapePromises = urlsToScrape.map(async (url) => {
+             const scrapeCacheKey = `scrape:${url}`;
+             
+             // Check if we already scraped this specific URL
+             if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+               try {
+                 const cachedText = await kv.get(scrapeCacheKey);
+                 if (cachedText) return cachedText;
+               } catch (e) {}
+             }
+
+             const controller = new AbortController();
+             const timeoutId = setTimeout(() => controller.abort(), 5000);
+             try {
+               const response = await fetch(url, {
+                 signal: controller.signal,
+                 headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' }
+               });
+               clearTimeout(timeoutId);
+               if (response.ok) {
+                 const html = await response.text();
+                 const $ = cheerio.load(html);
+                 $('script, style, nav, footer, header, aside, .navigation, .site-header, .site-footer, .advertisement, .share-options').remove();
+                 let text = $('article, main, .docTitle, .docSubTitle, .bodyTxt, .pGroup, #article').text() || $('body').text();
+                 text = text.replace(/\s+/g, ' ').trim();
+                 
+                 // Cache the scraped text
+                 if (text && process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+                   try {
+                     await kv.set(scrapeCacheKey, text, { ex: 86400 * 30 }); // Cache for 30 days
+                   } catch (e) {}
+                 }
+                 return text;
+               }
+             } catch (e) {
+               clearTimeout(timeoutId);
+               console.warn(`Scraping failed for ${url}:`, e);
+             }
+             return "";
+           });
+
+           const results = await Promise.all(scrapePromises);
+           const validTexts = results.filter(t => t.length > 0);
            
-           try {
-             const response = await fetch(articleUrl, {
-                signal: controller.signal,
-                headers: {
-                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-                }
-              });
-              
-              clearTimeout(timeoutId);
-              
-              if (response.ok) {
-                const html = await response.text();
-                const $ = cheerio.load(html);
-                
-                // Remove non-content
-                $('script, style, nav, footer, header, aside, .navigation, .site-header, .site-footer, .advertisement, .share-options').remove();
-                
-                // Extract content
-                scrapedContent = $('article, main, .docTitle, .docSubTitle, .bodyTxt, .pGroup, #article').text() || $('body').text();
-                scrapedContent = scrapedContent.replace(/\s+/g, ' ').trim().substring(0, 15000);
-                
-                diagnostic = `Diagnostic : [Scraping]`;
-              } else {
-                diagnostic = `Diagnostic : [Recherche]`;
-              }
-           } catch (e) {
-              clearTimeout(timeoutId);
-              console.warn("Scraping failed or timed out:", e);
-              diagnostic = `Diagnostic : [Recherche]`;
+           if (validTexts.length > 0) {
+             scrapedContent = validTexts.join('\n\n---\n\n').substring(0, 15000);
+             diagnostic = `Diagnostic : [Grounding + Scraping]`;
+           } else {
+             diagnostic = `Diagnostic : [Recherche]`;
            }
         } else {
            diagnostic = `Diagnostic : [Recherche]`;
@@ -163,10 +189,14 @@ export default async function handler(req) {
     
     // Reconstruct the prompt logic briefly
     if (type === 'DISCOURS_THEME') {
-        prompt = `Génère un thème de discours biblique accrocheur et profond basé sur les publications des Témoins de Jéhovah.
+        prompt = `OBLIGATOIRE : Commence TOUJOURS ta réponse par un grand titre (H1) reprenant le thème exact : "# ${themeTitle}", suivi immédiatement sur la ligne suivante de la date du jour en italique : "*${today}*".
+        
+Génère un thème de discours biblique accrocheur et profond basé sur les publications des Témoins de Jéhovah.
 Critères : "${input || 'Aucun'}". Langue : ${userLanguage}. Court et percutant.`;
     } else if (type === 'DISCOURS') {
-        prompt = `Orateur chrétien (TJ). Plan discours biblique.
+        prompt = `OBLIGATOIRE : Commence TOUJOURS ta réponse par un grand titre (H1) reprenant le thème exact : "# ${themeTitle}", suivi immédiatement sur la ligne suivante de la date du jour en italique : "*${today}*".
+
+Orateur chrétien (TJ). Plan discours biblique.
 Type: ${discoursType}, Thème: "${theme}", Durée: ${time}, Langue: ${userLanguage}.
 Prefs: ${userPreferences}.
 Inclure versets et articles.
@@ -184,8 +214,10 @@ ${preachingType ? `Type de prédication: ${preachingType}` : ''}
 ${articleReferences && articleReferences.length > 0 ? `Références articles: ${articleReferences.join(', ')}` : ''}
 
 INSTRUCTIONS :
-Utilise le contenu scrappé ci-dessus comme source principale.
-Si le contexte est vide, ignore le scraping et utilise UNIQUEMENT le contenu brut fourni par la recherche Google (Grounding).
+1. Utilise le contenu scrappé ci-dessus comme source principale.
+2. Ajoute ta propre réflexion, analyse et méditation spirituelle pour enrichir la réponse.
+3. Si le contexte est vide, ignore le scraping et utilise UNIQUEMENT le contenu brut fourni par la recherche Google (Grounding).
+4. OBLIGATOIRE : Commence TOUJOURS ta réponse par un grand titre (H1) reprenant le thème exact : "# ${themeTitle}", suivi immédiatement sur la ligne suivante de la date du jour en italique : "*${today}*".
 
 Format Markdown.`;
     }
@@ -208,20 +240,14 @@ Format Markdown.`;
       async start(controller) {
         try {
           for await (const chunk of stream) {
-            const text = chunk.text();
+            const text = chunk.text;
             if (text) {
               fullText += text;
               controller.enqueue(encoder.encode(text));
             }
           }
           
-          // Cache result
-          if (fullText && process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-             try {
-                await kv.set(cacheKey, fullText, { ex: 86400 });
-             } catch(e) { console.warn("Cache write failed", e); }
-          }
-          
+          // No Vercel KV Cache write here, strictly Gemini generation
           controller.close();
         } catch (e) {
           controller.error(e);
