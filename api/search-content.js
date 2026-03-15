@@ -133,7 +133,7 @@ export default async function handler(req) {
           }
 
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 5000);
+          const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
           try {
             const response = await fetch(url, {
               signal: controller.signal,
@@ -143,30 +143,94 @@ export default async function handler(req) {
             if (response.ok) {
               const html = await response.text();
               const $ = cheerio.load(html);
+              
+              // Extract main image
+              let imageUrl = $('meta[property="og:image"]').attr('content') || 
+                             $('article img').first().attr('src') || 
+                             $('main img').first().attr('src') || "";
+              
+              if (imageUrl && imageUrl.startsWith('/')) {
+                const urlObj = new URL(url);
+                imageUrl = `${urlObj.origin}${imageUrl}`;
+              }
+
               $('script, style, nav, footer, header, aside, .navigation, .site-header, .site-footer, .advertisement, .share-options').remove();
-              let text = $('article, main, .docTitle, .docSubTitle, .bodyTxt, .pGroup, #article').text() || $('body').text();
-              text = text.replace(/\s+/g, ' ').trim();
+              
+              const contentNode = $('article, main, #article').first();
+              const rootNode = contentNode.length ? contentNode : $('body');
+              
+              // Custom simple HTML to Markdown converter for Cheerio
+              function convertToMarkdown(node) {
+                let md = '';
+                node.contents().each((_, el) => {
+                  if (el.type === 'text') {
+                    md += $(el).text().replace(/\s+/g, ' ');
+                  } else if (el.type === 'tag') {
+                    const tagName = el.name.toLowerCase();
+                    if (['script', 'style', 'img', 'a', 'iframe', 'video', 'audio', 'nav', 'footer', 'header', 'aside'].includes(tagName)) {
+                      return; // Skip these
+                    }
+                    
+                    let innerMd = convertToMarkdown($(el));
+                    
+                    if (tagName === 'p') {
+                      md += `\n\n${innerMd}\n\n`;
+                    } else if (tagName.match(/^h[1-6]$/)) {
+                      const level = parseInt(tagName.charAt(1));
+                      md += `\n\n${'#'.repeat(level)} ${innerMd.trim()}\n\n`;
+                    } else if (tagName === 'li') {
+                      md += `\n- ${innerMd.trim()}`;
+                    } else if (tagName === 'ul' || tagName === 'ol') {
+                      md += `\n${innerMd}\n`;
+                    } else if (tagName === 'strong' || tagName === 'b') {
+                      md += `**${innerMd.trim()}**`;
+                    } else if (tagName === 'em' || tagName === 'i') {
+                      md += `*${innerMd.trim()}*`;
+                    } else if (tagName === 'br') {
+                      md += `\n`;
+                    } else {
+                      md += innerMd;
+                    }
+                  }
+                });
+                return md;
+              }
+              
+              let text = convertToMarkdown(rootNode);
+              text = text.replace(/\n{3,}/g, '\n\n').trim();
+              
+              if (!text) {
+                text = rootNode.text().replace(/\s+/g, ' ').trim();
+              }
+              
+              const resultObj = { text, imageUrl };
               
               // Cache the scraped text
               if (text && process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
                 try {
-                  await kv.set(scrapeCacheKey, text, { ex: 86400 * 30 }); // Cache for 30 days
+                  await kv.set(scrapeCacheKey, resultObj, { ex: 86400 * 30 }); // Cache for 30 days
                 } catch (e) {}
               }
-              return text;
+              return resultObj;
             }
           } catch (e) {
             clearTimeout(timeoutId);
             console.warn(`Scraping failed for ${url}:`, e);
           }
-          return "";
+          return { text: "", imageUrl: "" };
         });
 
         const results = await Promise.all(scrapePromises);
-        const validTexts = results.filter(t => t.length > 0);
+        const validResults = results.filter(t => t && t.text && t.text.length > 0);
         
-        if (validTexts.length > 0) {
-          scrapedContent = validTexts.join('\n\n---\n\n').substring(0, 15000);
+        if (validResults.length > 0) {
+          scrapedContent = validResults.map(t => t.text).join('\n\n---\n\n').substring(0, 15000);
+          const firstImage = validResults.find(t => t.imageUrl)?.imageUrl;
+          if (firstImage) {
+            articleUrl = articleUrl; // keep articleUrl
+            // We can pass the image to the preview
+            scrapedContent += `\n\n[IMAGE_URL: ${firstImage}]`;
+          }
           diagnostic = `Diagnostic : [Grounding + Scraping]`;
         } else {
           diagnostic = `Diagnostic : [Recherche]`;
@@ -185,22 +249,30 @@ export default async function handler(req) {
       // If we have scraped content, we can extract metadata manually or ask AI
       // For speed/simplicity in preview, we'll ask AI to format the preview JSON
       const previewPrompt = `
-      Generate a JSON preview for the article at "${articleUrl}" (or based on query "${questionOrSubject}").
-      Context: "${scrapedContent.substring(0, 2000)}..."
+      Génère un aperçu JSON pour l'article à l'URL "${articleUrl}" (ou basé sur la requête "${questionOrSubject}").
+      Contexte extrait : "${scrapedContent.substring(0, 3000)}..."
       
-      Return JSON object with:
-      - previewTitle: Title
-      - previewSummary: Short summary
-      - previewImage: URL of image (or placeholder)
-      - previewInfos: Source/Theme verse
+      Si le contexte contient [IMAGE_URL: ...], utilise cette URL pour previewImage.
+      Sinon, trouve une image pertinente ou renvoie une chaîne vide.
+      
+      Renvoie un objet JSON avec :
+      - previewTitle: Titre de l'article
+      - previewSummary: Bref résumé (2 phrases max)
+      - previewImage: URL de l'image
+      - previewInfos: Source ou verset clé
       - url: "${articleUrl}"
       
-      Return ONLY valid JSON.`;
+      Renvoie UNIQUEMENT du JSON valide.`;
+
+      const config = { responseMimeType: 'application/json' };
+      if (!scrapedContent) {
+        config.tools = [{ googleSearch: {} }];
+      }
 
       const result = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: previewPrompt,
-        config: { responseMimeType: 'application/json' }
+        config
       });
       
       return new Response(result.text, {
