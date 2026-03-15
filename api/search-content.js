@@ -71,18 +71,41 @@ export default async function handler(req) {
       // 2. If no cached URLs, perform the Google Search
       if (urlsToScrape.length === 0) {
         // Parallel search strictly on wol.jw.org and jw.org using Gemini's Google Search tool
-        const searchPromptWol = `Utilise l'outil Google Search pour chercher EXCLUSIVEMENT à partir du lien "https://wol.jw.org/fr/wol/h/r30/lp-f" l'article le plus pertinent pour le sujet : "${questionOrSubject}" en langue "${userLanguage}". Renvoie UNIQUEMENT l'URL exacte trouvée (commençant par http).`;
-        const searchPromptJw = `Utilise l'outil Google Search pour chercher EXCLUSIVEMENT à partir du lien "https://www.jw.org/fr/rechercher/?q=" l'article le plus pertinent pour le sujet : "${questionOrSubject}" en langue "${userLanguage}". Renvoie UNIQUEMENT l'URL exacte trouvée (commençant par http).`;
+        const searchPromptWol = `Recherche sur Google l'article le plus pertinent sur le site wol.jw.org pour le sujet : "${questionOrSubject}" en langue "${userLanguage}".`;
+        const searchPromptJw = `Recherche sur Google l'article le plus pertinent sur le site jw.org pour le sujet : "${questionOrSubject}" en langue "${userLanguage}".`;
         
         const [wolResult, jwResult] = await Promise.allSettled([
           ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptWol, config: { tools: [{ googleSearch: {} }] } }),
           ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptJw, config: { tools: [{ googleSearch: {} }] } })
         ]);
         
-        const wolUrl = wolResult.status === 'fulfilled' ? wolResult.value.text?.trim() : null;
-        const jwUrl = jwResult.status === 'fulfilled' ? jwResult.value.text?.trim() : null;
+        const extractUrl = (text) => {
+          if (!text) return null;
+          const match = text.match(/https?:\/\/[^\s"']+/);
+          return match ? match[0] : null;
+        };
 
-        urlsToScrape = [...new Set([wolUrl, jwUrl].filter(url => url && url.startsWith('http')))];
+        const extractUrlsFromGrounding = (result) => {
+          const urls = [];
+          if (result.status === 'fulfilled' && result.value.candidates?.[0]?.groundingMetadata?.groundingChunks) {
+            const chunks = result.value.candidates[0].groundingMetadata.groundingChunks;
+            for (const chunk of chunks) {
+              if (chunk.web?.uri) {
+                urls.push(chunk.web.uri);
+              }
+            }
+          }
+          if (result.status === 'fulfilled' && result.value.text) {
+             const textUrl = extractUrl(result.value.text);
+             if (textUrl) urls.push(textUrl);
+          }
+          return urls;
+        };
+
+        const wolUrls = extractUrlsFromGrounding(wolResult);
+        const jwUrls = extractUrlsFromGrounding(jwResult);
+
+        urlsToScrape = [...new Set([...wolUrls, ...jwUrls].filter(url => url && (url.includes('jw.org') || url.includes('wol.jw.org'))))];
         
         // Cache the found URLs
         if (urlsToScrape.length > 0 && process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {

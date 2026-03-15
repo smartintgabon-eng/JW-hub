@@ -95,9 +95,21 @@ export const callGenerateContentApi = async (
       return { text: fullText, title: fullText, theme: fullText };
     }
 
+    let extractedTitle = "Generated Content";
+    const titleMatch = fullText.match(/^#\s+(.+)$/m);
+    if (titleMatch) {
+      extractedTitle = titleMatch[1].trim();
+    } else {
+      // Fallback: try to find any first line that looks like a title
+      const lines = fullText.split('\n').filter(l => l.trim().length > 0);
+      if (lines.length > 0) {
+        extractedTitle = lines[0].replace(/^#+\s*/, '').trim();
+      }
+    }
+
     return { 
       text: fullText, 
-      title: "Generated Content",
+      title: extractedTitle,
       aiExplanation: fullText
     };
   } catch (err: any) {

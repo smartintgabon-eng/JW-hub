@@ -55,6 +55,34 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
     }
   };
 
+  const getStudyDate = (study: GeneratedStudy) => {
+    if (study.timestamp) {
+      return new Date(study.timestamp).toLocaleDateString(settings.language === 'fr' ? 'fr-FR' : settings.language === 'es' ? 'es-ES' : 'en-US');
+    }
+    if (study.date) {
+      const d = new Date(study.date);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString(settings.language === 'fr' ? 'fr-FR' : settings.language === 'es' ? 'es-ES' : 'en-US');
+      }
+    }
+    return new Date().toLocaleDateString(settings.language === 'fr' ? 'fr-FR' : settings.language === 'es' ? 'es-ES' : 'en-US');
+  };
+
+  const getStudyTitle = (study: GeneratedStudy) => {
+    if (study.title && study.title !== "Generated Content" && study.title !== "Nouvelle Étude") {
+      return study.title;
+    }
+    const titleMatch = study.content.match(/^#\s+(.+)$/m);
+    if (titleMatch) {
+      return titleMatch[1].trim();
+    }
+    const lines = study.content.split('\n').filter(l => l.trim().length > 0);
+    if (lines.length > 0) {
+      return lines[0].replace(/^#+\s*/, '').trim();
+    }
+    return "Nouvelle Étude";
+  };
+
   // Helper for DOCX to format text with Markdown-like bold/italic
   const formatTextRunForDocx = (text: string, defaultTextColor: string) => {
     const children: TextRun[] = [];
@@ -148,12 +176,12 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
       new Paragraph({
         alignment: AlignmentType.CENTER,
         spacing: { after: 240 },
-        children: [new TextRun({ text: study.title, color: defaultTextColor, size: 48, bold: true })]
+        children: [new TextRun({ text: getStudyTitle(study), color: defaultTextColor, size: 48, bold: true })]
       }),
       new Paragraph({
         alignment: AlignmentType.CENTER,
         spacing: { after: 360 },
-        children: [new TextRun({ text: `${getLocalizedText(settings, 'generatedOn')}: ${new Date(study.timestamp).toLocaleDateString(settings.language === 'fr' ? 'fr-FR' : settings.language === 'es' ? 'es-ES' : 'en-US')}`, color: defaultTextColor, size: 24, italics: true })]
+        children: [new TextRun({ text: `${getLocalizedText(settings, 'generatedOn')}: ${getStudyDate(study)}`, color: defaultTextColor, size: 24, italics: true })]
       }),
     ];
 
@@ -262,7 +290,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
 
     const doc = new Document({ sections: [{ children: docChildren }] });
     const buffer = await Packer.toBuffer(doc);
-    saveAs(new Blob([buffer]), `${study.title.replace(/[\s\W]+/g, '_')}.docx`);
+    saveAs(new Blob([buffer]), `${getStudyTitle(study).replace(/[\s\W]+/g, '_')}.docx`);
   };
 
   const exportToPdf = (study: GeneratedStudy) => {
@@ -280,12 +308,12 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
 
     // Title
     doc.setFontSize(24);
-    doc.text(study.title, pageWidth / 2, y + 10, { align: 'center' });
+    doc.text(getStudyTitle(study), pageWidth / 2, y + 10, { align: 'center' });
     y += 20;
 
     // Date
     doc.setFontSize(12);
-    doc.text(`${getLocalizedText(settings, 'generatedOn')}: ${new Date(study.timestamp).toLocaleDateString(settings.language === 'fr' ? 'fr-FR' : settings.language === 'es' ? 'es-ES' : 'en-US')}`, pageWidth / 2, y + 5, { align: 'center' });
+    doc.text(`${getLocalizedText(settings, 'generatedOn')}: ${getStudyDate(study)}`, pageWidth / 2, y + 5, { align: 'center' });
     y += 15;
 
     // Content
@@ -401,7 +429,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
       });
     }
 
-    doc.save(`${study.title.replace(/[\s\W]+/g, '_')}.pdf`);
+    doc.save(`${getStudyTitle(study).replace(/[\s\W]+/g, '_')}.pdf`);
   };
 
 
@@ -499,9 +527,9 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
           {history.map(study => (
             <div key={study.id} onClick={() => setSelectedStudy(study)} className="bg-white/5 p-8 rounded-[2rem] border border-white/10 hover:border-[var(--btn-color)] transition-all cursor-pointer group relative overflow-hidden">
               <span className="text-[9px] font-black opacity-30 uppercase tracking-widest">{getStudyTypeLabel(study.type)}</span>
-              <h3 className="text-xl font-black mt-2 uppercase line-clamp-2 leading-tight">{study.title}</h3>
+              <h3 className="text-xl font-black mt-2 uppercase line-clamp-2 leading-tight">{getStudyTitle(study)}</h3>
               <div className="mt-6 pt-6 border-t border-white/5 flex justify-between items-center">
-                <span className="text-[10px] opacity-30">{new Date(study.timestamp).toLocaleDateString(settings.language === 'fr' ? 'fr-FR' : settings.language === 'es' ? 'es-ES' : 'en-US')}</span>
+                <span className="text-[10px] opacity-30">{getStudyDate(study)}</span>
                 <ChevronRight size={16} className="text-[var(--btn-color)] group-hover:translate-x-1 transition-transform" />
               </div>
             </div>

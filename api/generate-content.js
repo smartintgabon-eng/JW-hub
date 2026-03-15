@@ -101,18 +101,41 @@ export default async function handler(req) {
            // 2. If no cached URLs, perform the Google Search
            if (urlsToScrape.length === 0) {
              // Parallel search strictly on wol.jw.org and jw.org using Gemini's Google Search tool
-             const searchPromptWol = `Utilise l'outil Google Search pour chercher EXCLUSIVEMENT à partir du lien "https://wol.jw.org/fr/wol/h/r30/lp-f" l'article le plus pertinent pour le sujet : "${input || theme}" en langue "${userLanguage}". Renvoie UNIQUEMENT l'URL exacte trouvée (commençant par http).`;
-             const searchPromptJw = `Utilise l'outil Google Search pour chercher EXCLUSIVEMENT à partir du lien "https://www.jw.org/fr/rechercher/?q=" l'article le plus pertinent pour le sujet : "${input || theme}" en langue "${userLanguage}". Renvoie UNIQUEMENT l'URL exacte trouvée (commençant par http).`;
+             const searchPromptWol = `Recherche sur Google l'article le plus pertinent sur le site wol.jw.org pour le sujet : "${input || theme}" en langue "${userLanguage}".`;
+             const searchPromptJw = `Recherche sur Google l'article le plus pertinent sur le site jw.org pour le sujet : "${input || theme}" en langue "${userLanguage}".`;
              
              const [wolResult, jwResult] = await Promise.allSettled([
                ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptWol, config: { tools: [{ googleSearch: {} }] } }),
                ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptJw, config: { tools: [{ googleSearch: {} }] } })
              ]);
             
-            const wolUrl = wolResult.status === 'fulfilled' ? wolResult.value.text?.trim() : null;
-            const jwUrl = jwResult.status === 'fulfilled' ? jwResult.value.text?.trim() : null;
+             const extractUrl = (text) => {
+               if (!text) return null;
+               const match = text.match(/https?:\/\/[^\s"']+/);
+               return match ? match[0] : null;
+             };
 
-            urlsToScrape = [...new Set([wolUrl, jwUrl].filter(url => url && url.startsWith('http')))];
+             const extractUrlsFromGrounding = (result) => {
+               const urls = [];
+               if (result.status === 'fulfilled' && result.value.candidates?.[0]?.groundingMetadata?.groundingChunks) {
+                 const chunks = result.value.candidates[0].groundingMetadata.groundingChunks;
+                 for (const chunk of chunks) {
+                   if (chunk.web?.uri) {
+                     urls.push(chunk.web.uri);
+                   }
+                 }
+               }
+               if (result.status === 'fulfilled' && result.value.text) {
+                  const textUrl = extractUrl(result.value.text);
+                  if (textUrl) urls.push(textUrl);
+               }
+               return urls;
+             };
+
+             const wolUrls = extractUrlsFromGrounding(wolResult);
+             const jwUrls = extractUrlsFromGrounding(jwResult);
+
+             urlsToScrape = [...new Set([...wolUrls, ...jwUrls].filter(url => url && (url.includes('jw.org') || url.includes('wol.jw.org'))))];
             
             // Cache the found URLs
             if (urlsToScrape.length > 0 && process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
@@ -203,18 +226,56 @@ ${contentOptions ? 'Utilise ce contexte pour enrichir le discours.' : ''}
 ${pointsToReinforce ? `Points à renforcer: ${pointsToReinforce}` : ''}
 ${strengths ? `Points forts: ${strengths}` : ''}
 ${encouragements ? `Encouragements: ${encouragements}` : ''}`;
+    } else if (type === 'PREDICATION') {
+        prompt = `OBLIGATOIRE : Commence TOUJOURS ta réponse par un grand titre (H1) reprenant le thème exact : "# ${themeTitle}", suivi immédiatement sur la ligne suivante de la date du jour en italique : "*${today}*".
+
+Tu es un proclamateur chrétien (Témoin de Jéhovah) expérimenté.
+Prépare une présentation de prédication.
+Type de prédication: ${preachingType || 'Non spécifié'}
+Sujet / Contenu de base: "${contentString}"
+Prefs: ${userPreferences}
+Langue: ${userLanguage}
+${articleReferences && articleReferences.length > 0 ? `Références articles: ${articleReferences.join(', ')}` : ''}
+CONTEXTE SCRAPPÉ (si dispo): "${scrapedContent}"
+
+INSTRUCTIONS :
+1. Rédige une présentation naturelle, conversationnelle et biblique.
+2. Inclus une question d'introduction, un verset biblique, et une question en suspens.
+3. Utilise le contexte scrappé si pertinent.
+Format Markdown.`;
+    } else if (type === 'WATCHTOWER' || type === 'MINISTRY') {
+        prompt = `OBLIGATOIRE : Commence TOUJOURS ta réponse par un grand titre (H1) reprenant le thème exact : "# ${themeTitle}", suivi immédiatement sur la ligne suivante de la date du jour en italique : "*${today}*".
+
+Tu es un assistant pour l'étude personnelle des Témoins de Jéhovah.
+Type d'étude: ${type === 'WATCHTOWER' ? 'Étude de La Tour de Garde' : 'Cahier Vie Chrétienne et Ministère'}
+Contenu source (texte collé ou lien): "${contentString}"
+Prefs: ${userPreferences}
+Langue: ${userLanguage}
+${articleReferences && articleReferences.length > 0 ? `Références articles: ${articleReferences.join(', ')}` : ''}
+CONTEXTE SCRAPPÉ (si dispo): "${scrapedContent}"
+
+INSTRUCTIONS CRUCIALES :
+1. Ton but principal est de FOURNIR LES RÉPONSES AUX QUESTIONS posées dans le texte source. Ne te contente SURTOUT PAS de répéter le texte.
+2. Pour chaque paragraphe ou section contenant une question, donne :
+   - Une réponse directe et claire basée sur le texte.
+   - Des commentaires supplémentaires ou des explications bibliques profondes.
+   - Une "Application dans la vie" (comment appliquer ce point au quotidien ou dans le ministère).
+3. Si le texte source est un article complet, identifie les questions d'étude et réponds-y.
+4. Si le texte source ne contient pas de questions explicites, dégage les points principaux et fournis des commentaires enrichissants et des applications pratiques.
+5. Utilise le contexte scrappé comme source principale si disponible, sinon utilise le texte fourni.
+
+Format Markdown structuré (utilise des sous-titres H2/H3, des puces, du gras pour mettre en valeur les réponses).`;
     } else {
         prompt = `Analyse et explication structurée.
 Contenu: "${contentString}"
 Prefs: ${userPreferences}
 Langue: ${userLanguage}
-${preachingType ? `Type de prédication: ${preachingType}` : ''}
-${articleReferences && articleReferences.length > 0 ? `Références articles: ${articleReferences.join(', ')}` : ''}
+CONTEXTE SCRAPPÉ (si dispo): "${scrapedContent}"
 
 INSTRUCTIONS :
 1. Utilise le contenu scrappé ci-dessus comme source principale.
 2. Ajoute ta propre réflexion, analyse et méditation spirituelle pour enrichir la réponse.
-3. Si le contexte est vide, ignore le scraping et utilise UNIQUEMENT le contenu brut fourni par la recherche Google (Grounding).
+3. Si le contexte est vide, ignore le scraping et utilise UNIQUEMENT le contenu brut fourni.
 4. OBLIGATOIRE : Commence TOUJOURS ta réponse par un grand titre (H1) reprenant le thème exact : "# ${themeTitle}", suivi immédiatement sur la ligne suivante de la date du jour en italique : "*${today}*".
 
 Format Markdown.`;

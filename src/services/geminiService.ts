@@ -31,8 +31,9 @@ export const generateStudyContent = async (
     title: result.title || "Nouvelle Étude",
     content: result.text,
     date: new Date().toISOString(),
+    timestamp: Date.now(),
     rawSources: result.rawSources || []
-  };
+  } as GeneratedStudy;
 };
 
 export const generateDiscourseTheme = async (
