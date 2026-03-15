@@ -36,7 +36,7 @@ async function withRetry(fn, retries = 3, delay = 1000) {
 }
 
 const scraperAxios = axios.create({
-  timeout: 30000,
+  timeout: 20000,
 });
 
 // Helper to get AI client
@@ -247,8 +247,15 @@ export default async function handler(req) {
           return { text: "", imageUrl: "", title: "", description: "" };
         });
 
-        const results = await Promise.all(scrapePromises);
-        const validResults = results.filter(t => t && t.text && t.text.length > 0);
+        const results = await Promise.race([
+          Promise.all(scrapePromises),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Global Scraping Timeout')), 15000))
+        ]).catch(err => {
+          console.warn("Scraping phase timed out or failed:", err.message);
+          return [];
+        });
+        
+        const validResults = Array.isArray(results) ? results.filter(t => t && t.text && t.text.length > 0) : [];
         
         if (validResults.length > 0) {
           scrapedContent = validResults.map(t => t.text).join('\n\n---\n\n').substring(0, 15000);
