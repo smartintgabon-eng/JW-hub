@@ -19,6 +19,22 @@ const scraper = metascraper([
   metascraperUrl()
 ]);
 
+// Helper for retrying Gemini calls
+async function withRetry(fn, retries = 3, delay = 1000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      const isQuotaError = error.message?.includes('429') || error.message?.includes('RESOURCE_EXHAUSTED');
+      if (isQuotaError && i < retries - 1) {
+        await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
+        continue;
+      }
+      throw error;
+    }
+  }
+}
+
 export const config = {
   runtime: 'edge',
 };
@@ -120,8 +136,8 @@ export default async function handler(req) {
              const searchPromptJw = `Recherche sur Google l'article le plus pertinent sur le site https://www.jw.org/fr/rechercher/?q= pour le sujet : "${input || theme}" en langue "${userLanguage}".`;
              
              const [wolResult, jwResult] = await Promise.allSettled([
-               ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptWol, config: { tools: [{ googleSearch: {} }] } }),
-               ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptJw, config: { tools: [{ googleSearch: {} }] } })
+               withRetry(() => ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptWol, config: { tools: [{ googleSearch: {} }] } })),
+               withRetry(() => ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptJw, config: { tools: [{ googleSearch: {} }] } }))
              ]);
             
              const extractUrl = (text) => {
@@ -164,7 +180,7 @@ export default async function handler(req) {
         }
 
         if (urlsToScrape.length > 0) {
-           // Scraping (5s Timeout)
+           // Scraping (15s Timeout)
            const scrapePromises = urlsToScrape.map(async (url) => {
              const scrapeCacheKey = `scrape:${url}`;
              
@@ -180,9 +196,16 @@ export default async function handler(req) {
 
              try {
                const controller = new AbortController();
-               const timeoutId = setTimeout(() => controller.abort(), 110000);
+               const timeoutId = setTimeout(() => controller.abort(), 15000);
                const response = await fetch(url, {
-                 headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' },
+                 headers: { 
+                  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                  'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+                  'Cache-Control': 'no-cache',
+                  'Pragma': 'no-cache',
+                  'Referer': 'https://www.google.com/'
+                },
                  signal: controller.signal
                });
                clearTimeout(timeoutId);
@@ -331,11 +354,11 @@ Format Markdown.`;
     // Stream Generation
     const config = withSearch ? { tools: [{ googleSearch: {} }] } : {};
     
-    const stream = await ai.models.generateContentStream({
+    const stream = await withRetry(() => ai.models.generateContentStream({
       model: 'gemini-3-flash-preview',
       contents: prompt,
       config
-    });
+    }));
 
     const encoder = new TextEncoder();
 

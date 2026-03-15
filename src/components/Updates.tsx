@@ -18,6 +18,7 @@ const updates: UpdateItem[] = [
       "**Extraction Intelligente des Médias** : Amélioration de la détection des images. Si l'image principale n'est pas trouvée via les métadonnées standards, le système fouille désormais le contenu de l'article pour extraire la première image pertinente."
     ],
     fixes: [
+      "**Gestion des Quotas (Erreur 429)** : Implémentation d'un système de tentatives automatiques (retry) avec attente exponentielle pour les appels à l'IA Gemini, réduisant considérablement les échecs dus aux limites de débit.",
       "**Correction de l'erreur 'fetch failed'** : Amélioration des en-têtes de requête pour simuler plus fidèlement un navigateur réel, réduisant les blocages par JW.org lors du scraping.",
       "**Résilience accrue** : En cas d'échec de lecture directe d'un lien, l'IA bascule automatiquement sur une recherche Google Search pour garantir l'affichage des informations de confirmation.",
       "Optimisation du prompt de confirmation pour une meilleure extraction des données structurées (JSON).",

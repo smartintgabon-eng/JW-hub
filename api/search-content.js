@@ -19,6 +19,22 @@ const scraper = metascraper([
   metascraperUrl()
 ]);
 
+// Helper for retrying Gemini calls
+async function withRetry(fn, retries = 3, delay = 1000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      const isQuotaError = error.message?.includes('429') || error.message?.includes('RESOURCE_EXHAUSTED');
+      if (isQuotaError && i < retries - 1) {
+        await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
+        continue;
+      }
+      throw error;
+    }
+  }
+}
+
 export const config = {
   runtime: 'edge',
 };
@@ -102,8 +118,8 @@ export default async function handler(req) {
           const searchPromptJw = `Recherche sur Google l'article le plus pertinent sur le site https://www.jw.org/fr/rechercher/?q= pour le sujet : "${questionOrSubject}" en langue "${userLanguage}".`;
           
           const [wolResult, jwResult] = await Promise.allSettled([
-            ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptWol, config: { tools: [{ googleSearch: {} }] } }),
-            ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptJw, config: { tools: [{ googleSearch: {} }] } })
+            withRetry(() => ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptWol, config: { tools: [{ googleSearch: {} }] } })),
+            withRetry(() => ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptJw, config: { tools: [{ googleSearch: {} }] } }))
           ]);
           
           const extractUrl = (text) => {
@@ -148,7 +164,7 @@ export default async function handler(req) {
       articleUrl = urlsToScrape[0] || "";
 
       if (urlsToScrape.length > 0) {
-        // --- PHASE 2: SCRAPING (8s Timeout) ---
+        // --- PHASE 2: SCRAPING (15s Timeout) ---
         const scrapePromises = urlsToScrape.map(async (url) => {
           const scrapeCacheKey = `scrape:${url}`;
           
@@ -164,7 +180,7 @@ export default async function handler(req) {
 
           try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 110000);
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
             const response = await fetch(url, {
               headers: { 
                 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
@@ -288,11 +304,11 @@ export default async function handler(req) {
         config.tools = [{ googleSearch: {} }];
       }
 
-      const result = await ai.models.generateContent({
+      const result = await withRetry(() => ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: previewPrompt,
         config
-      });
+      }));
       
       return new Response(result.text, {
         headers: { 'Content-Type': 'application/json' }
@@ -337,13 +353,13 @@ export default async function handler(req) {
     ${diagnostic}`;
 
     // Stream Generation
-    const stream = await ai.models.generateContentStream({
+    const stream = await withRetry(() => ai.models.generateContentStream({
       model: 'gemini-3-flash-preview',
       contents: prompt,
       // We don't need googleSearch tool here if we already scraped, 
       // but keeping it doesn't hurt if scraping failed (fallback).
       config: { tools: [{ googleSearch: {} }] }
-    });
+    }));
 
     const encoder = new TextEncoder();
 
