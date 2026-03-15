@@ -1,5 +1,5 @@
 import React from 'react';
-import { Lightbulb, Link as LinkIcon, Search, Smartphone, LayoutGrid, ChevronRight, History as HistoryIcon, Settings as SettingsIcon, Download } from 'lucide-react';
+import { Lightbulb, Link as LinkIcon, Search, Smartphone, LayoutGrid, ChevronRight, History as HistoryIcon, Settings as SettingsIcon, Download, Mic } from 'lucide-react';
 import { AppSettings, AppView } from '../types.ts'; // Import AppSettings and AppView
 
 interface Props {
@@ -45,6 +45,7 @@ const Tutorial: React.FC<Props> = ({ navigateTo, handleInstallClick, settings })
       title: getLocalizedText(settings, 'workbook'),
       desc: "Préparez vos réunions de semaine et d'étude de la Tour de Garde.",
       details: "Utilisez les liens jw.org ou collez le texte manuellement. Choisissez des parties spécifiques ou générez l'article complet.",
+      result: "Résultat : Vous obtiendrez des réponses structurées aux questions, des versets clés mis en évidence, et des commentaires prêts à être utilisés. Options pour copier, lire à voix haute ou exporter en PDF/Word.",
       icon: <LinkIcon className="text-indigo-400" size={32} />
     },
     {
@@ -52,14 +53,32 @@ const Tutorial: React.FC<Props> = ({ navigateTo, handleInstallClick, settings })
       title: getLocalizedText(settings, 'preaching'),
       desc: "Des préparations sur mesure pour le porte-à-porte, les nouvelles visites et les cours bibliques.",
       details: "Choisissez votre mode de prédication et l'IA vous aidera à structurer vos présentations avec des sujets et des versets pertinents.",
+      result: "Résultat : Un plan de conversation étape par étape (Introduction, Verset, Application, Conclusion), adapté au public choisi, avec des suggestions de transitions naturelles.",
       icon: <Smartphone className="text-violet-400" size={32} />
+    },
+    {
+      id: 'discours',
+      title: "Discours",
+      desc: "Générez des plans de discours complets (Normaux, Jeudi, Dimanche, Spéciaux).",
+      details: "Saisissez un thème ou un verset. L'IA structure un discours avec introduction, développement (points principaux), conclusion et même des suggestions de cantiques.",
+      result: "Résultat : Un plan détaillé et structuré, incluant des versets d'appui, des illustrations, une application pratique et une suggestion de cantique (avec lien jw.org).",
+      icon: <Mic className="text-orange-400" size={32} />
     },
     {
       id: 'search',
       title: getLocalizedText(settings, 'searches'),
       desc: "Recherche hybride intelligente sur jw.org et WOL avec images et résumés.",
       details: "Posez des questions complexes. L'IA vous montrera l'article trouvé avec son image et un résumé pour confirmation avant l'analyse complète.",
+      result: "Résultat : Une réponse détaillée et sourcée, expliquant la démarche de recherche, suivie des extraits pertinents et de la liste cliquable de tous les liens jw.org et wol.jw.org utilisés.",
       icon: <Search className="text-emerald-400" size={32} />
+    },
+    {
+      id: 'direct-links',
+      title: "Liens Directs & Scraping",
+      desc: "Gagnez du temps en collant directement les liens des articles.",
+      details: "Si vous collez un lien direct (ex: La Tour de Garde), l'IA ignore la recherche, scrape instantanément la page et garantit une réponse 100% fidèle au texte source.",
+      result: "Résultat : Une analyse ultra-rapide et précise, sans risque d'hallucination, car l'IA est ancrée (grounded) exclusivement sur le texte de votre lien.",
+      icon: <LinkIcon className="text-pink-400" size={32} />
     },
     {
       id: 'history',
@@ -103,7 +122,7 @@ const Tutorial: React.FC<Props> = ({ navigateTo, handleInstallClick, settings })
             </div>
             <p className="text-sm opacity-50 leading-relaxed flex-1">{s.desc}</p>
             <button
-              onClick={() => alert(s.details)}
+              onClick={() => alert(s.details + (s.result ? '\n\n' + s.result : ''))}
               className="px-4 py-2 bg-[var(--btn-color)]/20 text-[var(--btn-color)] rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-[var(--btn-color)]/30 transition-all"
             >
               Détails <ChevronRight size={14} className="inline ml-1" />

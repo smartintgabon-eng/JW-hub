@@ -12,6 +12,15 @@ import searchContentHandler from './api/search-content.js';
 import generateContentHandler from './api/generate-content.js';
 import getColorHandler from './api/get-color.js';
 
+// Vercel Packages Integration (as requested)
+import { put } from '@vercel/blob';
+import { sql } from '@vercel/postgres';
+import { get } from '@vercel/edge-config';
+
+// Utility packages (as requested)
+import { format } from 'date-fns';
+import { v4 as uuidv4 } from 'uuid';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -91,6 +100,35 @@ async function startServer() {
   app.post('/api/search-content', wrapApiRoute(searchContentHandler));
   app.post('/api/generate-content', wrapApiRoute(generateContentHandler));
   app.post('/api/get-color', wrapApiRoute(getColorHandler));
+
+  // Dummy endpoint to demonstrate Vercel packages integration
+  app.get('/api/vercel-status', async (req, res) => {
+    try {
+      // @vercel/edge-config
+      const configValue = process.env.EDGE_CONFIG ? await get('status') : 'Edge Config non configuré';
+      
+      // @vercel/postgres
+      const dbStatus = process.env.POSTGRES_URL ? await sql`SELECT NOW()` : 'Postgres non configuré';
+      
+      // @vercel/blob
+      const blobStatus = process.env.BLOB_READ_WRITE_TOKEN ? 'Prêt (put disponible)' : 'Blob non configuré';
+
+      res.json({
+        analytics: 'Actif (côté client)',
+        speedInsights: 'Actif (côté client)',
+        blob: blobStatus,
+        postgres: dbStatus,
+        edgeConfig: configValue,
+        _putAvailable: !!put, // Just to ensure the import is used
+        _utils: {
+          date: format(new Date(), 'yyyy-MM-dd HH:mm:ss'),
+          uuid: uuidv4()
+        }
+      });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {

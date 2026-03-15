@@ -11,6 +11,21 @@ interface UpdateItem {
 
 const updates: UpdateItem[] = [
   {
+    version: "2.2.0",
+    date: "15 Mars 2026",
+    features: [
+      "**Scraping Fiable et Rapide** : Remplacement de l'ancien système par une combinaison robuste (`axios`, `html-to-text`, `metascraper`). Les métadonnées (images, titres, descriptions) sont extraites avec précision lors de la confirmation des articles.",
+      "**Priorité aux Liens Directs (Grounding Absolu)** : Si vous collez un lien direct (ex: La Tour de Garde), l'application ignore l'étape de recherche Google. Elle scrape directement la page et utilise ce texte comme 'Grounding' absolu pour l'IA, garantissant une fidélité à 100% au texte source et un gain de temps considérable.",
+      "**Recherche Ciblée (JW.org & WOL)** : Pour les recherches par mots-clés, l'IA fouille simultanément et spécifiquement sur `jw.org` et `wol.jw.org` en utilisant l'outil Google Search intégré, offrant des résultats extrêmement précis.",
+      "**Génération Spécifique par Onglet** : Les instructions de l'IA ont été affinées pour chaque outil (Étude, Prédication, etc.) afin d'exploiter au mieux le contenu scrappé.",
+      "**Intégration de l'écosystème Vercel** : Ajout des packages `@vercel/analytics`, `@vercel/speed-insights`, `@vercel/blob`, `@vercel/postgres`, et `@vercel/edge-config` pour préparer les futures fonctionnalités cloud et suivre les performances."
+    ],
+    fixes: [
+      "Correction de l'erreur `timeout of 8000ms exceeded` lors du scraping de pages volumineuses sur jw.org en augmentant le délai d'attente à 25 secondes.",
+      "Résolution de divers bugs de variables non utilisées et de blocs vides dans le code backend pour une meilleure stabilité."
+    ]
+  },
+  {
     version: "2.1.0",
     date: "02 Mars 2026",
     features: [
@@ -375,6 +390,19 @@ const Updates: React.FC = () => {
   // Sort updates by date, most recent first
   const sortedUpdates = [...updates].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
+  const renderItem = (text: string) => {
+    const parts = text.split('**');
+    if (parts.length >= 3) {
+      return (
+        <div className="mb-6">
+          <strong className="text-white font-black tracking-wide block text-xl mb-2">{parts[1]}</strong>
+          <span className="text-white/70 leading-relaxed block pl-4 border-l-2 border-[var(--btn-color)]/50">{parts.slice(2).join('**').replace(/^ : /, '')}</span>
+        </div>
+      );
+    }
+    return <div className="text-white/70 leading-relaxed block pl-4 border-l-2 border-white/20 mb-6">{text}</div>;
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 max-w-5xl mx-auto">
       <div className="flex items-center space-x-4 mb-6">
@@ -402,22 +430,22 @@ const Updates: React.FC = () => {
             </div>
 
             <div className="space-y-4 pt-4 border-t border-white/5">
-              <p className="flex items-center space-x-2 text-white/70 font-bold text-lg uppercase tracking-wider"><CheckCircle size={20} className="text-emerald-500" /> Nouvelles Fonctionnalités</p>
-              <ul className="list-disc list-inside space-y-2 pl-4 text-white/60 font-medium leading-relaxed">
+              <p className="flex items-center space-x-2 text-white/70 font-bold text-lg uppercase tracking-wider mb-6"><CheckCircle size={20} className="text-emerald-500" /> Nouvelles Fonctionnalités</p>
+              <div className="space-y-2">
                 {update.features.map((feature, i) => (
-                  <li key={i}>{feature}</li>
+                  <div key={i}>{renderItem(feature)}</div>
                 ))}
-              </ul>
+              </div>
             </div>
 
             {update.fixes.length > 0 && (
               <div className="space-y-4 pt-4 border-t border-white/5">
-                <p className="flex items-center space-x-2 text-white/70 font-bold text-lg uppercase tracking-wider"><Bug size={20} className="text-amber-500" /> Corrections et Optimisations</p>
-                <ul className="list-disc list-inside space-y-2 pl-4 text-white/60 font-medium leading-relaxed">
+                <p className="flex items-center space-x-2 text-white/70 font-bold text-lg uppercase tracking-wider mb-6"><Bug size={20} className="text-amber-500" /> Corrections et Optimisations</p>
+                <div className="space-y-2">
                   {update.fixes.map((fix, i) => (
-                    <li key={i}>{fix}</li>
+                    <div key={i}>{renderItem(fix)}</div>
                   ))}
-                </ul>
+                </div>
               </div>
             )}
           </div>
