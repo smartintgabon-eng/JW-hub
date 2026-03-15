@@ -1,6 +1,20 @@
 import { GoogleGenAI } from '@google/genai';
 import { kv } from '@vercel/kv';
 import * as cheerio from 'cheerio';
+import axios from 'axios';
+import { convert } from 'html-to-text';
+import metascraper from 'metascraper';
+import metascraperImage from 'metascraper-image';
+import metascraperTitle from 'metascraper-title';
+import metascraperDescription from 'metascraper-description';
+import metascraperUrl from 'metascraper-url';
+
+const scraper = metascraper([
+  metascraperImage(),
+  metascraperTitle(),
+  metascraperDescription(),
+  metascraperUrl()
+]);
 
 export const config = {
   runtime: 'edge',
@@ -34,9 +48,11 @@ export default async function handler(req) {
     return new Response(JSON.stringify({ message: 'Method Not Allowed' }), { status: 405 });
   }
 
+  let isConfirmMode = false;
   try {
     const body = await req.json();
     const { questionOrSubject, settings, confirmMode, contentOptions, part } = body;
+    if (confirmMode) isConfirmMode = true;
 
     if (!questionOrSubject && !confirmMode) {
       return new Response(JSON.stringify({ message: 'Question or subject is required.' }), { status: 400 });
@@ -49,70 +65,79 @@ export default async function handler(req) {
     let diagnostic = "Diagnostic : [Recherche]";
     let scrapedContent = "";
     let articleUrl = "";
+    let metadata = {};
+
+    // Check if input is a direct URL
+    const isDirectUrl = questionOrSubject && questionOrSubject.match(/^https?:\/\//);
 
     // --- PHASE 1: GROUNDING (Parallel Search via Google Search ONLY) ---
     try {
       let urlsToScrape = [];
       const groundingCacheKey = `grounding:${questionOrSubject}:${userLanguage}`;
 
-      // 1. Check if we already have the URLs cached for this exact query
-      if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-        try {
-          const cachedUrls = await kv.get(groundingCacheKey);
-          if (cachedUrls && Array.isArray(cachedUrls) && cachedUrls.length > 0) {
-            urlsToScrape = cachedUrls;
-            diagnostic = "Diagnostic : [Grounding en Cache + Scraping]";
+      if (isDirectUrl) {
+        urlsToScrape = [questionOrSubject.trim()];
+        diagnostic = "Diagnostic : [Lien Direct + Scraping]";
+      } else {
+        // 1. Check if we already have the URLs cached for this exact query
+        if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+          try {
+            const cachedUrls = await kv.get(groundingCacheKey);
+            if (cachedUrls && Array.isArray(cachedUrls) && cachedUrls.length > 0) {
+              urlsToScrape = cachedUrls;
+              diagnostic = "Diagnostic : [Grounding en Cache + Scraping]";
+            }
+          } catch (e) {
+            console.warn("KV Cache read error:", e);
           }
-        } catch (e) {
-          console.warn("KV Cache read error:", e);
         }
-      }
 
-      // 2. If no cached URLs, perform the Google Search
-      if (urlsToScrape.length === 0) {
-        // Parallel search strictly on wol.jw.org and jw.org using Gemini's Google Search tool
-        const searchPromptWol = `Recherche sur Google l'article le plus pertinent sur le site wol.jw.org pour le sujet : "${questionOrSubject}" en langue "${userLanguage}".`;
-        const searchPromptJw = `Recherche sur Google l'article le plus pertinent sur le site jw.org pour le sujet : "${questionOrSubject}" en langue "${userLanguage}".`;
-        
-        const [wolResult, jwResult] = await Promise.allSettled([
-          ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptWol, config: { tools: [{ googleSearch: {} }] } }),
-          ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptJw, config: { tools: [{ googleSearch: {} }] } })
-        ]);
-        
-        const extractUrl = (text) => {
-          if (!text) return null;
-          const match = text.match(/https?:\/\/[^\s"']+/);
-          return match ? match[0] : null;
-        };
+        // 2. If no cached URLs, perform the Google Search
+        if (urlsToScrape.length === 0) {
+          // Parallel search strictly on wol.jw.org and jw.org using Gemini's Google Search tool
+          const searchPromptWol = `Recherche sur Google l'article le plus pertinent sur le site https://wol.jw.org/fr/wol/h/r30/lp-f pour le sujet : "${questionOrSubject}" en langue "${userLanguage}".`;
+          const searchPromptJw = `Recherche sur Google l'article le plus pertinent sur le site https://www.jw.org/fr/rechercher/?q= pour le sujet : "${questionOrSubject}" en langue "${userLanguage}".`;
+          
+          const [wolResult, jwResult] = await Promise.allSettled([
+            ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptWol, config: { tools: [{ googleSearch: {} }] } }),
+            ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptJw, config: { tools: [{ googleSearch: {} }] } })
+          ]);
+          
+          const extractUrl = (text) => {
+            if (!text) return null;
+            const match = text.match(/https?:\/\/[^\s"']+/);
+            return match ? match[0] : null;
+          };
 
-        const extractUrlsFromGrounding = (result) => {
-          const urls = [];
-          if (result.status === 'fulfilled' && result.value.candidates?.[0]?.groundingMetadata?.groundingChunks) {
-            const chunks = result.value.candidates[0].groundingMetadata.groundingChunks;
-            for (const chunk of chunks) {
-              if (chunk.web?.uri) {
-                urls.push(chunk.web.uri);
+          const extractUrlsFromGrounding = (result) => {
+            const urls = [];
+            if (result.status === 'fulfilled' && result.value.candidates?.[0]?.groundingMetadata?.groundingChunks) {
+              const chunks = result.value.candidates[0].groundingMetadata.groundingChunks;
+              for (const chunk of chunks) {
+                if (chunk.web?.uri) {
+                  urls.push(chunk.web.uri);
+                }
               }
             }
-          }
-          if (result.status === 'fulfilled' && result.value.text) {
-             const textUrl = extractUrl(result.value.text);
-             if (textUrl) urls.push(textUrl);
-          }
-          return urls;
-        };
+            if (result.status === 'fulfilled' && result.value.text) {
+               const textUrl = extractUrl(result.value.text);
+               if (textUrl) urls.push(textUrl);
+            }
+            return urls;
+          };
 
-        const wolUrls = extractUrlsFromGrounding(wolResult);
-        const jwUrls = extractUrlsFromGrounding(jwResult);
+          const wolUrls = extractUrlsFromGrounding(wolResult);
+          const jwUrls = extractUrlsFromGrounding(jwResult);
 
-        urlsToScrape = [...new Set([...wolUrls, ...jwUrls].filter(url => url && (url.includes('jw.org') || url.includes('wol.jw.org'))))];
-        
-        // Cache the found URLs
-        if (urlsToScrape.length > 0 && process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-          try {
-            await kv.set(groundingCacheKey, urlsToScrape, { ex: 86400 * 7 }); // Cache for 7 days
-          } catch (e) {
-            console.warn("KV Cache write error:", e);
+          urlsToScrape = [...new Set([...wolUrls, ...jwUrls].filter(url => url && (url.includes('jw.org') || url.includes('wol.jw.org'))))];
+          
+          // Cache the found URLs
+          if (urlsToScrape.length > 0 && process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+            try {
+              await kv.set(groundingCacheKey, urlsToScrape, { ex: 86400 * 7 }); // Cache for 7 days
+            } catch (e) {
+              console.warn("KV Cache write error:", e);
+            }
           }
         }
       }
@@ -120,7 +145,7 @@ export default async function handler(req) {
       articleUrl = urlsToScrape[0] || "";
 
       if (urlsToScrape.length > 0) {
-        // --- PHASE 2: SCRAPING (5s Timeout) ---
+        // --- PHASE 2: SCRAPING (8s Timeout) ---
         const scrapePromises = urlsToScrape.map(async (url) => {
           const scrapeCacheKey = `scrape:${url}`;
           
@@ -129,95 +154,60 @@ export default async function handler(req) {
             try {
               const cachedText = await kv.get(scrapeCacheKey);
               if (cachedText) return cachedText;
-            } catch (e) {}
+            } catch (e) {
+              console.warn("KV Cache read error:", e);
+            }
           }
 
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
           try {
-            const response = await fetch(url, {
-              signal: controller.signal,
+            const response = await axios.get(url, {
+              timeout: 8000,
               headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' }
             });
-            clearTimeout(timeoutId);
-            if (response.ok) {
-              const html = await response.text();
+            
+            if (response.status === 200) {
+              const html = response.data;
+              
+              // Extract metadata using metascraper
+              const meta = await scraper({ html, url });
+              
               const $ = cheerio.load(html);
-              
-              // Extract main image
-              let imageUrl = $('meta[property="og:image"]').attr('content') || 
-                             $('article img').first().attr('src') || 
-                             $('main img').first().attr('src') || "";
-              
-              if (imageUrl && imageUrl.startsWith('/')) {
-                const urlObj = new URL(url);
-                imageUrl = `${urlObj.origin}${imageUrl}`;
-              }
-
               $('script, style, nav, footer, header, aside, .navigation, .site-header, .site-footer, .advertisement, .share-options').remove();
               
               const contentNode = $('article, main, #article').first();
               const rootNode = contentNode.length ? contentNode : $('body');
               
-              // Custom simple HTML to Markdown converter for Cheerio
-              function convertToMarkdown(node) {
-                let md = '';
-                node.contents().each((_, el) => {
-                  if (el.type === 'text') {
-                    md += $(el).text().replace(/\s+/g, ' ');
-                  } else if (el.type === 'tag') {
-                    const tagName = el.name.toLowerCase();
-                    if (['script', 'style', 'img', 'a', 'iframe', 'video', 'audio', 'nav', 'footer', 'header', 'aside'].includes(tagName)) {
-                      return; // Skip these
-                    }
-                    
-                    let innerMd = convertToMarkdown($(el));
-                    
-                    if (tagName === 'p') {
-                      md += `\n\n${innerMd}\n\n`;
-                    } else if (tagName.match(/^h[1-6]$/)) {
-                      const level = parseInt(tagName.charAt(1));
-                      md += `\n\n${'#'.repeat(level)} ${innerMd.trim()}\n\n`;
-                    } else if (tagName === 'li') {
-                      md += `\n- ${innerMd.trim()}`;
-                    } else if (tagName === 'ul' || tagName === 'ol') {
-                      md += `\n${innerMd}\n`;
-                    } else if (tagName === 'strong' || tagName === 'b') {
-                      md += `**${innerMd.trim()}**`;
-                    } else if (tagName === 'em' || tagName === 'i') {
-                      md += `*${innerMd.trim()}*`;
-                    } else if (tagName === 'br') {
-                      md += `\n`;
-                    } else {
-                      md += innerMd;
-                    }
-                  }
-                });
-                return md;
-              }
+              // Use html-to-text for clean extraction
+              let text = convert(rootNode.html() || "", {
+                wordwrap: false,
+                selectors: [
+                  { selector: 'img', format: 'skip' },
+                  { selector: 'a', options: { ignoreHref: true } }
+                ]
+              });
               
-              let text = convertToMarkdown(rootNode);
               text = text.replace(/\n{3,}/g, '\n\n').trim();
               
               if (!text) {
                 text = rootNode.text().replace(/\s+/g, ' ').trim();
               }
               
-              const resultObj = { text, imageUrl };
+              const resultObj = { text, imageUrl: meta.image || "", title: meta.title || "", description: meta.description || "" };
               
               // Cache the scraped text
               if (text && process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
                 try {
                   await kv.set(scrapeCacheKey, resultObj, { ex: 86400 * 30 }); // Cache for 30 days
-                } catch (e) {}
+                } catch (e) {
+                  console.warn("KV Cache write error:", e);
+                }
               }
               return resultObj;
             }
           } catch (e) {
-            clearTimeout(timeoutId);
-            console.warn(`Scraping failed for ${url}:`, e);
+            console.warn(`Scraping failed for ${url}:`, e.message);
           }
-          return { text: "", imageUrl: "" };
+          return { text: "", imageUrl: "", title: "", description: "" };
         });
 
         const results = await Promise.all(scrapePromises);
@@ -225,13 +215,14 @@ export default async function handler(req) {
         
         if (validResults.length > 0) {
           scrapedContent = validResults.map(t => t.text).join('\n\n---\n\n').substring(0, 15000);
-          const firstImage = validResults.find(t => t.imageUrl)?.imageUrl;
-          if (firstImage) {
-            articleUrl = articleUrl; // keep articleUrl
-            // We can pass the image to the preview
-            scrapedContent += `\n\n[IMAGE_URL: ${firstImage}]`;
+          const firstValid = validResults.find(t => t.imageUrl || t.title);
+          if (firstValid) {
+            metadata = firstValid;
+            if (firstValid.imageUrl) {
+              scrapedContent += `\n\n[IMAGE_URL: ${firstValid.imageUrl}]`;
+            }
           }
-          diagnostic = `Diagnostic : [Grounding + Scraping]`;
+          if (!isDirectUrl) diagnostic = `Diagnostic : [Grounding + Scraping]`;
         } else {
           diagnostic = `Diagnostic : [Recherche]`;
         }
@@ -246,17 +237,17 @@ export default async function handler(req) {
 
     // Handle confirmMode (Preview)
     if (confirmMode) {
-      // If we have scraped content, we can extract metadata manually or ask AI
-      // For speed/simplicity in preview, we'll ask AI to format the preview JSON
+      // If we have scraped content and metadata, we can build the preview directly or ask AI
       const previewPrompt = `
       Génère un aperçu JSON pour l'article à l'URL "${articleUrl}" (ou basé sur la requête "${questionOrSubject}").
+      Titre extrait : "${metadata.title || ''}"
+      Description extraite : "${metadata.description || ''}"
       Contexte extrait : "${scrapedContent.substring(0, 3000)}..."
       
-      Si le contexte contient [IMAGE_URL: ...], utilise cette URL pour previewImage.
-      Sinon, trouve une image pertinente ou renvoie une chaîne vide.
+      Si une image est disponible dans le contexte [IMAGE_URL: ...] ou si tu en connais une pertinente, utilise-la pour previewImage. Sinon renvoie "${metadata.imageUrl || ''}".
       
       Renvoie un objet JSON avec :
-      - previewTitle: Titre de l'article
+      - previewTitle: Titre de l'article (utilise le titre extrait si pertinent)
       - previewSummary: Bref résumé (2 phrases max)
       - previewImage: URL de l'image
       - previewInfos: Source ou verset clé
@@ -327,7 +318,6 @@ export default async function handler(req) {
     });
 
     const encoder = new TextEncoder();
-    let fullText = "";
 
     const readable = new ReadableStream({
       async start(controller) {
@@ -335,7 +325,6 @@ export default async function handler(req) {
           for await (const chunk of stream) {
             const text = chunk.text;
             if (text) {
-              fullText += text;
               controller.enqueue(encoder.encode(text));
             }
           }
@@ -359,15 +348,6 @@ export default async function handler(req) {
     const errorMessage = "Désolé, je n'ai pas pu récupérer cette information, veuillez réessayer.";
     
     // If it's a JSON request (like confirmMode), return JSON
-    let isConfirmMode = false;
-    try {
-      // Try to parse if not already parsed, but in most cases it failed during processing
-      // We can check if we already have confirmMode from the top of the function
-      if (typeof confirmMode !== 'undefined' && confirmMode) {
-        isConfirmMode = true;
-      }
-    } catch(e) {}
-
     if (isConfirmMode) {
       return new Response(JSON.stringify({ message: errorMessage }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }

@@ -1,6 +1,20 @@
 import { GoogleGenAI } from '@google/genai';
 import { kv } from '@vercel/kv';
 import * as cheerio from 'cheerio';
+import axios from 'axios';
+import { convert } from 'html-to-text';
+import metascraper from 'metascraper';
+import metascraperImage from 'metascraper-image';
+import metascraperTitle from 'metascraper-title';
+import metascraperDescription from 'metascraper-description';
+import metascraperUrl from 'metascraper-url';
+
+const scraper = metascraper([
+  metascraperImage(),
+  metascraperTitle(),
+  metascraperDescription(),
+  metascraperUrl()
+]);
 
 export const config = {
   runtime: 'edge',
@@ -42,7 +56,6 @@ export default async function handler(req) {
       text, 
       settings, 
       type, 
-      part, 
       discoursType, 
       time, 
       theme, 
@@ -72,7 +85,6 @@ export default async function handler(req) {
     
     let diagnostic = isManualText ? "Diagnostic : [Analyse de texte manuel]" : "Diagnostic : [Recherche]";
     let scrapedContent = "";
-    let articleUrl = "";
 
     // --- PHASE 1 & 2: GROUNDING + SCRAPING (If applicable) ---
     if (withSearch && !isInitialSearchForPreview) {
@@ -101,8 +113,8 @@ export default async function handler(req) {
            // 2. If no cached URLs, perform the Google Search
            if (urlsToScrape.length === 0) {
              // Parallel search strictly on wol.jw.org and jw.org using Gemini's Google Search tool
-             const searchPromptWol = `Recherche sur Google l'article le plus pertinent sur le site wol.jw.org pour le sujet : "${input || theme}" en langue "${userLanguage}".`;
-             const searchPromptJw = `Recherche sur Google l'article le plus pertinent sur le site jw.org pour le sujet : "${input || theme}" en langue "${userLanguage}".`;
+             const searchPromptWol = `Recherche sur Google l'article le plus pertinent sur le site https://wol.jw.org/fr/wol/h/r30/lp-f pour le sujet : "${input || theme}" en langue "${userLanguage}".`;
+             const searchPromptJw = `Recherche sur Google l'article le plus pertinent sur le site https://www.jw.org/fr/rechercher/?q= pour le sujet : "${input || theme}" en langue "${userLanguage}".`;
              
              const [wolResult, jwResult] = await Promise.allSettled([
                ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptWol, config: { tools: [{ googleSearch: {} }] } }),
@@ -158,95 +170,60 @@ export default async function handler(req) {
                try {
                  const cachedText = await kv.get(scrapeCacheKey);
                  if (cachedText) return cachedText;
-               } catch (e) {}
+               } catch (e) {
+                 console.warn("KV Cache read error:", e);
+               }
              }
 
-             const controller = new AbortController();
-             const timeoutId = setTimeout(() => controller.abort(), 8000); // Increased timeout to 8s
              try {
-               const response = await fetch(url, {
-                 signal: controller.signal,
+               const response = await axios.get(url, {
+                 timeout: 8000,
                  headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' }
                });
-               clearTimeout(timeoutId);
-               if (response.ok) {
-                 const html = await response.text();
+               
+               if (response.status === 200) {
+                 const html = response.data;
+                 
+                 // Extract metadata using metascraper
+                 const meta = await scraper({ html, url });
+                 
                  const $ = cheerio.load(html);
-                 
-                 // Extract main image
-                 let imageUrl = $('meta[property="og:image"]').attr('content') || 
-                                $('article img').first().attr('src') || 
-                                $('main img').first().attr('src') || "";
-                 
-                 if (imageUrl && imageUrl.startsWith('/')) {
-                   const urlObj = new URL(url);
-                   imageUrl = `${urlObj.origin}${imageUrl}`;
-                 }
-
                  $('script, style, nav, footer, header, aside, .navigation, .site-header, .site-footer, .advertisement, .share-options').remove();
                  
                  const contentNode = $('article, main, #article').first();
                  const rootNode = contentNode.length ? contentNode : $('body');
                  
-                 // Custom simple HTML to Markdown converter for Cheerio
-                 function convertToMarkdown(node) {
-                   let md = '';
-                   node.contents().each((_, el) => {
-                     if (el.type === 'text') {
-                       md += $(el).text().replace(/\s+/g, ' ');
-                     } else if (el.type === 'tag') {
-                       const tagName = el.name.toLowerCase();
-                       if (['script', 'style', 'img', 'a', 'iframe', 'video', 'audio', 'nav', 'footer', 'header', 'aside'].includes(tagName)) {
-                         return; // Skip these
-                       }
-                       
-                       let innerMd = convertToMarkdown($(el));
-                       
-                       if (tagName === 'p') {
-                         md += `\n\n${innerMd}\n\n`;
-                       } else if (tagName.match(/^h[1-6]$/)) {
-                         const level = parseInt(tagName.charAt(1));
-                         md += `\n\n${'#'.repeat(level)} ${innerMd.trim()}\n\n`;
-                       } else if (tagName === 'li') {
-                         md += `\n- ${innerMd.trim()}`;
-                       } else if (tagName === 'ul' || tagName === 'ol') {
-                         md += `\n${innerMd}\n`;
-                       } else if (tagName === 'strong' || tagName === 'b') {
-                         md += `**${innerMd.trim()}**`;
-                       } else if (tagName === 'em' || tagName === 'i') {
-                         md += `*${innerMd.trim()}*`;
-                       } else if (tagName === 'br') {
-                         md += `\n`;
-                       } else {
-                         md += innerMd;
-                       }
-                     }
-                   });
-                   return md;
-                 }
+                 // Use html-to-text for clean extraction
+                 let text = convert(rootNode.html() || "", {
+                   wordwrap: false,
+                   selectors: [
+                     { selector: 'img', format: 'skip' },
+                     { selector: 'a', options: { ignoreHref: true } }
+                   ]
+                 });
                  
-                 let text = convertToMarkdown(rootNode);
                  text = text.replace(/\n{3,}/g, '\n\n').trim();
                  
                  if (!text) {
                    text = rootNode.text().replace(/\s+/g, ' ').trim();
                  }
                  
-                 const resultObj = { text, imageUrl };
+                 const resultObj = { text, imageUrl: meta.image || "", title: meta.title || "", description: meta.description || "" };
                  
                  // Cache the scraped text
                  if (text && process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
                    try {
                      await kv.set(scrapeCacheKey, resultObj, { ex: 86400 * 30 }); // Cache for 30 days
-                   } catch (e) {}
+                   } catch (e) {
+                     console.warn("KV Cache write error:", e);
+                   }
                  }
                  return resultObj;
                }
              } catch (e) {
-               clearTimeout(timeoutId);
-               console.warn(`Scraping failed for ${url}:`, e);
+               console.warn(`Scraping failed for ${url}:`, e.message);
              }
-             return { text: "", imageUrl: "" };
+             return { text: "", imageUrl: "", title: "", description: "" };
            });
 
            const results = await Promise.all(scrapePromises);
@@ -254,9 +231,9 @@ export default async function handler(req) {
            
            if (validResults.length > 0) {
              scrapedContent = validResults.map(t => t.text).join('\n\n---\n\n').substring(0, 15000);
-             const firstImage = validResults.find(t => t.imageUrl)?.imageUrl;
-             if (firstImage) {
-               scrapedContent += `\n\n[IMAGE_URL: ${firstImage}]`;
+             const firstValid = validResults.find(t => t.imageUrl || t.title);
+             if (firstValid && firstValid.imageUrl) {
+               scrapedContent += `\n\n[IMAGE_URL: ${firstValid.imageUrl}]`;
              }
              diagnostic = `Diagnostic : [Grounding + Scraping]`;
            } else {
@@ -355,7 +332,6 @@ Format Markdown.`;
     });
 
     const encoder = new TextEncoder();
-    let fullText = "";
 
     const readable = new ReadableStream({
       async start(controller) {
@@ -363,7 +339,6 @@ Format Markdown.`;
           for await (const chunk of stream) {
             const text = chunk.text;
             if (text) {
-              fullText += text;
               controller.enqueue(encoder.encode(text));
             }
           }

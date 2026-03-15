@@ -50,10 +50,13 @@ async function handleWebResponse(webRes: Response, res: express.Response) {
   if (webRes.body) {
     const reader = webRes.body.getReader();
     try {
-      while (true) {
+      let isDone = false;
+      while (!isDone) {
         const { done, value } = await reader.read();
-        if (done) break;
-        res.write(value);
+        isDone = done;
+        if (!isDone) {
+          res.write(value);
+        }
       }
     } finally {
       res.end();
