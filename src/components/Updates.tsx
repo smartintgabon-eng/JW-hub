@@ -11,6 +11,20 @@ interface UpdateItem {
 
 const updates: UpdateItem[] = [
   {
+    version: "2.2.1",
+    date: "15 Mars 2026",
+    features: [
+      "**Aperçu d'Article Enrichi** : Lors de la confirmation d'un article, l'IA extrait désormais automatiquement le **Thème**, le **Thème Principal** et le **Verset Clé** en plus de l'image et du titre. Cela permet une vérification immédiate de la source avant de lancer l'analyse complète.",
+      "**Extraction Intelligente des Médias** : Amélioration de la détection des images. Si l'image principale n'est pas trouvée via les métadonnées standards, le système fouille désormais le contenu de l'article pour extraire la première image pertinente."
+    ],
+    fixes: [
+      "**Correction de l'erreur 'fetch failed'** : Amélioration des en-têtes de requête pour simuler plus fidèlement un navigateur réel, réduisant les blocages par JW.org lors du scraping.",
+      "**Résilience accrue** : En cas d'échec de lecture directe d'un lien, l'IA bascule automatiquement sur une recherche Google Search pour garantir l'affichage des informations de confirmation.",
+      "Optimisation du prompt de confirmation pour une meilleure extraction des données structurées (JSON).",
+      "Ajustement du design de l'aperçu pour une meilleure lisibilité des informations clés (Thèmes et Versets)."
+    ]
+  },
+  {
     version: "2.2.0",
     date: "15 Mars 2026",
     features: [

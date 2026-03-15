@@ -179,13 +179,16 @@ export default async function handler(req) {
              }
 
              try {
-               const response = await axios.get(url, {
-                 timeout: 110000,
-                 headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' }
+               const controller = new AbortController();
+               const timeoutId = setTimeout(() => controller.abort(), 110000);
+               const response = await fetch(url, {
+                 headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' },
+                 signal: controller.signal
                });
+               clearTimeout(timeoutId);
                
                if (response.status === 200) {
-                 const html = response.data;
+                 const html = await response.text();
                  
                  // Extract metadata using metascraper
                  const meta = await scraper({ html, url });

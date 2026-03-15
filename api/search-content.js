@@ -163,13 +163,23 @@ export default async function handler(req) {
           }
 
           try {
-            const response = await axios.get(url, {
-              timeout: 110000,
-              headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' }
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 110000);
+            const response = await fetch(url, {
+              headers: { 
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache',
+                'Referer': 'https://www.google.com/'
+              },
+              signal: controller.signal
             });
+            clearTimeout(timeoutId);
             
             if (response.status === 200) {
-              const html = response.data;
+              const html = await response.text();
               
               // Extract metadata using metascraper
               const meta = await scraper({ html, url });
@@ -180,6 +190,18 @@ export default async function handler(req) {
               const contentNode = $('article, main, #article').first();
               const rootNode = contentNode.length ? contentNode : $('body');
               
+              // Try to find the first image in the content if metascraper didn't find one
+              let firstImage = meta.image || "";
+              if (!firstImage) {
+                const img = rootNode.find('img').first();
+                if (img.length) {
+                  const src = img.attr('src');
+                  if (src) {
+                    firstImage = src.startsWith('http') ? src : new URL(src, url).href;
+                  }
+                }
+              }
+
               // Use html-to-text for clean extraction
               let text = convert(rootNode.html() || "", {
                 wordwrap: false,
@@ -195,7 +217,7 @@ export default async function handler(req) {
                 text = rootNode.text().replace(/\s+/g, ' ').trim();
               }
               
-              const resultObj = { text, imageUrl: meta.image || "", title: meta.title || "", description: meta.description || "" };
+              const resultObj = { text, imageUrl: firstImage, title: meta.title || "", description: meta.description || "" };
               
               // Cache the scraped text
               if (text && process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
@@ -253,7 +275,10 @@ export default async function handler(req) {
       - previewTitle: Titre de l'article (utilise le titre extrait si pertinent)
       - previewSummary: Bref résumé (2 phrases max)
       - previewImage: URL de l'image
-      - previewInfos: Source ou verset clé
+      - previewInfos: Source
+      - theme: Le thème de l'article
+      - mainTheme: Le thème principal ou la leçon centrale
+      - keyVerse: Le verset clé de l'article (ex: "Psaume 119:105")
       - url: "${articleUrl}"
       
       Renvoie UNIQUEMENT du JSON valide.`;
