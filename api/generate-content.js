@@ -2,7 +2,10 @@ import { GoogleGenAI } from '@google/genai';
 import { kv } from '@vercel/kv';
 import * as cheerio from 'cheerio';
 import axios from 'axios';
+import axiosRetry from 'axios-retry';
 import { convert } from 'html-to-text';
+
+axiosRetry(axios, { retries: 3, retryDelay: axiosRetry.exponentialDelay });
 import metascraper from 'metascraper';
 import metascraperImage from 'metascraper-image';
 import metascraperTitle from 'metascraper-title';
@@ -177,7 +180,7 @@ export default async function handler(req) {
 
              try {
                const response = await axios.get(url, {
-                 timeout: 60000,
+                 timeout: 110000,
                  headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' }
                });
                

@@ -15,108 +15,97 @@ export const callGenerateContentApi = async (
 ): Promise<{ text: string; title: string; theme?: string; rawSources?: GeneratedStudy['rawSources']; aiExplanation?: string }> => {
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for Pro mode
 
-  try {
-    const response = await fetch('/api/generate-content', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      signal: controller.signal,
-      body: JSON.stringify({
-        type,
-        input,
-        part,
-        settings,
-        isInitialSearchForPreview,
-        preachingType,
-        contentOptions,
-        articleReferences: contentOptions?.articleLinks,
-        ...extraParams 
-      }),
-    });
+  const response = await fetch('/api/generate-content', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    signal: controller.signal,
+    body: JSON.stringify({
+      type,
+      input,
+      part,
+      settings,
+      isInitialSearchForPreview,
+      preachingType,
+      contentOptions,
+      articleReferences: contentOptions?.articleLinks,
+      ...extraParams 
+    }),
+  });
 
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        throw new Error("QUOTA_EXCEEDED: Quota d'IA épuisé. Veuillez patienter quelques minutes.");
-      }
-      let errorData;
-      try {
-        errorData = await response.json();
-      } catch {
-        throw new Error(`Server Error: ${response.status}`);
-      }
-      throw new Error(errorData.message || `API Error: ${response.status}`);
+  if (!response.ok) {
+    if (response.status === 429) {
+      throw new Error("QUOTA_EXCEEDED: Quota d'IA épuisé. Veuillez patienter quelques minutes.");
     }
+    let errorData;
+    try {
+      errorData = await response.json();
+    } catch {
+      throw new Error(`Server Error: ${response.status}`);
+    }
+    throw new Error(errorData.message || `API Error: ${response.status}`);
+  }
 
-    // Handle Streaming Response
-    const reader = response.body?.getReader();
-    const decoder = new TextDecoder();
-    let fullText = "";
+  // Handle Streaming Response
+  const reader = response.body?.getReader();
+  const decoder = new TextDecoder();
+  let fullText = "";
 
-    if (reader) {
-      let done = false;
-      while (!done) {
-        const { done: streamDone, value } = await reader.read();
-        done = streamDone;
+  if (reader) {
+    let done = false;
+    while (!done) {
+      const { done: streamDone, value } = await reader.read();
+      done = streamDone;
+      
+      if (value) {
+        const chunk = decoder.decode(value, { stream: true });
+        fullText += chunk;
         
-        if (value) {
-          const chunk = decoder.decode(value, { stream: true });
-          fullText += chunk;
-          
-          if (onStream) {
-            onStream(fullText);
-          }
+        if (onStream) {
+          onStream(fullText);
         }
       }
-    } else {
-      // Fallback for non-streaming response (e.g. cached JSON)
-      const data = await response.json();
-      fullText = data.text || "";
-      if (onStream) onStream(fullText);
-      
-      if (type === 'DISCOURS_THEME') {
-        return data;
-      }
-      
-      return { 
-        text: fullText, 
-        title: data.title || "Generated Content",
-        theme: data.theme,
-        rawSources: data.rawSources,
-        aiExplanation: data.aiExplanation || fullText
-      };
     }
-
+  } else {
+    // Fallback for non-streaming response (e.g. cached JSON)
+    const data = await response.json();
+    fullText = data.text || "";
+    if (onStream) onStream(fullText);
+    
     if (type === 'DISCOURS_THEME') {
-      return { text: fullText, title: fullText, theme: fullText };
+      return data;
     }
-
-    let extractedTitle = "Generated Content";
-    const titleMatch = fullText.match(/^#\s+(.+)$/m);
-    if (titleMatch) {
-      extractedTitle = titleMatch[1].trim();
-    } else {
-      // Fallback: try to find any first line that looks like a title
-      const lines = fullText.split('\n').filter(l => l.trim().length > 0);
-      if (lines.length > 0) {
-        extractedTitle = lines[0].replace(/^#+\s*/, '').trim();
-      }
-    }
-
+    
     return { 
       text: fullText, 
-      title: extractedTitle,
-      aiExplanation: fullText
+      title: data.title || "Generated Content",
+      theme: data.theme,
+      rawSources: data.rawSources,
+      aiExplanation: data.aiExplanation || fullText
     };
-  } catch (err: any) {
-    clearTimeout(timeoutId);
-    if (err.name === 'AbortError') {
-      throw new Error("TIMEOUT: La requête a dépassé 30 secondes et a été annulée.");
-    }
-    throw err;
   }
+
+  if (type === 'DISCOURS_THEME') {
+    return { text: fullText, title: fullText, theme: fullText };
+  }
+
+  let extractedTitle = "Generated Content";
+  const titleMatch = fullText.match(/^#\s+(.+)$/m);
+  if (titleMatch) {
+    extractedTitle = titleMatch[1].trim();
+  } else {
+    // Fallback: try to find any first line that looks like a title
+    const lines = fullText.split('\n').filter(l => l.trim().length > 0);
+    if (lines.length > 0) {
+      extractedTitle = lines[0].replace(/^#+\s*/, '').trim();
+    }
+  }
+
+  return { 
+    text: fullText, 
+    title: extractedTitle,
+    aiExplanation: fullText
+  };
 };
