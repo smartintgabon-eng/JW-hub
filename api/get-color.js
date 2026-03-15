@@ -1,9 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
 
-export const config = {
-  runtime: 'edge',
-};
-
 function getAiClient() {
   const candidates = [
     process.env.GEMINI_API_KEY,

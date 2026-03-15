@@ -212,6 +212,23 @@ const RecherchesTool: React.FC<Props> = ({ onGenerated, settings, setGlobalLoadi
                     <Info size={14} className="text-[var(--btn-color)]" /> {getLocalizedText(settings, 'infosKeys')} {articleConfirmed.previewInfos}
                   </p>
                 )}
+                <div className="mt-4 space-y-2 border-t border-white/5 pt-4">
+                  {(articleConfirmed.theme || articleConfirmed.previewTitle) && (
+                    <p className="text-sm font-bold text-[var(--btn-color)] flex items-center gap-2">
+                      <span className="opacity-40 text-[10px] uppercase tracking-widest">Thème :</span> {articleConfirmed.theme || articleConfirmed.previewTitle}
+                    </p>
+                  )}
+                  {articleConfirmed.mainTheme && (
+                    <p className="text-sm font-bold text-white/80 flex items-center gap-2">
+                      <span className="opacity-40 text-[10px] uppercase tracking-widest">Thème Principal :</span> {articleConfirmed.mainTheme}
+                    </p>
+                  )}
+                  {articleConfirmed.keyVerse && (
+                    <p className="text-sm italic text-white/60 flex items-center gap-2">
+                      <span className="opacity-40 text-[10px] uppercase tracking-widest not-italic">Verset clé :</span> {articleConfirmed.keyVerse}
+                    </p>
+                  )}
+                </div>
               </div>
               <button onClick={() => setArticleConfirmed(null)} className="text-xs font-bold opacity-30 hover:opacity-100 uppercase underline">{getLocalizedText(settings, 'changeSearch')}</button>
             </div>

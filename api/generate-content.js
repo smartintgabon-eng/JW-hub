@@ -19,6 +19,10 @@ const scraper = metascraper([
   metascraperUrl()
 ]);
 
+const scraperAxios = axios.create({
+  timeout: 30000,
+});
+
 // Helper for retrying Gemini calls
 async function withRetry(fn, retries = 3, delay = 1000) {
   for (let i = 0; i < retries; i++) {
@@ -34,10 +38,6 @@ async function withRetry(fn, retries = 3, delay = 1000) {
     }
   }
 }
-
-export const config = {
-  runtime: 'edge',
-};
 
 // Helper to get AI client
 function getAiClient() {
@@ -180,40 +180,36 @@ export default async function handler(req) {
         }
 
         if (urlsToScrape.length > 0) {
-           // Scraping (15s Timeout)
-           const scrapePromises = urlsToScrape.map(async (url) => {
-             const scrapeCacheKey = `scrape:${url}`;
-             
-             // Check if we already scraped this specific URL
-             if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-               try {
-                 const cachedText = await kv.get(scrapeCacheKey);
-                 if (cachedText) return cachedText;
-               } catch (e) {
-                 console.warn("KV Cache read error:", e);
-               }
-             }
+          // Scraping (25s Timeout)
+          const scrapePromises = urlsToScrape.map(async (url) => {
+            const scrapeCacheKey = `scrape:${url}`;
+            
+            // Check if we already scraped this specific URL
+            if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+              try {
+                const cachedText = await kv.get(scrapeCacheKey);
+                if (cachedText) return cachedText;
+              } catch (e) {
+                console.warn("KV Cache read error:", e);
+              }
+            }
 
-             try {
-               const controller = new AbortController();
-               const timeoutId = setTimeout(() => controller.abort(), 15000);
-               const response = await fetch(url, {
-                 headers: { 
-                  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-                  'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
-                  'Cache-Control': 'no-cache',
-                  'Pragma': 'no-cache',
-                  'Referer': 'https://www.google.com/'
-                },
-                 signal: controller.signal
-               });
-               clearTimeout(timeoutId);
-               
-               if (response.status === 200) {
-                 const html = await response.text();
-                 
-                 // Extract metadata using metascraper
+            try {
+              const response = await scraperAxios.get(url, {
+                headers: { 
+                 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                 'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+                 'Cache-Control': 'no-cache',
+                 'Pragma': 'no-cache',
+                 'Referer': 'https://www.google.com/'
+               }
+              });
+              
+              if (response.status === 200) {
+                const html = response.data;
+                
+                // Extract metadata using metascraper
                  const meta = await scraper({ html, url });
                  
                  const $ = cheerio.load(html);

@@ -35,9 +35,9 @@ async function withRetry(fn, retries = 3, delay = 1000) {
   }
 }
 
-export const config = {
-  runtime: 'edge',
-};
+const scraperAxios = axios.create({
+  timeout: 30000,
+});
 
 // Helper to get AI client
 function getAiClient() {
@@ -164,7 +164,7 @@ export default async function handler(req) {
       articleUrl = urlsToScrape[0] || "";
 
       if (urlsToScrape.length > 0) {
-        // --- PHASE 2: SCRAPING (15s Timeout) ---
+        // --- PHASE 2: SCRAPING (25s Timeout) ---
         const scrapePromises = urlsToScrape.map(async (url) => {
           const scrapeCacheKey = `scrape:${url}`;
           
@@ -179,9 +179,7 @@ export default async function handler(req) {
           }
 
           try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000);
-            const response = await fetch(url, {
+            const response = await scraperAxios.get(url, {
               headers: { 
                 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
@@ -189,13 +187,11 @@ export default async function handler(req) {
                 'Cache-Control': 'no-cache',
                 'Pragma': 'no-cache',
                 'Referer': 'https://www.google.com/'
-              },
-              signal: controller.signal
+              }
             });
-            clearTimeout(timeoutId);
             
             if (response.status === 200) {
-              const html = await response.text();
+              const html = response.data;
               
               // Extract metadata using metascraper
               const meta = await scraper({ html, url });
@@ -278,23 +274,26 @@ export default async function handler(req) {
 
     // Handle confirmMode (Preview)
     if (confirmMode) {
-      // If we have scraped content and metadata, we can build the preview directly or ask AI
       const previewPrompt = `
-      Génère un aperçu JSON pour l'article à l'URL "${articleUrl}" (ou basé sur la requête "${questionOrSubject}").
+      Génère un aperçu JSON détaillé pour l'article à l'URL "${articleUrl}" (ou basé sur la requête "${questionOrSubject}").
       Titre extrait : "${metadata.title || ''}"
       Description extraite : "${metadata.description || ''}"
-      Contexte extrait : "${scrapedContent.substring(0, 3000)}..."
+      Contexte extrait : "${scrapedContent.substring(0, 4000)}..."
       
-      Si une image est disponible dans le contexte [IMAGE_URL: ...] ou si tu en connais une pertinente, utilise-la pour previewImage. Sinon renvoie "${metadata.imageUrl || ''}".
+      INSTRUCTIONS :
+      1. Identifie précisément l'image principale de l'article.
+      2. Extrais le Thème exact.
+      3. Identifie le Thème Principal ou la leçon centrale de l'article.
+      4. Trouve le Verset Clé cité ou mis en avant.
       
       Renvoie un objet JSON avec :
-      - previewTitle: Titre de l'article (utilise le titre extrait si pertinent)
+      - previewTitle: Titre de l'article
       - previewSummary: Bref résumé (2 phrases max)
-      - previewImage: URL de l'image
-      - previewInfos: Source
+      - previewImage: URL de l'image (utilise [IMAGE_URL: ...] si présent dans le contexte)
+      - previewInfos: Source ou date
       - theme: Le thème de l'article
       - mainTheme: Le thème principal ou la leçon centrale
-      - keyVerse: Le verset clé de l'article (ex: "Psaume 119:105")
+      - keyVerse: Le verset clé (ex: "Psaume 119:105")
       - url: "${articleUrl}"
       
       Renvoie UNIQUEMENT du JSON valide.`;
