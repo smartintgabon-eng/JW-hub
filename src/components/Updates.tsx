@@ -11,6 +11,19 @@ interface UpdateItem {
 
 const updates: UpdateItem[] = [
   {
+    version: "2.2.2",
+    date: "Aujourd'hui",
+    features: [
+      "**Nouveau Guide des Icônes (Tutoriel)** : L'onglet Tutoriel a été entièrement repensé. Il inclut désormais une description détaillée de chaque icône du menu (Accueil, Cahier, Tour de Garde, Mises à jour, etc.) avec des explications claires et intégrées directement sur la page, sans pop-up.",
+      "**Mises à jour Publiques vs Accès Restreint** : Mise en place d'une nouvelle politique de confidentialité pour les notes de mise à jour. Les détails techniques ou outils de modération sont désormais réservés à l'accès restreint. Vous ne verrez que les nouveautés publiques (Thèmes, interface) pertinentes pour vous."
+    ],
+    fixes: [
+      "**Visualisation des Images (Tour de Garde / Cahier)** : Correction d'un problème qui empêchait l'affichage des images des articles dans les réponses de l'IA. Les images principales sont désormais correctement extraites (y compris pour les articles de la Tour de Garde) et affichées en tête de la réponse générée.",
+      "**Extraction Améliorée (Textes & Articles)** : Le système de scraping de l'application a été entièrement réécrit pour cibler spécifiquement les conteneurs d'articles officiels (comme `.syn-body` et `#articleArticle`). Cela garantit que le texte généré par l'IA est toujours fidèle, sans inclure les menus ou les pieds de page du site.",
+      "**Gestion des Surcharges Serveur** : Ajout de messages clairs lorsque l'IA est surchargée ou que le quota est atteint, afin de vous informer de l'état du système."
+    ]
+  },
+  {
     version: "2.2.1",
     date: "15 Mars 2026",
     features: [

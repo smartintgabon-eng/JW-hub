@@ -20,7 +20,7 @@ const scraper = metascraper([
 ]);
 
 const scraperAxios = axios.create({
-  timeout: 20000,
+  timeout: 45000,
 });
 
 // Helper for retrying Gemini calls
@@ -29,8 +29,12 @@ async function withRetry(fn, retries = 3, delay = 1000) {
     try {
       return await fn();
     } catch (error) {
-      const isQuotaError = error.message?.includes('429') || error.message?.includes('RESOURCE_EXHAUSTED');
-      if (isQuotaError && i < retries - 1) {
+      const errorStr = String(error?.message || error);
+      const isQuotaError = errorStr.includes('429') || errorStr.includes('RESOURCE_EXHAUSTED') || errorStr.includes('Too Many Requests');
+      const isUnavailableError = errorStr.includes('503') || errorStr.includes('UNAVAILABLE') || errorStr.includes('high demand');
+      
+      // If it's a transient error, retry
+      if ((isQuotaError || isUnavailableError) && i < retries - 1) {
         await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
         continue;
       }
@@ -136,8 +140,8 @@ export default async function handler(req) {
              const searchPromptJw = `Recherche sur Google l'article le plus pertinent sur le site https://www.jw.org/fr/rechercher/?q= pour le sujet : "${input || theme}" en langue "${userLanguage}".`;
              
              const [wolResult, jwResult] = await Promise.allSettled([
-               withRetry(() => ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptWol, config: { tools: [{ googleSearch: {} }] } })),
-               withRetry(() => ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: searchPromptJw, config: { tools: [{ googleSearch: {} }] } }))
+               withRetry(() => ai.models.generateContent({ model: 'gemini-2.5-flash', contents: searchPromptWol, config: { tools: [{ googleSearch: {} }] } })),
+               withRetry(() => ai.models.generateContent({ model: 'gemini-2.5-flash', contents: searchPromptJw, config: { tools: [{ googleSearch: {} }] } }))
              ]);
             
              const extractUrl = (text) => {
@@ -213,27 +217,84 @@ export default async function handler(req) {
                  const meta = await scraper({ html, url });
                  
                  const $ = cheerio.load(html);
-                 $('script, style, nav, footer, header, aside, .navigation, .site-header, .site-footer, .advertisement, .share-options').remove();
                  
-                 const contentNode = $('article, main, #article').first();
-                 const rootNode = contentNode.length ? contentNode : $('body');
+                 // Extract title specifically for jw.org if possible
+                 let extractedTitle = $('header h1').text().trim();
+                 if (!extractedTitle) extractedTitle = meta.title || "";
                  
-                 // Use html-to-text for clean extraction
-                 let text = convert(rootNode.html() || "", {
-                   wordwrap: false,
-                   selectors: [
-                     { selector: 'img', format: 'skip' },
-                     { selector: 'a', options: { ignoreHref: true } }
-                   ]
-                 });
-                 
-                 text = text.replace(/\n{3,}/g, '\n\n').trim();
-                 
-                 if (!text) {
-                   text = rootNode.text().replace(/\s+/g, ' ').trim();
+                 // Targeted extraction for jw.org/wol.jw.org articles
+                 let articleContent = '';
+                 const jwContentNodes = $('#articleArticle, .syn-body');
+                 if (jwContentNodes.length > 0) {
+                     jwContentNodes.find('p').each((index, element) => {
+                         articleContent += $(element).text().trim() + '\n\n';
+                     });
                  }
                  
-                 const resultObj = { text, imageUrl: meta.image || "", title: meta.title || "", description: meta.description || "" };
+                 let text = articleContent.trim();
+                 
+                 let imageUrl = meta.image || "";
+                 if (!imageUrl) {
+                   const rootForImg = jwContentNodes.length > 0 ? jwContentNodes : $('article, main, #article, body');
+                   const img = rootForImg.find('img').first();
+                   if (img.length) {
+                     const src = img.attr('src');
+                     if (src) {
+                       imageUrl = src.startsWith('http') ? src : new URL(src, url).href;
+                     }
+                   }
+                 }
+                 
+                 // Fallback to standard extraction if targeting fails or it's not a JW article
+                 if (!text) {
+                     $('script, style, nav, footer, header, aside, .navigation, .site-header, .site-footer, .advertisement, .share-options').remove();
+                     const contentNode = $('article, main, #article').first();
+                     const rootNode = contentNode.length ? contentNode : $('body');
+                     text = convert(rootNode.html() || "", {
+                       wordwrap: false,
+                       selectors: [
+                         { selector: 'img', format: 'skip' },
+                         { selector: 'a', options: { ignoreHref: true } }
+                       ]
+                     });
+                     text = text.replace(/\n{3,}/g, '\n\n').trim();
+                     if (!text) {
+                       text = rootNode.text().replace(/\s+/g, ' ').trim();
+                     }
+                 }
+                 
+                 // Extract Media API links if it's a media URL
+                 let mediaLinks = "";
+                 try {
+                   const parsedUrl = new URL(url);
+                   const hash = parsedUrl.hash;
+                   if (hash && hash.includes('/mediaitems/')) {
+                     const parts = hash.split('/');
+                     const lang = parts[0].replace('#', '');
+                     const mediaId = parts[parts.length - 1];
+                     if (lang && mediaId) {
+                       const mediaApiUrl = `https://b.jw-cdn.org/apis/mediator/v1/media-items/${lang}/${mediaId}`;
+                       const mediaResponse = await axios.get(mediaApiUrl, { timeout: 5000 });
+                       if (mediaResponse.data && mediaResponse.data.media && mediaResponse.data.media[0]) {
+                         const files = mediaResponse.data.media[0].files;
+                         if (files && files.length > 0) {
+                            mediaLinks = "\n\n### Liens de téléchargement du Média :\n";
+                            files.forEach(f => {
+                              if (f.progressiveDownloadURL) {
+                                mediaLinks += `- [${f.label} (${f.format})](${f.progressiveDownloadURL})\n`;
+                              }
+                            });
+                         }
+                       }
+                     }
+                   }
+                 } catch (e) {
+                   console.warn("Media API fetch failed:", e.message);
+                 }
+                 
+                 text += mediaLinks;
+                 
+                 const resultObj = { text, imageUrl: imageUrl, title: extractedTitle, description: meta.description || "" };
                  
                  // Cache the scraped text
                  if (text && process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
@@ -253,7 +314,7 @@ export default async function handler(req) {
 
            const results = await Promise.race([
              Promise.all(scrapePromises),
-             new Promise((_, reject) => setTimeout(() => reject(new Error('Global Scraping Timeout')), 15000))
+             new Promise((_, reject) => setTimeout(() => reject(new Error('Global Scraping Timeout')), 50000))
            ]).catch(err => {
              console.warn("Scraping phase timed out or failed:", err.message);
              diagnostic += " (Timeout Scraping)";
@@ -335,6 +396,7 @@ INSTRUCTIONS CRUCIALES :
 3. Si le texte source est un article complet, identifie les questions d'étude et réponds-y.
 4. Si le texte source ne contient pas de questions explicites, dégage les points principaux et fournis des commentaires enrichissants et des applications pratiques.
 5. Utilise le contexte scrappé comme source principale si disponible, sinon utilise le texte fourni.
+6. SI LE TEXTE SCRAPPÉ CONTIENT LA BALISE [IMAGE_URL: url], TU DOIS ABSOLUMENT AFFICHER CETTE IMAGE au tout début de ton texte (juste après la date) en utilisant le Markdown : ![Image de l'article](url).
 
 Format Markdown structuré (utilise des sous-titres H2/H3, des puces, du gras pour mettre en valeur les réponses).`;
     } else {
@@ -349,6 +411,7 @@ INSTRUCTIONS :
 2. Ajoute ta propre réflexion, analyse et méditation spirituelle pour enrichir la réponse.
 3. Si le contexte est vide, ignore le scraping et utilise UNIQUEMENT le contenu brut fourni.
 4. OBLIGATOIRE : Commence TOUJOURS ta réponse par un grand titre (H1) reprenant le thème exact : "# ${themeTitle}", suivi immédiatement sur la ligne suivante de la date du jour en italique : "*${today}*".
+5. SI LE TEXTE SCRAPPÉ CONTIENT LA BALISE [IMAGE_URL: url], TU DOIS ABSOLUMENT AFFICHER CETTE IMAGE au tout début de ton texte (juste après la date) en utilisant le Markdown : ![Image de l'article](url).
 
 Format Markdown.`;
     }
@@ -359,7 +422,7 @@ Format Markdown.`;
     const config = withSearch ? { tools: [{ googleSearch: {} }] } : {};
     
     const stream = await withRetry(() => ai.models.generateContentStream({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-2.5-flash',
       contents: prompt,
       config
     }));
@@ -389,8 +452,15 @@ Format Markdown.`;
     });
 
   } catch (error) {
-    console.error('API Error:', error);
-    const errorMessage = "Désolé, je n'ai pas pu récupérer cette information, veuillez réessayer.";
+    console.warn('API Error encountered (handled):', error?.message || error);
+    let errorMessage = "Désolé, je n'ai pas pu récupérer cette information, veuillez réessayer.";
+    
+    const errorStr = String(error?.message || error);
+    if (errorStr.includes('429') || errorStr.includes('RESOURCE_EXHAUSTED') || errorStr.includes('Too Many Requests') || errorStr.includes('exceeded your current quota')) {
+        errorMessage = "⚠️ Quota dépassé : Vous avez atteint la limite de l'API. Veuillez vérifier votre plan ou réessayer plus tard.";
+    } else if (errorStr.includes('503') || errorStr.includes('UNAVAILABLE') || errorStr.includes('high demand')) {
+        errorMessage = "⚠️ Surcharge : L'IA est actuellement très sollicitée. Veuillez patienter et réessayer dans quelques instants.";
+    }
     
     const encoder = new TextEncoder();
     const readable = new ReadableStream({

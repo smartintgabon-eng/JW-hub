@@ -51,7 +51,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ hex: '#4a70b5' });
 
   } catch (error) {
-    console.error('API Error in guess-color:', error);
+    console.warn('API Error in guess-color:', error);
     res.status(500).json({ message: 'Failed to guess color.', details: error.message });
   }
 }

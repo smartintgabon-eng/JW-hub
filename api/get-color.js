@@ -38,7 +38,7 @@ export default async function handler(req) {
     const prompt = `Donne-moi uniquement le code hexadécimal (format #RRGGBB) pour la couleur suivante : ${colorName}. Ne réponds rien d'autre, juste le code hexadécimal.`;
     
     const result = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-2.5-flash',
       contents: prompt
     });
 
@@ -48,7 +48,7 @@ export default async function handler(req) {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
-    console.error('Color API Error:', error);
+    console.warn('Color API Error:', error);
     return new Response(JSON.stringify({ message: "Désolé, je n'ai pas pu récupérer cette information, veuillez réessayer." }), { status: 200 });
   }
 }

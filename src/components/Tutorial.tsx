@@ -1,28 +1,28 @@
 import React from 'react';
-import { Lightbulb, Link as LinkIcon, Search, Smartphone, LayoutGrid, ChevronRight, History as HistoryIcon, Settings as SettingsIcon, Download, Mic } from 'lucide-react';
+import { Home, Calendar, BookOpen, Megaphone, Search, History as HistoryIcon, BellRing, HelpCircle, Settings as SettingsIcon, Mic, Lightbulb } from 'lucide-react';
 import { AppSettings, AppView } from '../types.ts'; // Import AppSettings and AppView
 
 interface Props {
-  navigateTo: (v: AppView) => void; // navigateTo now expects an AppView
+  navigateTo: (v: AppView) => void;
   deferredPrompt: any;
   handleInstallClick: () => void;
-  settings: AppSettings; // Pass settings to Tutorial
+  settings: AppSettings;
 }
 
 const getLocalizedText = (settings: AppSettings, key: string) => {
   const texts: { [key: string]: { [lang: string]: string } } = {
-    'expertGuide': { 'fr': 'Guide Expert', 'en': 'Expert Guide', 'es': 'Guía Experta' },
-    'masterAssistant': { 'fr': 'Maîtrisez votre assistant spirituel en 2 minutes.', 'en': 'Master your spiritual assistant in 2 minutes.', 'es': 'Domina tu asistente espiritual en 2 minutos.' },
-    'chooseStudy': { 'fr': 'Choisir votre étude', 'en': 'Choose your study', 'es': 'Elige tu estudio' },
-    'chooseStudyDesc': { 'fr': 'Sélectionnez \'Cahier\' pour les réunions de semaine ou \'Tour de Garde\' pour le week-end.', 'en': 'Select \'Workbook\' for midweek meetings or \'Watchtower\' for weekend.', 'es': 'Selecciona \'Cuaderno\' para las reuniones de entre semana o \'La Atalaya\' para el fin de semana.' },
-    'smartInput': { 'fr': 'Saisie Intelligente', 'en': 'Smart Input', 'es': 'Entrada inteligente' },
-    'smartInputDesc': { 'fr': 'Copiez le lien jw.org de l\'article. Pour le Cahier, utilisez le \'+\' pour ajouter les articles de l\'étude de livre.', 'en': 'Copy the jw.org article link. For the Workbook, use \'+\' to add book study articles.', 'es': 'Copia el enlace de jw.org del artículo. Para el Cuaderno, usa el \'+\' para añadir artículos de estudio de libro.' },
-    'manualMode': { 'fr': 'Mode Manuel', 'en': 'Manual Mode', 'es': 'Modo manual' },
-    'manualModeDesc': { 'fr': 'Si un lien est bloqué, utilisez \'Saisie Manuelle\' pour coller directement le texte de l\'article.', 'en': 'If a link is blocked, use \'Manual Input\' to paste the article text directly.', 'es': 'Si un enlace está bloqueado, usa \'Entrada Manual\' para pegar el texto del artículo directamente.' },
-    'expertOptions': { 'fr': 'Options Expert', 'en': 'Expert Options', 'es': 'Opciones expertas' },
-    'expertOptionsDesc': { 'fr': 'Générez uniquement ce dont vous avez besoin (Joyaux, Perles, Exposés) ou l\'article complet.', 'en': 'Generate only what you need (Treasures, Gems, Presentations) or the full article.', 'es': 'Genera solo lo que necesites (Joyas, Perlas, Presentaciones) o el artículo completo.' },
-    'pwaInstallation': { 'fr': 'Installation PWA', 'en': 'PWA Installation', 'es': 'Instalación PWA' },
-    'pwaInstallationDesc': { 'fr': 'Installez l\'app pour l\'utiliser sans internet. Retrouvez vos études dans l\'Historique.', 'en': 'Install the app to use offline. Find your studies in History.', 'es': 'Instala la aplicación para usarla sin conexión a internet. Encuentra tus estudios en el Historial.' },
+    'expertGuide': { 'fr': 'Guide des Icônes & Tutoriel', 'en': 'Icons Guide & Tutorial', 'es': 'Guía de Iconos y Tutorial' },
+    'masterAssistant': { 'fr': 'Découvrez à quoi correspond chaque icône du menu.', 'en': 'Discover what each menu icon means.', 'es': 'Descubre qué significa cada icono del menú.' },
+    'home': { 'fr': 'Accueil', 'en': 'Home', 'es': 'Inicio' },
+    'workbook': { 'fr': 'Cahier Vie & Ministère', 'en': 'Life & Ministry Workbook', 'es': 'Guía de Actividades' },
+    'watchtower': { 'fr': 'Tour de Garde', 'en': 'Watchtower', 'es': 'La Atalaya' },
+    'preaching': { 'fr': 'Prédication', 'en': 'Preaching', 'es': 'Predicación' },
+    'discours': { 'fr': 'Discours', 'en': 'Public Talk', 'es': 'Discurso' },
+    'searches': { 'fr': 'Recherches', 'en': 'Searches', 'es': 'Búsquedas' },
+    'history': { 'fr': 'Historique', 'en': 'History', 'es': 'Historial' },
+    'updates': { 'fr': 'Mises à jour', 'en': 'Updates', 'es': 'Actualizaciones' },
+    'tutorial': { 'fr': 'Tutoriel', 'en': 'Tutorial', 'es': 'Tutorial' },
+    'settings': { 'fr': 'Paramètres', 'en': 'Settings', 'es': 'Ajustes' },
     'readyToStart': { 'fr': 'Prêt à commencer ?', 'en': 'Ready to start?', 'es': '¿Listo para empezar?' },
     'savedAuto': { 'fr': 'Toutes vos préférences et votre historique sont sauvegardés automatiquement dans le cache de votre appareil.', 'en': 'All your preferences and history are automatically saved in your device\'s cache.', 'es': 'Todas tus preferencias e historial se guardan automáticamente en la caché de tu dispositivo.' },
     'returnHome': { 'fr': 'Retour Accueil', 'en': 'Return Home', 'es': 'Volver al inicio' },
@@ -36,70 +36,77 @@ const Tutorial: React.FC<Props> = ({ navigateTo, handleInstallClick, settings })
     {
       id: 'home',
       title: getLocalizedText(settings, 'home'),
-      desc: "L'écran d'accueil pour une vue rapide et l'accès aux principales sections.",
-      details: "L'accueil propose des raccourcis vers les sections clés et un bouton d'installation PWA si disponible.",
-      icon: <LayoutGrid className="text-blue-400" size={32} />
+      desc: "Représenté par l'icône de maison. C'est votre tableau de bord principal.",
+      details: "L'accueil vous permet de revenir à tout moment au point de départ, d'installer l'application (PWA) et d'avoir un accès rapide au tutoriel.",
+      icon: <Home className="text-blue-400" size={32} />
     },
     {
-      id: 'study',
+      id: 'workbook',
       title: getLocalizedText(settings, 'workbook'),
-      desc: "Préparez vos réunions de semaine et d'étude de la Tour de Garde.",
-      details: "Utilisez les liens jw.org ou collez le texte manuellement. Choisissez des parties spécifiques ou générez l'article complet.",
-      result: "Résultat : Vous obtiendrez des réponses structurées aux questions, des versets clés mis en évidence, et des commentaires prêts à être utilisés. Options pour copier, lire à voix haute ou exporter en PDF/Word.",
-      icon: <LinkIcon className="text-indigo-400" size={32} />
+      desc: "L'icône Calendrier. Préparez vos réunions de semaine (Joyaux, Perles, etc.).",
+      details: "Copiez le lien jw.org du programme de la semaine. Vous pouvez ajouter d'autres liens avec le bouton '+' pour l'étude biblique de l'assemblée.",
+      result: "Résultat : Des réponses structurées pour les Joyaux, les Perles et les présentations.",
+      icon: <Calendar className="text-emerald-400" size={32} />
+    },
+    {
+      id: 'watchtower',
+      title: getLocalizedText(settings, 'watchtower'),
+      desc: "L'icône de Livre ouvert. Pour préparer l'étude de la Tour de Garde du week-end.",
+      details: "Collez le lien direct de l'article de la Tour de Garde. L'IA lira l'article et préparera des réponses pour chaque question.",
+      result: "Résultat : Les questions, les paragraphes résumés et des commentaires prêts à donner, incluant les versets.",
+      icon: <BookOpen className="text-indigo-400" size={32} />
     },
     {
       id: 'preaching',
       title: getLocalizedText(settings, 'preaching'),
-      desc: "Des préparations sur mesure pour le porte-à-porte, les nouvelles visites et les cours bibliques.",
-      details: "Choisissez votre mode de prédication et l'IA vous aidera à structurer vos présentations avec des sujets et des versets pertinents.",
-      result: "Résultat : Un plan de conversation étape par étape (Introduction, Verset, Application, Conclusion), adapté au public choisi, avec des suggestions de transitions naturelles.",
-      icon: <Smartphone className="text-violet-400" size={32} />
+      desc: "Le Mégaphone. Des préparations sur mesure pour le ministère.",
+      details: "Choisissez le type de témoignage (porte-à-porte, nouvelle visite, cours biblique) et l'IA vous aide à structurer une présentation adaptée.",
+      result: "Résultat : Un plan de conversation naturel avec introduction, verset, et question en suspens.",
+      icon: <Megaphone className="text-violet-400" size={32} />
     },
     {
       id: 'discours',
-      title: "Discours",
-      desc: "Générez des plans de discours complets (Normaux, Jeudi, Dimanche, Spéciaux).",
-      details: "Saisissez un thème ou un verset. L'IA structure un discours avec introduction, développement (points principaux), conclusion et même des suggestions de cantiques.",
-      result: "Résultat : Un plan détaillé et structuré, incluant des versets d'appui, des illustrations, une application pratique et une suggestion de cantique (avec lien jw.org).",
+      title: getLocalizedText(settings, 'discours'),
+      desc: "Le Micro. Générez des plans de discours complets.",
+      details: "Saisissez un thème ou un verset. L'IA structure un discours avec introduction, points principaux, conclusion et suggestions de cantiques.",
+      result: "Résultat : Un plan détaillé avec des versets d'appui et des illustrations.",
       icon: <Mic className="text-orange-400" size={32} />
     },
     {
       id: 'search',
       title: getLocalizedText(settings, 'searches'),
-      desc: "Recherche hybride intelligente sur jw.org et WOL avec images et résumés.",
-      details: "Posez des questions complexes. L'IA vous montrera l'article trouvé avec son image et un résumé pour confirmation avant l'analyse complète.",
-      result: "Résultat : Une réponse détaillée et sourcée, expliquant la démarche de recherche, suivie des extraits pertinents et de la liste cliquable de tous les liens jw.org et wol.jw.org utilisés.",
-      icon: <Search className="text-emerald-400" size={32} />
-    },
-    {
-      id: 'direct-links',
-      title: "Liens Directs & Scraping",
-      desc: "Gagnez du temps en collant directement les liens des articles.",
-      details: "Si vous collez un lien direct (ex: La Tour de Garde), l'IA ignore la recherche, scrape instantanément la page et garantit une réponse 100% fidèle au texte source.",
-      result: "Résultat : Une analyse ultra-rapide et précise, sans risque d'hallucination, car l'IA est ancrée (grounded) exclusivement sur le texte de votre lien.",
-      icon: <LinkIcon className="text-pink-400" size={32} />
+      desc: "La Loupe. Recherche hybride intelligente sur jw.org et WOL.",
+      details: "Posez des questions bibliques. L'IA cherche les sources officielles, vous donne un aperçu, puis analyse le tout pour vous donner une réponse.",
+      result: "Résultat : Une réponse détaillée, sourcée, avec les liens directs vers les articles utilisés.",
+      icon: <Search className="text-pink-400" size={32} />
     },
     {
       id: 'history',
       title: getLocalizedText(settings, 'history'),
-      desc: "Retrouvez toutes vos études et préparations passées, sauvegardées automatiquement.",
-      details: "Chaque génération est enregistrée avec un horodatage et un lien vers les sources. Vous pouvez les revoir ou les supprimer.",
+      desc: "L'Horloge. Retrouvez toutes vos préparations passées.",
+      details: "Toutes vos études sont sauvegardées localement. Vous pouvez les rouvrir, les exporter ou les supprimer à tout moment.",
       icon: <HistoryIcon className="text-amber-400" size={32} />
+    },
+    {
+      id: 'updates',
+      title: getLocalizedText(settings, 'updates'),
+      desc: "La Cloche. Restez informé des dernières nouveautés.",
+      details: "Consultez cet onglet pour découvrir les nouvelles fonctionnalités ajoutées à l'application et les corrections de bugs.",
+      icon: <BellRing className="text-cyan-400" size={32} />
+    },
+    {
+      id: 'tutorial',
+      title: getLocalizedText(settings, 'tutorial'),
+      desc: "Le Point d'Interrogation. C'est la page sur laquelle vous êtes !",
+      details: "Ce guide vous aide à comprendre comment utiliser chaque outil de l'application.",
+      icon: <HelpCircle className="text-teal-400" size={32} />
     },
     {
       id: 'settings',
       title: getLocalizedText(settings, 'settings'),
-      desc: "Personnalisez l'app : langue, couleurs, préférences IA et installation PWA.",
-      details: "Changez la langue de l'interface et de l'IA, ajustez les couleurs des boutons et du fond, et installez l'application sur votre écran d'accueil.",
+      desc: "La Roue Crantée. Personnalisez votre expérience.",
+      details: "Changez la langue, choisissez vos couleurs préférées, modifiez le comportement de l'IA (taille des réponses) et gérez vos données.",
       icon: <SettingsIcon className="text-red-400" size={32} />
-    },
-    {
-      id: 'install',
-      title: getLocalizedText(settings, 'installApp'),
-      desc: "Installez l'application sur votre appareil pour une expérience hors ligne et plus rapide.",
-      details: "Cliquez sur le bouton 'Installer' dans les paramètres. Sur iOS, utilisez 'Partager' > 'Sur l'écran d'accueil'.",
-      icon: <Download className="text-cyan-400" size={32} />
     }
   ];
 
@@ -115,18 +122,21 @@ const Tutorial: React.FC<Props> = ({ navigateTo, handleInstallClick, settings })
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {tutorialData.map((s, i) => (
-          <div key={i} className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10 flex flex-col gap-6 items-start hover:bg-white/10 transition-all">
-            <div className="flex items-center gap-4">
-              <div className="p-4 bg-white/5 rounded-2xl">{s.icon}</div>
+          <div key={i} className="bg-white/5 p-8 rounded-[2.5rem] border border-white/10 flex flex-col gap-6 items-start hover:bg-white/10 transition-all group">
+            <div className="flex items-center gap-4 w-full">
+              <div className="p-4 bg-white/5 rounded-2xl transition-transform group-hover:scale-110">{s.icon}</div>
               <h3 className="font-black uppercase text-sm tracking-widest flex-1">{s.title}</h3>
             </div>
-            <p className="text-sm opacity-50 leading-relaxed flex-1">{s.desc}</p>
-            <button
-              onClick={() => alert(s.details + (s.result ? '\n\n' + s.result : ''))}
-              className="px-4 py-2 bg-[var(--btn-color)]/20 text-[var(--btn-color)] rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-[var(--btn-color)]/30 transition-all"
-            >
-              Détails <ChevronRight size={14} className="inline ml-1" />
-            </button>
+            <p className="text-sm font-bold opacity-80 leading-relaxed w-full">{s.desc}</p>
+            <div className="text-sm opacity-60 leading-relaxed w-full bg-black/20 p-4 rounded-xl">
+              <span className="block mb-2 font-semibold">Comment ça marche :</span>
+              {s.details}
+              {s.result && (
+                <span className="block mt-3 text-emerald-400/80 font-medium">
+                  {s.result}
+                </span>
+              )}
+            </div>
           </div>
         ))} 
       </div>
