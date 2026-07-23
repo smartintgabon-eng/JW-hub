@@ -22,16 +22,16 @@ function getAiClient() {
   return new GoogleGenAI({ apiKey: validApiKey });
 }
 
-export default async function handler(req) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ message: 'Method Not Allowed' }), { status: 405 });
+    return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
   try {
-    const { colorName } = await req.json();
+    const { colorName } = req.body || {};
     
     if (!colorName) {
-      return new Response(JSON.stringify({ message: 'colorName is required' }), { status: 400 });
+      return res.status(400).json({ message: 'colorName is required' });
     }
 
     const ai = getAiClient();
@@ -44,11 +44,9 @@ export default async function handler(req) {
 
     const hex = result.text?.trim();
     
-    return new Response(JSON.stringify({ hex }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.json({ hex });
   } catch (error) {
     console.warn('Color API Error:', error);
-    return new Response(JSON.stringify({ message: "Désolé, je n'ai pas pu récupérer cette information, veuillez réessayer." }), { status: 200 });
+    return res.status(200).json({ message: "Désolé, je n'ai pas pu récupérer cette information, veuillez réessayer." });
   }
 }

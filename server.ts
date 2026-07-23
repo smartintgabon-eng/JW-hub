@@ -88,10 +88,8 @@ async function startServer() {
   // API Routes wrapper
   const wrapApiRoute = (handlerModule: any) => async (req: express.Request, res: express.Response, next: express.NextFunction) => {
     try {
-      const webReq = createWebRequest(req);
       const handler = getHandler(handlerModule);
-      const webRes = await handler(webReq);
-      await handleWebResponse(webRes, res);
+      await handler(req, res);
     } catch (e) {
       next(e);
     }

@@ -1,3 +1,4 @@
+export const maxDuration = 60;
 import { GoogleGenAI } from '@google/genai';
 import { kv } from '@vercel/kv';
 import * as cheerio from 'cheerio';
@@ -66,25 +67,28 @@ function getAiClient() {
   return new GoogleGenAI({ apiKey: validApiKey });
 }
 
-export default async function handler(req) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ message: 'Method Not Allowed' }), { status: 405 });
+    return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
   let isConfirmMode = false;
   try {
-    const body = await req.json();
+    const body = req.body || {};
     const { questionOrSubject, settings, confirmMode, contentOptions, part } = body;
     if (confirmMode) isConfirmMode = true;
 
     if (!questionOrSubject && !confirmMode) {
-      return new Response(JSON.stringify({ message: 'Question or subject is required.' }), { status: 400 });
+      return res.status(400).json({ message: 'Question or subject is required.' });
     }
 
     const ai = getAiClient();
     const userLanguage = settings?.language || 'fr';
     const today = new Date().toLocaleDateString(userLanguage, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    const themeTitle = questionOrSubject || "Recherche";
+    let themeTitle = questionOrSubject || "Recherche";
+    if (themeTitle.startsWith('http')) {
+        themeTitle = "Recherche d'article";
+    }
     let diagnostic = "Diagnostic : [Recherche]";
     let scrapedContent = "";
     let articleUrl = "";
@@ -313,6 +317,7 @@ export default async function handler(req) {
           const firstValid = validResults.find(t => t.imageUrl || t.title);
           if (firstValid) {
             metadata = firstValid;
+            if (firstValid.title) themeTitle = firstValid.title;
             if (firstValid.imageUrl) {
               scrapedContent += `\n\n[IMAGE_URL: ${firstValid.imageUrl}]`;
             }
@@ -368,9 +373,8 @@ export default async function handler(req) {
           config
         }));
         
-        return new Response(result.text, {
-          headers: { 'Content-Type': 'application/json' }
-        });
+        res.setHeader('Content-Type', 'application/json');
+return res.send(result.text);
       } catch (e) {
         console.warn("Preview generation failed, falling back to scraped metadata:", e);
         const fallbackJson = {
@@ -380,9 +384,7 @@ export default async function handler(req) {
           previewInfos: "Source extraite",
           url: articleUrl
         };
-        return new Response(JSON.stringify(fallbackJson), {
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return res.json(fallbackJson);
       }
     }
 
@@ -405,9 +407,9 @@ export default async function handler(req) {
     
     INSTRUCTIONS :
     1. Utilise PRINCIPALEMENT le contexte scrappé ci-dessus pour générer ta réponse.
-    2. Ajoute ta propre réflexion, analyse et méditation spirituelle pour enrichir la réponse.
+    2. N'inclus aucune phrase d'introduction ou de métadiscours. Donne directement les réponses.
     3. Si le contexte est vide, ignore le scraping et utilise UNIQUEMENT le contenu brut fourni par la recherche Google (Grounding).
-    4. OBLIGATOIRE : Commence TOUJOURS ta réponse par un grand titre (H1) reprenant le thème exact : "# ${themeTitle}", suivi immédiatement sur la ligne suivante de la date du jour en italique : "*${today}*".
+    4. OBLIGATOIRE : Commence TOUJOURS ta réponse par un UNIQUE grand titre (H1) reprenant le thème exact : "# ${themeTitle}", suivi immédiatement sur la ligne suivante de la date du jour en italique : "*${today}*". N'écris ce titre et cette date qu'UNE SEULE FOIS au tout début.
     5. SI LE TEXTE SCRAPPÉ CONTIENT LA BALISE [IMAGE_URL: url], TU DOIS ABSOLUMENT AFFICHER CETTE IMAGE au tout début de ton texte (juste après la date) en utilisant le Markdown : ![Image de l'article](url).
     
     ${contentInclusionInstructions}
@@ -436,29 +438,9 @@ export default async function handler(req) {
       config: { tools: [{ googleSearch: {} }] }
     }));
 
-    const encoder = new TextEncoder();
-
-    const readable = new ReadableStream({
-      async start(controller) {
-        try {
-          for await (const chunk of stream) {
-            const text = chunk.text;
-            if (text) {
-              controller.enqueue(encoder.encode(text));
-            }
-          }
-          
-          // No Vercel KV Cache write here, strictly Gemini generation
-          controller.close();
-        } catch (e) {
-          controller.error(e);
-        }
-      }
-    });
-
-    return new Response(readable, {
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-    });
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+res.write(errorMessage);
+res.end();
 
   } catch (error) {
     console.warn('API Error encountered (handled):', error?.message || error);
@@ -475,20 +457,12 @@ export default async function handler(req) {
     
     // If it's a JSON request (like confirmMode), return JSON
     if (isConfirmMode) {
-      return new Response(JSON.stringify({ message: errorMessage }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return res.status(200).json({ message: errorMessage });
     }
 
     // Otherwise return a stream with the error message so the UI displays it gracefully
-    const encoder = new TextEncoder();
-    const readable = new ReadableStream({
-      start(controller) {
-        controller.enqueue(encoder.encode(errorMessage));
-        controller.close();
-      }
-    });
-    
-    return new Response(readable, {
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-    });
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+res.write(errorMessage);
+res.end();
   }
 }

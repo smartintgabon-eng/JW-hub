@@ -1,3 +1,4 @@
+export const maxDuration = 60;
 import { GoogleGenAI } from '@google/genai';
 import { kv } from '@vercel/kv';
 import * as cheerio from 'cheerio';
@@ -21,6 +22,11 @@ const scraper = metascraper([
 
 const scraperAxios = axios.create({
   timeout: 45000,
+  headers: {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Language': 'fr,fr-FR;q=0.8,en-US;q=0.5,en;q=0.3',
+  }
 });
 
 // Helper for retrying Gemini calls
@@ -66,13 +72,13 @@ function getAiClient() {
   return new GoogleGenAI({ apiKey: validApiKey });
 }
 
-export default async function handler(req) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ message: 'Method Not Allowed' }), { status: 405 });
+    return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
   try {
-    const body = await req.json();
+    const body = req.body || {};
     const { 
       input, 
       manualText, 
@@ -93,6 +99,7 @@ export default async function handler(req) {
 
     const ai = getAiClient();
     let prompt = '';
+    
     const userLanguage = settings?.language || 'fr';
     const userPreferences = (settings?.answerPreferences || []).map(p => p.text).join(', ') || 'Précis, factuel, fidèle aux enseignements bibliques et détaillé.';
     const today = new Date().toLocaleDateString(userLanguage, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -108,6 +115,10 @@ export default async function handler(req) {
     
     let diagnostic = isManualText ? "Diagnostic : [Analyse de texte manuel]" : "Diagnostic : [Recherche]";
     let scrapedContent = "";
+    let finalThemeTitle = themeTitle || "Analyse";
+    if (finalThemeTitle.startsWith('http')) {
+        finalThemeTitle = "Analyse de l'article";
+    }
 
     // --- PHASE 1 & 2: GROUNDING + SCRAPING (If applicable) ---
     if (withSearch && !isInitialSearchForPreview) {
@@ -221,6 +232,10 @@ export default async function handler(req) {
                  // Extract title specifically for jw.org if possible
                  let extractedTitle = $('header h1').text().trim();
                  if (!extractedTitle) extractedTitle = meta.title || "";
+                 // Some jw.org 404 pages have a generic title, don't use it if it contains "introuvable"
+                 if (extractedTitle && !extractedTitle.toLowerCase().includes("introuvable")) {
+                     finalThemeTitle = extractedTitle;
+                 }
                  
                  // Targeted extraction for jw.org/wol.jw.org articles
                  let articleContent = '';
@@ -329,6 +344,9 @@ export default async function handler(req) {
              if (firstValid && firstValid.imageUrl) {
                scrapedContent += `\n\n[IMAGE_URL: ${firstValid.imageUrl}]`;
              }
+             if (firstValid && firstValid.title) {
+                 finalThemeTitle = firstValid.title;
+             }
              diagnostic = `Diagnostic : [Grounding + Scraping]`;
            } else {
              diagnostic = `Diagnostic : [Recherche]`;
@@ -348,7 +366,7 @@ export default async function handler(req) {
         prompt = `Génère un thème de discours biblique accrocheur et profond basé sur les publications des Témoins de Jéhovah.
 Critères : "${input || 'Aucun'}". Langue : ${userLanguage}. Court et percutant. Ne renvoie QUE le thème, sans aucun autre texte.`;
     } else if (type === 'DISCOURS') {
-        prompt = `OBLIGATOIRE : Commence TOUJOURS ta réponse par un grand titre (H1) reprenant le thème exact : "# ${themeTitle}", suivi immédiatement sur la ligne suivante de la date du jour en italique : "*${today}*".
+        prompt = `OBLIGATOIRE : Commence TOUJOURS ta réponse par un UNIQUE grand titre (H1) reprenant le thème exact : "# ${finalThemeTitle}", suivi immédiatement sur la ligne suivante de la date du jour en italique : "*${today}*". N'écris ce titre et cette date qu'UNE SEULE FOIS au tout début.
 
 Orateur chrétien (TJ). Plan discours biblique.
 Type: ${discoursType}, Thème: "${theme}", Durée: ${time}, Langue: ${userLanguage}.
@@ -360,7 +378,7 @@ ${pointsToReinforce ? `Points à renforcer: ${pointsToReinforce}` : ''}
 ${strengths ? `Points forts: ${strengths}` : ''}
 ${encouragements ? `Encouragements: ${encouragements}` : ''}`;
     } else if (type === 'PREDICATION') {
-        prompt = `OBLIGATOIRE : Commence TOUJOURS ta réponse par un grand titre (H1) reprenant le thème exact : "# ${themeTitle}", suivi immédiatement sur la ligne suivante de la date du jour en italique : "*${today}*".
+        prompt = `OBLIGATOIRE : Commence TOUJOURS ta réponse par un UNIQUE grand titre (H1) reprenant le thème exact : "# ${finalThemeTitle}", suivi immédiatement sur la ligne suivante de la date du jour en italique : "*${today}*". N'écris ce titre et cette date qu'UNE SEULE FOIS au tout début.
 
 Tu es un proclamateur chrétien (Témoin de Jéhovah) expérimenté.
 Prépare une présentation de prédication.
@@ -377,7 +395,7 @@ INSTRUCTIONS :
 3. Utilise le contexte scrappé si pertinent.
 Format Markdown.`;
     } else if (type === 'WATCHTOWER' || type === 'MINISTRY') {
-        prompt = `OBLIGATOIRE : Commence TOUJOURS ta réponse par un grand titre (H1) reprenant le thème exact : "# ${themeTitle}", suivi immédiatement sur la ligne suivante de la date du jour en italique : "*${today}*".
+        prompt = `OBLIGATOIRE : Commence TOUJOURS ta réponse par un UNIQUE grand titre (H1) reprenant le thème exact : "# ${finalThemeTitle}", suivi immédiatement sur la ligne suivante de la date du jour en italique : "*${today}*". N'écris ce titre et cette date qu'UNE SEULE FOIS au tout début.
 
 Tu es un assistant pour l'étude personnelle des Témoins de Jéhovah.
 Type d'étude: ${type === 'WATCHTOWER' ? 'Étude de La Tour de Garde' : 'Cahier Vie Chrétienne et Ministère'}
@@ -409,9 +427,9 @@ CONTEXTE SCRAPPÉ (si dispo): "${scrapedContent}"
 
 INSTRUCTIONS :
 1. Utilise le contenu scrappé ci-dessus comme source principale.
-2. Ajoute ta propre réflexion, analyse et méditation spirituelle pour enrichir la réponse.
+2. N'inclus aucune phrase d'introduction ou de métadiscours (ex: "Voici l'analyse", "Voici ma réflexion", "Voici les réponses"). Ne montre pas ton processus de réflexion.
 3. Si le contexte est vide, ignore le scraping et utilise UNIQUEMENT le contenu brut fourni.
-4. OBLIGATOIRE : Commence TOUJOURS ta réponse par un grand titre (H1) reprenant le thème exact : "# ${themeTitle}", suivi immédiatement sur la ligne suivante de la date du jour en italique : "*${today}*".
+4. OBLIGATOIRE : Commence TOUJOURS ta réponse par un UNIQUE grand titre (H1) reprenant le thème exact : "# ${finalThemeTitle}", suivi immédiatement sur la ligne suivante de la date du jour en italique : "*${today}*". N'écris ce titre et cette date qu'UNE SEULE FOIS au tout début.
 5. SI LE TEXTE SCRAPPÉ CONTIENT LA BALISE [IMAGE_URL: url], TU DOIS ABSOLUMENT AFFICHER CETTE IMAGE au tout début de ton texte (juste après la date) en utilisant le Markdown : ![Image de l'article](url).
 6. OBLIGATION DE MISE EN FORME ET DE STRUCTURE :
    - Les Titres de questions (s'il y en a) doivent commencer par un chiffre ou être en majuscules pour les sections principales.
@@ -429,6 +447,7 @@ Format Markdown strict requis.`;
     // Stream Generation
     const config = withSearch ? { tools: [{ googleSearch: {} }] } : {};
     
+    
     const stream = await withRetry(() => ai.models.generateContentStream({
       model: 'gemini-2.5-flash',
       contents: prompt,
@@ -437,33 +456,25 @@ Format Markdown strict requis.`;
 
     const encoder = new TextEncoder();
 
-    const readable = new ReadableStream({
-      async start(controller) {
-        try {
-          for await (const chunk of stream) {
-            const text = chunk.text;
-            if (text) {
-              controller.enqueue(encoder.encode(text));
-            }
-          }
-          
-          // No Vercel KV Cache write here, strictly Gemini generation
-          controller.close();
-        } catch (e) {
-          controller.error(e);
-        }
-      }
-    });
-
-    return new Response(readable, {
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-    });
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+res.setHeader('Transfer-Encoding', 'chunked');
+try {
+  for await (const chunk of stream) {
+    const text = chunk.text;
+    if (text) {
+      res.write(text);
+    }
+  }
+  res.end();
+} catch (e) {
+  console.error("Stream error:", e);
+  res.end();
+}
 
   } catch (error) {
     console.warn('API Error encountered (handled):', error?.message || error);
-    let errorMessage = "Désolé, je n'ai pas pu récupérer cette information, veuillez réessayer.";
-    
     const errorStr = String(error?.message || error);
+    let errorMessage = "Désolé, je n'ai pas pu récupérer cette information, veuillez réessayer. " + errorStr;
     if (errorStr.includes('429') || errorStr.includes('RESOURCE_EXHAUSTED') || errorStr.includes('Too Many Requests') || errorStr.includes('exceeded your current quota')) {
         errorMessage = "⚠️ Quota dépassé : Vous avez atteint la limite de l'API. Veuillez vérifier votre plan ou réessayer plus tard.";
     } else if (errorStr.includes('503') || errorStr.includes('UNAVAILABLE') || errorStr.includes('high demand')) {
@@ -471,15 +482,9 @@ Format Markdown strict requis.`;
     }
     
     const encoder = new TextEncoder();
-    const readable = new ReadableStream({
-      start(controller) {
-        controller.enqueue(encoder.encode(errorMessage));
-        controller.close();
-      }
-    });
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+res.write(errorMessage);
+res.end();
 
-    return new Response(readable, {
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-    });
   }
 }
