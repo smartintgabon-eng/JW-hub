@@ -389,16 +389,17 @@ CONTEXTE SCRAPPÉ (si dispo): "${scrapedContent}"
 
 INSTRUCTIONS CRUCIALES :
 1. Ton but principal est de FOURNIR LES RÉPONSES AUX QUESTIONS posées dans le texte source. Ne te contente SURTOUT PAS de répéter le texte.
-2. Pour chaque paragraphe ou section contenant une question, donne :
-   - Une réponse directe et claire basée sur le texte.
-   - Des commentaires supplémentaires ou des explications bibliques profondes.
-   - Une "Application dans la vie" (comment appliquer ce point au quotidien ou dans le ministère).
-3. Si le texte source est un article complet, identifie les questions d'étude et réponds-y.
-4. Si le texte source ne contient pas de questions explicites, dégage les points principaux et fournis des commentaires enrichissants et des applications pratiques.
-5. Utilise le contexte scrappé comme source principale si disponible, sinon utilise le texte fourni.
-6. SI LE TEXTE SCRAPPÉ CONTIENT LA BALISE [IMAGE_URL: url], TU DOIS ABSOLUMENT AFFICHER CETTE IMAGE au tout début de ton texte (juste après la date) en utilisant le Markdown : ![Image de l'article](url).
+2. Utilise le contexte scrappé comme source principale si disponible, sinon utilise le texte fourni.
+3. SI LE TEXTE SCRAPPÉ CONTIENT LA BALISE [IMAGE_URL: url], TU DOIS ABSOLUMENT AFFICHER CETTE IMAGE au tout début de ton texte (juste après la date) en utilisant le Markdown : ![Image de l'article](url).
+4. OBLIGATION DE MISE EN FORME ET DE STRUCTURE POUR CHAQUE QUESTION :
+   - Les Titres de questions doivent commencer par un chiffre (ex: 1. Pourquoi...) ou être en majuscules pour les sections principales.
+   - Sous chaque question, tu dois utiliser une liste à puces avec EXACTEMENT ces trois catégories (en gras) :
+     * **Réponses (Informations Clés)** : Trouve la réponse directe, exacte et doctrinale à la question. TOUTE CETTE RÉPONSE DOIT ÊTRE FORMATÉE EN ITALIQUE (*texte en italique*).
+     * **Commentaires** : Explique ou développe l'idée avec des mots simples pour qu'elle soit facile à exprimer ou à partager à l'oral.
+     * **Applications** : Explique concrètement comment cette vérité ou cette réponse change notre vie quotidienne, notre façon de penser ou notre confiance en Jéhovah.
+5. Utilise le Gras (**Texte**) pour faire ressortir les mots importants à l'intérieur des phrases (par exemple : **le Dieu de vérité**, **Créateur**), ainsi que pour les titres des catégories.
 
-Format Markdown structuré (utilise des sous-titres H2/H3, des puces, du gras pour mettre en valeur les réponses).`;
+Format Markdown strict requis pour la hiérarchie et la lisibilité.`;
     } else {
         prompt = `Analyse et explication structurée.
 Contenu: "${contentString}"
@@ -412,8 +413,15 @@ INSTRUCTIONS :
 3. Si le contexte est vide, ignore le scraping et utilise UNIQUEMENT le contenu brut fourni.
 4. OBLIGATOIRE : Commence TOUJOURS ta réponse par un grand titre (H1) reprenant le thème exact : "# ${themeTitle}", suivi immédiatement sur la ligne suivante de la date du jour en italique : "*${today}*".
 5. SI LE TEXTE SCRAPPÉ CONTIENT LA BALISE [IMAGE_URL: url], TU DOIS ABSOLUMENT AFFICHER CETTE IMAGE au tout début de ton texte (juste après la date) en utilisant le Markdown : ![Image de l'article](url).
+6. OBLIGATION DE MISE EN FORME ET DE STRUCTURE :
+   - Les Titres de questions (s'il y en a) doivent commencer par un chiffre ou être en majuscules pour les sections principales.
+   - Sous chaque idée principale ou question, tu dois utiliser une liste à puces avec EXACTEMENT ces trois catégories (en gras) :
+     * **Réponses (Informations Clés)** : Trouve la réponse directe, exacte et doctrinale. TOUTE CETTE RÉPONSE DOIT ÊTRE FORMATÉE EN ITALIQUE (*texte en italique*).
+     * **Commentaires** : Explique ou développe l'idée avec des mots simples pour qu'elle soit facile à exprimer ou à partager à l'oral.
+     * **Applications** : Explique concrètement comment cette vérité ou cette réponse change notre vie quotidienne, notre façon de penser ou notre confiance en Jéhovah.
+7. Utilise le Gras (**Texte**) pour faire ressortir les mots importants à l'intérieur des phrases.
 
-Format Markdown.`;
+Format Markdown strict requis.`;
     }
     
     prompt += `\n\nIMPORTANT : À la toute fin de ta réponse, ajoute cette ligne exacte :\n${diagnostic}`;

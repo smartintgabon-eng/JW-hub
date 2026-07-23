@@ -8,6 +8,9 @@ import saveAs from 'file-saver';
 import { Document, Paragraph, TextRun, Packer, AlignmentType, HeadingLevel } from 'docx'; 
 import jsPDF from 'jspdf';
 import { getContrastTextColor } from '../utils/colorUtils.ts';
+import html2pdf from 'html2pdf.js';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface Props {
   history: GeneratedStudy[];
@@ -293,143 +296,84 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
     saveAs(new Blob([buffer]), `${getStudyTitle(study).replace(/[\s\W]+/g, '_')}.docx`);
   };
 
-  const exportToPdf = (study: GeneratedStudy) => {
+  const exportToPdf = async (study: GeneratedStudy) => {
     if (!study.content) return alert(getLocalizedText(settings, 'emptyContent'));
-    const doc = new jsPDF();
-    const margin = 15;
-    let y = 20;
-    const pageWidth = doc.internal.pageSize.getWidth();
-    // Always use black text for PDF as background is white by default
-    const defaultTextColor = '#000000';
-    const btnColor = settings.btnColor || '#4a70b5';
-
-    doc.setFont('helvetica');
-    doc.setTextColor(defaultTextColor);
-
-    // Title
-    doc.setFontSize(24);
-    doc.text(getStudyTitle(study), pageWidth / 2, y + 10, { align: 'center' });
-    y += 20;
-
-    // Date
-    doc.setFontSize(12);
-    doc.text(`${getLocalizedText(settings, 'generatedOn')}: ${getStudyDate(study)}`, pageWidth / 2, y + 5, { align: 'center' });
-    y += 15;
-
-    // Content
-    doc.setFontSize(11);
-    doc.setTextColor(defaultTextColor);
-
-    const addTextWithLineBreaks = (text: string, x: number, yPos: number, maxWidth: number, lineHeight: number, options: any = {}) => {
-      const textLines = doc.splitTextToSize(text, maxWidth);
-      doc.text(textLines, x, yPos, options);
-      return yPos + (textLines.length * lineHeight);
-    };
     
-    if (study.type === 'RECHERCHES') {
-      // Parse and format for RECHERCHES type
-      const blocks = study.content.split('NOM :');
-      blocks.forEach((block, i) => {
-        if (!block.trim() && i === 0) return;
-        if (!block.trim()) return;
-
-        const lines = block.split('\n');
-        const name = lines[0].trim();
-        const linkLine = lines.find(l => l.includes('LIEN :')) || '';
-        const link = linkLine.replace('LIEN :', '').trim();
-        const explanationLines = lines.filter(l => l.includes('EXPLICATION :'));
-        const explanation = explanationLines.map(l => l.replace('EXPLICATION :', '').trim()).join('\n');
-
-        if (y > doc.internal.pageSize.getHeight() - margin) { doc.addPage(); y = margin; }
-        
-        if (name) {
-          doc.setFontSize(14);
-          doc.setFont('helvetica', 'bold');
-          doc.setTextColor(btnColor);
-          y = addTextWithLineBreaks(`NOM : ${name}`, margin, y + 5, pageWidth - 2 * margin, 7);
-        }
-        if (link) {
-          doc.setFontSize(10);
-          doc.setFont('helvetica', 'normal');
-          doc.setTextColor(defaultTextColor);
-          y = addTextWithLineBreaks(`LIEN : ${link}`, margin, y + 3, pageWidth - 2 * margin, 6);
-        }
-        if (explanation) {
-          doc.setFontSize(11);
-          doc.setFont('helvetica', 'normal');
-          doc.setTextColor(defaultTextColor);
-          y = addTextWithLineBreaks(`EXPLICATION : ${explanation}`, margin, y + 5, pageWidth - 2 * margin, 6);
-        }
-        y += 10; // Extra space between research blocks
-      });
-    } else {
-      study.content.split('\n').forEach(line => {
-        const trimmed = line.trim();
-        if (!trimmed) {
-          y += 5; // Spacing for empty lines
-          return;
-        }
-
-        // Check for page overflow
-        if (y > doc.internal.pageSize.getHeight() - margin) {
-          doc.addPage();
-          y = margin;
-          doc.setTextColor(defaultTextColor);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(11);
-        }
-
-        if (trimmed.startsWith('## Sources Brutes Trouvées :') || trimmed.startsWith('## Explication de l\'IA :') || trimmed.startsWith('## Liens des Sources :')) {
-          doc.setFontSize(16);
-          doc.setFont('helvetica', 'bold');
-          doc.setTextColor(btnColor);
-          y = addTextWithLineBreaks(trimmed.replace(/^##\s*/, ''), margin, y + 5, pageWidth - 2 * margin, 7);
-          doc.setTextColor(defaultTextColor);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(11);
-        } else if (trimmed.startsWith('# ')) {
-          doc.setFontSize(14);
-          doc.setFont('helvetica', 'bold');
-          doc.setTextColor(btnColor);
-          y = addTextWithLineBreaks(trimmed.replace(/^#\s*/, ''), margin, y + 5, pageWidth - 2 * margin, 7);
-          doc.setTextColor(defaultTextColor);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(11);
-        } else if (trimmed.match(/^(JOYAUX DE LA PAROLE DE DIEU|PERLES SPIRITUELLES|APPLIQUE-TOI AU MINISTÈRE|VIE CHRÉTIENNE|ÉTUDE BIBLIQUE DE L'ASSEMBLÉE|QUESTIONS DE RÉVISION|PORTE-EN-PORTE|NOUVELLE VISITE|COURS BIBLIQUE|SUJET|ENTRÉE EN MATIÈRE|MANIÈRE DE FAIRE|CONCLUSION|POINTS À DÉVELOPPER|POINTS PRINCIPAUX|QUESTION POUR REVENIR):/i)) {
-          doc.setFontSize(12);
-          doc.setFont('helvetica', 'bold');
-          doc.setTextColor(btnColor);
-          const [label, ...rest] = trimmed.split(':');
-          let currentX = margin;
-          y = addTextWithLineBreaks(`${label}: `, currentX, y, pageWidth - 2 * margin, 7, { align: 'left' });
-          currentX += doc.getStringUnitWidth(`${label}: `) * doc.getFontSize() + 2; // Adjust x for remaining text
-          doc.setTextColor(defaultTextColor);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(11);
-          y = addTextWithLineBreaks(rest.join(':').trim(), currentX, y - (doc.splitTextToSize(`${label}: `, pageWidth - 2 * margin).length * 7), pageWidth - currentX - margin, 7, { align: 'left' });
-          y += 5; // Extra spacing after a section header
-        } else if (trimmed.startsWith('PARAGRAPHE')) {
-          doc.setFontSize(12);
-          doc.setFont('helvetica', 'bold');
-          doc.setTextColor(btnColor);
-          y = addTextWithLineBreaks(trimmed, margin, y + 5, pageWidth - 2 * margin, 7);
-          doc.setTextColor(defaultTextColor);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(11);
-        } else if (trimmed.startsWith('VERSET:')) {
-          doc.setFontSize(11);
-          doc.setFont('helvetica', 'italic');
-          y = addTextWithLineBreaks(trimmed, margin + 5, y + 3, pageWidth - 2 * margin - 10, 6);
-          doc.setFont('helvetica', 'normal');
-        } else if (trimmed.startsWith('- ')) { // List items
-          y = addTextWithLineBreaks(trimmed, margin + 5, y + 3, pageWidth - 2 * margin - 10, 6);
-        } else { // Normal text
-          y = addTextWithLineBreaks(trimmed, margin, y + 3, pageWidth - 2 * margin, 6);
-        }
-      });
+    const element = document.getElementById('study-content-to-print');
+    if (!element) return;
+    
+    // We create an isolated iframe to prevent html2canvas from parsing Tailwind v4 oklab colors in the main document stylesheets
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+    
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!iframeDoc) {
+      document.body.removeChild(iframe);
+      return;
     }
+    
+    const btnColor = settings.btnColor || '#3b82f6';
+    
+    iframeDoc.open();
+    iframeDoc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { 
+              font-family: 'Inter', Helvetica, Arial, sans-serif; 
+              color: #000000; 
+              padding: 20px 40px; 
+              line-height: 1.6;
+              background: #ffffff;
+            }
+            /* Header styles */
+            header { text-align: center; margin-bottom: 30px; }
+            header span { font-size: 10px; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; color: ${btnColor}; opacity: 0.8; }
+            header h1 { font-size: 32px; font-weight: 900; margin: 10px 0; color: #000; letter-spacing: -0.02em; }
+            header p { font-size: 12px; opacity: 0.5; }
+            
+            /* Markdown styles */
+            h1 { font-size: 26px; font-weight: 900; margin-top: 30px; margin-bottom: 15px; color: ${btnColor}; }
+            h2 { font-size: 22px; font-weight: bold; margin-top: 25px; margin-bottom: 12px; color: ${btnColor}; }
+            h3 { font-size: 18px; font-weight: bold; margin-top: 20px; margin-bottom: 10px; color: ${btnColor}; }
+            p { margin-bottom: 15px; font-size: 15px; }
+            strong { font-weight: 900; color: ${btnColor}; }
+            em { font-style: italic; color: #333; }
+            ul { margin-left: 25px; margin-bottom: 15px; list-style-type: disc; }
+            ol { margin-left: 25px; margin-bottom: 15px; list-style-type: decimal; font-weight: bold; color: ${btnColor}; }
+            li { margin-bottom: 6px; font-weight: normal; color: #000; font-size: 15px; }
+            li p { margin-bottom: 4px; }
+            img { max-width: 100%; border-radius: 12px; margin: 25px auto; display: block; max-height: 400px; object-fit: contain; }
+          </style>
+        </head>
+        <body>
+          <div id="pdf-content">
+            ${element.innerHTML}
+          </div>
+        </body>
+      </html>
+    `);
+    iframeDoc.close();
 
-    doc.save(`${getStudyTitle(study).replace(/[\s\W]+/g, '_')}.pdf`);
+    try {
+      const opt = {
+        margin:       15,
+        filename:     `${getStudyTitle(study).replace(/[\s\W]+/g, '_')}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      
+      const targetElement = iframeDoc.getElementById('pdf-content');
+      await html2pdf().set(opt).from(targetElement).save();
+    } catch (e) {
+      console.error('Error generating PDF:', e);
+      alert('Une erreur est survenue lors de la création du PDF.');
+    } finally {
+      document.body.removeChild(iframe);
+    }
   };
 
 
@@ -468,7 +412,7 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
           </div>
         </div>
 
-        <article className="max-w-3xl mx-auto space-y-10">
+        <article id="study-content-to-print" className="max-w-3xl mx-auto space-y-10">
           <header className="text-center space-y-4">
             <span className="px-4 py-1 bg-[var(--btn-color)]/20 text-[var(--btn-color)] rounded-full text-[10px] font-black uppercase tracking-widest">{getStudyTypeLabel(selectedStudy.type)}</span>
             <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter">{selectedStudy.title}</h1>
@@ -503,8 +447,24 @@ const History: React.FC<Props> = ({ history, setHistory, settings }) => {
               })}
             </div>
           ) : (
-            <div className={`prose ${proseClass} max-w-none font-serif text-lg leading-relaxed whitespace-pre-wrap opacity-80`}>
-              {selectedStudy.content}
+            <div className={`prose ${proseClass} max-w-none font-sans text-lg leading-relaxed opacity-90`}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  h1: ({node, ...props}) => <h1 className="text-3xl font-bold mt-8 mb-4 text-[var(--btn-color)]" {...props} />,
+                  h2: ({node, ...props}) => <h2 className="text-2xl font-bold mt-6 mb-3 text-[var(--btn-color)]" {...props} />,
+                  h3: ({node, ...props}) => <h3 className="text-xl font-bold mt-5 mb-2 text-[var(--btn-color)]" {...props} />,
+                  strong: ({node, ...props}) => <strong className="font-black text-[var(--btn-color)]" {...props} />,
+                  em: ({node, ...props}) => <em className="italic text-[var(--text-color)]/90" {...props} />,
+                  ul: ({node, ...props}) => <ul className="list-disc pl-6 space-y-2 mb-4 marker:text-[var(--btn-color)]" {...props} />,
+                  ol: ({node, ...props}) => <ol className="list-decimal pl-6 space-y-2 mb-4 text-[var(--btn-color)] font-bold" {...props} />,
+                  li: ({node, ...props}) => <li className="mb-1 text-[var(--text-color)] font-normal" {...props} />,
+                  p: ({node, ...props}) => <p className="mb-4 text-[var(--text-color)]" {...props} />,
+                  img: ({node, ...props}) => <img className="rounded-2xl shadow-lg my-6 max-h-[60vh] object-contain mx-auto" {...props} />
+                }}
+              >
+                {selectedStudy.content}
+              </ReactMarkdown>
             </div>
           )}
         </article>

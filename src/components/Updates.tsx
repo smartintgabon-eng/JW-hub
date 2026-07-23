@@ -18,7 +18,9 @@ const updates: UpdateItem[] = [
       "**Mises à jour Publiques vs Accès Restreint** : Mise en place d'une nouvelle politique de confidentialité pour les notes de mise à jour. Les détails techniques ou outils de modération sont désormais réservés à l'accès restreint. Vous ne verrez que les nouveautés publiques (Thèmes, interface) pertinentes pour vous."
     ],
     fixes: [
+      "**Téléchargement PDF Amélioré** : La génération de PDF utilise désormais un nouveau moteur permettant de conserver fidèlement la mise en forme (les images, l'italique, le gras et la police) telle qu'elle s'affiche à l'écran, avec une mise en page parfaite.",
       "**Visualisation des Images (Tour de Garde / Cahier)** : Correction d'un problème qui empêchait l'affichage des images des articles dans les réponses de l'IA. Les images principales sont désormais correctement extraites (y compris pour les articles de la Tour de Garde) et affichées en tête de la réponse générée.",
+      "**Mise en forme des réponses** : Application d'un style standardisé pour l'étude. Les réponses directes sont désormais en italique pour se démarquer, les titres et mots importants en gras, avec une hiérarchie stricte (Réponses, Commentaires, Applications) pour faciliter l'étude et la préparation aux réunions.",
       "**Extraction Améliorée (Textes & Articles)** : Le système de scraping de l'application a été entièrement réécrit pour cibler spécifiquement les conteneurs d'articles officiels (comme `.syn-body` et `#articleArticle`). Cela garantit que le texte généré par l'IA est toujours fidèle, sans inclure les menus ou les pieds de page du site.",
       "**Gestion des Surcharges Serveur** : Ajout de messages clairs lorsque l'IA est surchargée ou que le quota est atteint, afin de vous informer de l'état du système."
     ]

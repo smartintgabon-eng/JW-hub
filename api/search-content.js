@@ -412,14 +412,17 @@ export default async function handler(req) {
     
     ${contentInclusionInstructions}
     
-    Structure de la réponse :
+    Structure et Mise en forme de la réponse (OBLIGATOIRE) :
     1. Introduction directe.
-    2. Points clés basés sur les publications.
-    3. Versets bibliques expliqués.
+    2. Pour chaque point clé ou question abordée, utilise une structure avec ces trois catégories exactes :
+       - **Réponses (Informations Clés)** : [La réponse doctrinale et directe. TOUT CE TEXTE DOIT ÊTRE EN ITALIQUE].
+       - **Commentaires** : [Explication simple pour l'oral].
+       - **Applications** : [Application concrète au quotidien].
+    3. Utilise le gras (**texte**) pour faire ressortir les mots importants dans tes phrases.
     4. Conclusion pratique.
     5. SOURCES : Liste les liens utilisés.
     
-    Formatte en Markdown.
+    Formatte en Markdown strict.
     
     IMPORTANT : À la toute fin de ta réponse, ajoute cette ligne exacte :
     ${diagnostic}`;
